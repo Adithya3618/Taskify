@@ -2,7 +2,9 @@ This project is a Project and Task Management Application built to help teams an
 
 We are developing this project as part of our Software Engineering course, focusing on real-world collaboration problems and full-stack development.
 
-🎯 Why did We Built This ???While working in teams, we often notice that tracking down our tasks and communication with members happen on different platforms.This project combines both into a single application, making teamwork simpler and more organized.The goals of this project are:
+🎯 Why did We Built This ???
+
+While working in teams, we often notice that tracking down our tasks and communication with members happen on different platforms.This project combines both into a single application, making teamwork simpler and more organized.The goals of this project are:
 
 To manage projects and tasks in a structured manner.To visualize task progress clearly.To enable real-time communication within the team.To apply software engineering concepts in a practical project implementation.Task Stages
 
