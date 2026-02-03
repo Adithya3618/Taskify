@@ -76,28 +76,6 @@ Database
 
 SQLite (relational database)
 
-📁 Project Structure
-project-management-app/
-│
-├── backend/
-│   ├── main.go
-│   ├── routes/
-│   ├── controllers/
-│   ├── models/
-│   ├── services/
-│   └── database/
-│
-├── frontend/
-│   └── src/
-│       ├── app/
-│       │   ├── components/
-│       │   ├── pages/
-│       │   ├── services/
-│       │   └── models/
-│       └── assets/
-│
-└── README.md
-
 ⚙️ How to Run the Project
 Backend
 cd backend
