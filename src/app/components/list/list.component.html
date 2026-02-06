@@ -1,7 +1,7 @@
 <div class="list" [id]="listId" cdkDropList [cdkDropListData]="cards()" [cdkDropListConnectedTo]="connectedListIds" (cdkDropListDropped)="onDrop($event)">
   <div class="list-header">
     <h3 class="list-title" [title]="list().title">{{ list().title }}</h3>
-    <button type="button" class="btn-list-menu" (click)="deleteList()" title="Delete list">⋯</button>
+    <button type="button" class="btn-list-menu" (click)="onListMenuClick($event)" title="List options">⋯</button>
   </div>
   <div class="list-cards">
     @for (card of cards(); track card.id) {

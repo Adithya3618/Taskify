@@ -84,7 +84,12 @@ export class ListComponent {
     }
   }
 
-  deleteList(): void {
-    this.boardService.deleteList(this.listId);
+  /** Stop propagation so the click doesn’t bubble (e.g. to CDK drag) and only delete after confirm. */
+  onListMenuClick(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (confirm(`Delete list "${this.list().title}"? This will remove all cards in it.`)) {
+      this.boardService.deleteList(this.listId);
+    }
   }
 }
