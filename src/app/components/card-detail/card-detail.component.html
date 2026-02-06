@@ -1,0 +1,118 @@
+<div class="card-detail-overlay" *ngIf="card() as c" (click)="close()">
+  <div class="card-detail-panel" (click)="$event.stopPropagation()">
+    <header class="card-detail-header">
+      <h2 class="card-detail-title">{{ c.title }}</h2>
+      <span class="card-detail-meta">In list {{ getListName(c.listId) }}</span>
+      <button type="button" class="btn-close" (click)="close()" aria-label="Close">×</button>
+    </header>
+    <div class="card-detail-body">
+      <section class="detail-section">
+        <h3>Description</h3>
+        <div *ngIf="!descriptionEdit">
+          <p class="description-text" *ngIf="c.description">{{ c.description }}</p>
+          <button type="button" class="btn-ghost" *ngIf="!c.description" (click)="startEditDescription()">Add description</button>
+          <button type="button" class="btn-ghost" *ngIf="c.description" (click)="startEditDescription()">Edit</button>
+        </div>
+        <div *ngIf="descriptionEdit">
+          <textarea [(ngModel)]="descriptionText" rows="3" placeholder="Add a description..."></textarea>
+          <div class="section-actions">
+            <button type="button" class="btn-primary" (click)="saveDescription()">Save</button>
+            <button type="button" class="btn-ghost" (click)="descriptionEdit = false">Cancel</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="detail-section" *ngIf="c.dueDate">
+        <h3>Due date</h3>
+        <p>📅 {{ formatDate(c.dueDate) }}</p>
+      </section>
+      <section class="detail-section" *ngIf="c.reminder">
+        <h3>Reminder</h3>
+        <p>🔔 {{ formatDateTime(c.reminder) }}</p>
+      </section>
+
+      <section class="detail-section" *ngIf="c.labels?.length">
+        <h3>Labels</h3>
+        <div class="labels-row">
+          <span *ngFor="let label of c.labels" class="label-tag" [style.background-color]="label.color">{{ label.name }}</span>
+        </div>
+      </section>
+
+      <section class="detail-section">
+        <h3>Assignees</h3>
+        <div class="assignees-list" *ngIf="c.assignees?.length">
+          <span *ngFor="let a of c.assignees" class="assignee-tag">
+            {{ a }}
+            <button type="button" class="btn-remove" (click)="removeAssignee(a)">×</button>
+          </span>
+        </div>
+        <div class="add-row">
+          <input type="text" [(ngModel)]="newAssigneeName" placeholder="Name" (keydown.enter)="addAssignee()" />
+          <button type="button" class="btn-small btn-primary" (click)="addAssignee()">Add</button>
+        </div>
+      </section>
+
+      <section class="detail-section">
+        <h3>Checklist</h3>
+        <div class="checklist-progress" *ngIf="c.checklist?.length">
+          {{ getChecklistDoneCount(c) }}/{{ (c.checklist ?? []).length }} completed
+        </div>
+        <ul class="checklist-list" *ngIf="c.checklist?.length">
+          <li *ngFor="let item of c.checklist">
+            <label class="checklist-item">
+              <input type="checkbox" [checked]="item.completed" (change)="toggleChecklistItem(item.id)" />
+              <span [class.done]="item.completed">{{ item.title }}</span>
+            </label>
+            <button type="button" class="btn-remove" (click)="deleteChecklistItem(item.id)">×</button>
+          </li>
+        </ul>
+        <div class="add-row">
+          <input type="text" [(ngModel)]="newChecklistTitle" placeholder="Add an item" (keydown.enter)="addChecklistItem()" />
+          <button type="button" class="btn-small btn-primary" (click)="addChecklistItem()">Add</button>
+        </div>
+      </section>
+
+      <section class="detail-section">
+        <h3>Comments</h3>
+        <div class="comments-list" *ngIf="c.comments?.length">
+          <div *ngFor="let comment of c.comments" class="comment">
+            <strong>{{ comment.author }}</strong>
+            <span class="comment-date">{{ formatDateTime(comment.createdAt) }}</span>
+            <p>{{ comment.text }}</p>
+            <button type="button" class="btn-remove" (click)="deleteComment(comment.id)">×</button>
+          </div>
+        </div>
+        <div class="add-comment">
+          <input type="text" [(ngModel)]="commentAuthor" placeholder="Your name" />
+          <textarea [(ngModel)]="newCommentText" rows="2" placeholder="Write a comment..."></textarea>
+          <button type="button" class="btn-small btn-primary" (click)="addComment()">Save</button>
+        </div>
+      </section>
+
+      <section class="detail-section" *ngIf="c.attachments?.length">
+        <h3>Attachments</h3>
+        <ul class="attachments-list">
+          <li *ngFor="let att of c.attachments">
+            <a [href]="att.url" target="_blank" rel="noopener">{{ att.name }}</a>
+            <span class="att-type">({{ att.type }})</span>
+            <button type="button" class="btn-remove" (click)="removeAttachment(att.id)">×</button>
+          </li>
+        </ul>
+      </section>
+      <section class="detail-section">
+        <h3>Add attachment</h3>
+        <div class="add-attachment">
+          <input type="text" [(ngModel)]="newAttachmentName" placeholder="Name" />
+          <input type="text" [(ngModel)]="newAttachmentUrl" placeholder="URL (Google Drive, Dropbox, etc.)" />
+          <select [(ngModel)]="newAttachmentType">
+            <option value="link">Link</option>
+            <option value="drive">Google Drive</option>
+            <option value="dropbox">Dropbox</option>
+            <option value="file">File</option>
+          </select>
+          <button type="button" class="btn-small btn-primary" (click)="addAttachment()">Add</button>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>

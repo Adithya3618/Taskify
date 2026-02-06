@@ -1,0 +1,70 @@
+<div class="board-wrapper" *ngIf="currentBoard() as board">
+  <header class="board-header">
+    <div class="board-header-left">
+      <h1 class="board-title">{{ board.title }}</h1>
+      <nav class="view-switcher">
+        @for (v of views; track v.id) {
+          <button
+            type="button"
+            class="view-btn"
+            [class.active]="currentView() === v.id"
+            (click)="setView(v.id)"
+          >
+            {{ v.label }}
+          </button>
+        }
+      </nav>
+    </div>
+  </header>
+  <div class="board-content">
+    @switch (currentView()) {
+      @case ('board') {
+        <div class="board-lists-container">
+          <div class="board-lists">
+            @for (list of lists(); track list.id) {
+              <app-list [list]="list" [listIds]="listIds()" />
+            }
+            <div class="add-list-slot">
+              @if (addingList) {
+                <div class="add-list-form">
+                  <input
+                    type="text"
+                    [(ngModel)]="newListTitle"
+                    placeholder="Enter list title..."
+                    (keydown.enter)="addList()"
+                    (keydown.escape)="cancelAddList()"
+                  />
+                  <div class="add-list-actions">
+                    <button type="button" class="btn-primary" (click)="addList()">Add list</button>
+                    <button type="button" class="btn-ghost" (click)="cancelAddList()">Cancel</button>
+                  </div>
+                </div>
+              } @else {
+                <button type="button" class="btn-add-list" (click)="startAddList()">
+                  + Add another list
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+      }
+      @case ('calendar') {
+        <app-calendar-view />
+      }
+      @case ('timeline') {
+        <app-timeline-view />
+      }
+      @case ('dashboard') {
+        <app-dashboard-view />
+      }
+      @case ('table') {
+        <app-table-view />
+      }
+    }
+  </div>
+  <app-card-detail />
+</div>
+
+<div class="board-empty" *ngIf="!currentBoard()">
+  <p>No board selected.</p>
+</div>

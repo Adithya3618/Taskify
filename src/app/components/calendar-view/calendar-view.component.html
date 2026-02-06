@@ -1,0 +1,34 @@
+<div class="calendar-view">
+  <div class="calendar-toolbar">
+    <button type="button" class="btn-nav" (click)="prevMonth()">‹</button>
+    <h2 class="calendar-title">{{ monthLabel() }}</h2>
+    <button type="button" class="btn-nav" (click)="nextMonth()">›</button>
+    <button type="button" class="btn-today" (click)="today()">Today</button>
+  </div>
+  <div class="calendar-grid-wrapper">
+    <div class="calendar-weekdays">
+      <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+    </div>
+    <div class="calendar-grid">
+      @for (row of calendarGrid(); track $index) {
+        <div class="calendar-row">
+          @for (cell of row; track cell.key || $index) {
+            <div class="calendar-cell" [class.other-month]="!cell.date">
+              @if (cell.date) {
+                <div class="cell-day">{{ cell.day }}</div>
+                <div class="cell-cards">
+                  @for (card of cardsByDate().get(cell.key) || []; track card.id) {
+                    <div class="mini-card" [title]="card.title" (click)="openCard(card.id)">
+                      <span class="mini-card-title">{{ card.title }}</span>
+                      <span class="mini-card-list">{{ getListName(card.listId) }}</span>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>

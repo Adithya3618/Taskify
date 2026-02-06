@@ -1,0 +1,48 @@
+<div class="table-view">
+  <div class="table-toolbar">
+    <h2 class="table-title">Table – Spreadsheet-like task tracking</h2>
+  </div>
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Task</th>
+          <th>List</th>
+          <th>Due date</th>
+          <th>Labels</th>
+          <th>Assignees</th>
+          <th>Checklist</th>
+          <th>Attachments</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (card of tableRows(); track card.id) {
+          <tr (click)="openCard(card.id)" class="clickable-row">
+            <td class="col-title">
+              <span class="task-title">{{ card.title }}</span>
+              @if (card.description) {
+                <span class="task-desc">{{ card.description }}</span>
+              }
+            </td>
+            <td>{{ getListName(card.listId) }}</td>
+            <td>{{ formatDate(card.dueDate) }}</td>
+            <td>
+              <span class="labels-cell">
+                @for (label of card.labels || []; track label.id) {
+                  <span class="label-dot" [style.background-color]="label.color" [title]="label.name"></span>
+                }
+                @if (!card.labels?.length) { — }
+              </span>
+            </td>
+            <td>{{ assigneesDisplay(card) }}</td>
+            <td>{{ checklistDisplay(card) }}</td>
+            <td>{{ (card.attachments?.length ?? 0) > 0 ? card.attachments!.length + ' file(s)' : '—' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (tableRows().length === 0) {
+    <p class="table-empty">No tasks yet. Add cards from the Board view.</p>
+  }
+</div>

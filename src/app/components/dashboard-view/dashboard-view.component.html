@@ -1,0 +1,58 @@
+<div class="dashboard-view">
+  <h2 class="dashboard-title">Dashboard – High-level progress</h2>
+  <div class="dashboard-cards">
+    <div class="stat-card">
+      <span class="stat-value">{{ totalCards() }}</span>
+      <span class="stat-label">Total tasks</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">{{ totalLists() }}</span>
+      <span class="stat-label">Lists</span>
+    </div>
+    <div class="stat-card stat-warning" *ngIf="overdueCount() > 0">
+      <span class="stat-value">{{ overdueCount() }}</span>
+      <span class="stat-label">Overdue</span>
+    </div>
+    <div class="stat-card stat-info">
+      <span class="stat-value">{{ dueSoonCount() }}</span>
+      <span class="stat-label">Due in 7 days</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-value">{{ checklistProgress() }}%</span>
+      <span class="stat-label">Checklist progress</span>
+    </div>
+  </div>
+  <div class="dashboard-section">
+    <h3>Tasks by list</h3>
+    <div class="list-bars">
+      @for (item of listProgress(); track item.list.id) {
+        <div class="list-bar-row">
+          <span class="list-name">{{ item.list.title }}</span>
+          <span class="list-count">{{ item.count }} tasks</span>
+          <div class="list-bar-bg">
+            <div class="list-bar-fill" [style.width.%]="item.pct"></div>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+  <div class="dashboard-section">
+    <h3>Overdue tasks</h3>
+    @if (overdueCount() === 0) {
+      <p class="empty-msg">No overdue tasks.</p>
+    } @else {
+      <ul class="overdue-list">
+        @for (card of cardsWithDueDate(); track card.id) {
+          @if (card.dueDate) {
+            @if (isOverdue(card.dueDate)) {
+              <li>
+                <span class="card-title">{{ card.title }}</span>
+                <span class="card-meta">{{ getListName(card.listId) }} · Due {{ formatDate(card.dueDate) }}</span>
+              </li>
+            }
+          }
+        }
+      </ul>
+    }
+  </div>
+</div>
