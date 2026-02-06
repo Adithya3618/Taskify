@@ -1,63 +1,121 @@
-# Taskify (Angular Frontend)
+This project is a Project and Task Management Application built to help teams and its people organize their work and communicate in one go. The main idea is to make it easier to manage projects, track tasks along different stages, and allow team and its members to collaborate without using a different application.
 
-A kanban board application built with **Angular 17** and **Angular CDK** for drag-and-drop. Frontend only; data is kept in memory.
+We are developing this project as part of our Software Engineering course, focusing on real-world collaboration problems and full-stack development.
 
-## Features
+🎯 Why did We Built This ???
 
-- **Board** – Single board with a header and horizontal list layout
-- **Lists** – Add/delete lists (columns) such as To Do, In Progress, Done
-- **Cards** – Add/edit/delete cards; inline edit title
-- **Drag & drop** – Move cards within a list (reorder) or between lists using Angular CDK
-- **Taskify UI** – Blue header, gray list columns, white cards
+While working in teams, we often notice that tracking down our tasks and communication with members happen on different platforms.This project combines both into a single application, making teamwork simpler and more organized.The goals of this project are:
 
-## Tech stack
+To manage projects and tasks in a structured manner.To visualize task progress clearly.To enable real-time communication within the team.To apply software engineering concepts in a practical project implementation.Task Stages
 
-- Angular 17 (standalone components, signals, computed)
-- Angular CDK (DragDropModule)
-- SCSS
-- In-memory state (no backend)
+Every project contains stages such as Planned, In Progress, and Completed
 
-## Setup
+These Stages help track the progress of tasks
 
-1. **Install dependencies** (if not already done):
+Users can add or remove stages as needed
 
-   ```bash
-   cd taskify
-   npm install
-   ```
 
-2. **Run the dev server**:
+Task Management
 
-   ```bash
-   npm start
-   ```
+Tasks are created inside stages
 
-3. Open **http://localhost:4200/** in your browser.
+Each task has a title and description
 
-## Build
+Tasks can be edited, moved between stages, or deleted
 
-```bash
-npm run build
-```
+All task data is stored securely in the database
 
-Output is in `dist/taskify/browser/`.
+Integrated Chat System
 
-## Project structure
+Each project has its own chat section
 
-- `src/app/models/` – Board, List, Card interfaces
-- `src/app/services/board.service.ts` – In-memory state and CRUD for boards, lists, cards
-- `src/app/components/board/` – Board view and “Add list”
-- `src/app/components/list/` – List column and “Add card”
-- `src/app/components/card/` – Card with edit/delete
+Team members can send messages in real time
 
-## Note
+Messages show who sent them and when
 
-If you see `Cannot find module 'rxjs'` when running `ng build` or `ng serve`, run a clean install:
+This helps teams communicate without leaving the app
 
-```bash
-Remove-Item -Recurse -Force node_modules
-Remove-Item -Force package-lock.json
+🧠 How the System Works
+
+The application follows a simple client–server architecture.
+
+The Angular frontend handles the user interface
+
+The Go backend processes requests and manages data
+
+SQLite is used to store projects, tasks, and chat messages
+
+The chat system uses WebSockets or API-based communication for real-time updates
+
+Angular Frontend  ↔  Go Backend  ↔  SQLite Database
+
+🛠️ Technologies Used
+Frontend
+
+Angular
+
+TypeScript
+
+HTML and CSS
+
+Component-based design
+
+Angular services for API and chat communication
+
+Backend
+
+Go (Golang)
+
+REST APIs
+
+Real-time chat support
+
+Modular and clean code structure
+
+Database
+
+SQLite (relational database)
+
+⚙️ How to Run the Project
+Backend
+cd backend
+go mod tidy
+go run main.go
+
+Frontend
+cd frontend
 npm install
-```
+ng serve
 
-Then run `npm start` or `npm run build` again.
+
+The application will be available at:
+
+http://localhost:4200
+
+📌 Future Improvements
+
+User login and authentication
+
+Role-based access for team members
+
+Notifications for task updates
+
+File sharing in chat
+
+Better UI and mobile responsiveness
+
+📄 Conclusion
+
+This project helped us understand how real-world project management systems work and how frontend and backend components communicate with each other. It also gave us hands-on experience with Angular, Go, and real-time features like chat systems.
+
+👥 Team Members & Contributions
+
+This project was developed as a team effort.
+
+Adithya – Backend development, API design, database schema
+
+Nandhan – Backend development, chat system implementation
+
+Meghana – Frontend development, project and task UI
+
+Srija – Frontend development, chat interface and integration
