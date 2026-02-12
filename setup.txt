@@ -1,0 +1,20 @@
+# First Time Setup
+
+Frontend:
+cd Taskify
+npm install
+
+Backend:
+cd backend
+go mod tidy
+
+
+# Run the Application
+
+Frontend:
+cd Taskify
+npm start
+
+Backend:
+cd backend
+go run cmd/server/main.go
