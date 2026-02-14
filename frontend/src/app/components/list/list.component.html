@@ -1,0 +1,36 @@
+<div class="list" [id]="listId" cdkDropList [cdkDropListData]="cards()" [cdkDropListConnectedTo]="connectedListIds" (cdkDropListDropped)="onDrop($event)">
+  <div class="list-header">
+    <h3 class="list-title" [title]="list().title">{{ list().title }}</h3>
+    <button type="button" class="btn-list-menu" (click)="onListMenuClick($event)" title="List options">⋯</button>
+  </div>
+  <div class="list-cards">
+    @for (card of cards(); track card.id) {
+      <app-card
+        [card]="card"
+        (deleteCard)="onDeleteCard($event)"
+      />
+    }
+  </div>
+  <div class="list-footer">
+    @if (addingCard) {
+      <div class="add-card-form">
+        <textarea
+          [(ngModel)]="newCardTitle"
+          placeholder="Enter card title..."
+          rows="2"
+          (keydown.enter)="$event.preventDefault(); addCard()"
+          (keydown.escape)="cancelAddCard()"
+          #cardInput
+        ></textarea>
+        <div class="add-card-actions">
+          <button type="button" class="btn-primary" (click)="addCard()">Add card</button>
+          <button type="button" class="btn-ghost" (click)="cancelAddCard()">Cancel</button>
+        </div>
+      </div>
+    } @else {
+      <button type="button" class="btn-add-card" (click)="startAddCard()">
+        + Add a card
+      </button>
+    }
+  </div>
+</div>

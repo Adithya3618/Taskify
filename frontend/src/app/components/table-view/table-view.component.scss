@@ -1,0 +1,99 @@
+.table-view {
+  padding: 16px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 12px;
+  margin: 0 12px;
+}
+
+.table-toolbar {
+  margin-bottom: 12px;
+}
+
+.table-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #172b4d;
+}
+
+.table-scroll {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid rgba(9, 30, 66, 0.1);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+
+  th {
+    text-align: left;
+    padding: 12px 16px;
+    background: #f4f5f7;
+    font-weight: 600;
+    color: #5e6c84;
+    border-bottom: 2px solid #dfe1e6;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(9, 30, 66, 0.08);
+    color: #172b4d;
+    vertical-align: top;
+  }
+
+  tbody tr.clickable-row {
+    cursor: pointer;
+  }
+  tbody tr:hover {
+    background: #f8f9fa;
+  }
+
+  .col-title {
+    max-width: 240px;
+
+    .task-title {
+      display: block;
+      font-weight: 500;
+      color: #172b4d;
+    }
+    .task-desc {
+      display: block;
+      font-size: 12px;
+      color: #5e6c84;
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .labels-cell {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .label-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+}
+
+.table-empty {
+  padding: 24px;
+  color: #5e6c84;
+  font-size: 14px;
+  margin: 0;
+}

@@ -1,0 +1,80 @@
+<div class="board-container">
+  <!-- Header -->
+  <header class="board-header">
+    <button class="btn-back" (click)="goBack()">
+      ← Back to Boards
+    </button>
+    <h1>{{ project?.name || 'Board' }}</h1>
+  </header>
+
+  <!-- Loading State -->
+  <div class="loading" *ngIf="loading">
+    <p>Loading board...</p>
+    <p class="debug-hint">Check browser console (F12) for debug messages</p>
+  </div>
+
+  <!-- Board Content -->
+  <div class="board-content" *ngIf="!loading">
+    <div class="columns-container">
+      <!-- Stage Columns -->
+      <div class="column" *ngFor="let stage of stages">
+        <div class="column-header">
+          <h3>{{ stage.name }}</h3>
+          <button class="btn-delete" (click)="deleteStage(stage.id)" title="Delete stage">
+            ×
+          </button>
+        </div>
+
+        <!-- Tasks -->
+        <div class="tasks-list">
+          <div class="task-card" *ngFor="let task of stage.tasks">
+            <div class="task-content">
+              <p class="task-title">{{ task.title }}</p>
+              <p class="task-desc" *ngIf="task.description">{{ task.description }}</p>
+            </div>
+            <button class="btn-delete-task" (click)="deleteTask(stage.id, task.id)" title="Delete task">
+              ×
+            </button>
+          </div>
+          
+          <p *ngIf="!stage.tasks?.length" class="no-tasks">No tasks yet</p>
+        </div>
+
+        <!-- Add Task -->
+        <div class="add-task-form">
+          <input
+            type="text"
+            [(ngModel)]="newTaskTitles[stage.id]"
+            placeholder="+ Add a task..."
+            (keyup.enter)="createTask(stage.id)"
+          />
+          <button
+            class="btn-add-task"
+            *ngIf="newTaskTitles[stage.id]?.trim()"
+            (click)="createTask(stage.id)"
+          >
+            Add
+          </button>
+        </div>
+      </div>
+
+      <!-- Add Stage Column -->
+      <div class="column add-column">
+        <input
+          type="text"
+          [(ngModel)]="newStageName"
+          placeholder="Enter list name..."
+          (keydown.enter)="createStage()"
+          class="add-stage-input"
+        />
+        <button
+          class="btn-add-column"
+          (click)="createStage()"
+          [disabled]="!newStageName.trim()"
+        >
+          + Add another list
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,47 @@
+<div class="card" cdkDrag [cdkDragData]="card()">
+  <div class="card-content" *ngIf="!editMode">
+    <div class="card-main" (click)="openDetail()">
+      @if (card().labels?.length) {
+        <div class="card-labels">
+          @for (label of card().labels; track label.id) {
+            <span class="label-chip" [style.background-color]="label.color" [title]="label.name"></span>
+          }
+        </div>
+      }
+      <span class="card-title">{{ card().title }}</span>
+      @if (card().dueDate) {
+        <span class="card-due" [class.overdue]="isOverdue(card().dueDate!)" title="Due date">
+          📅 {{ formatDueDate(card().dueDate!) }}
+        </span>
+      }
+      @if (hasBadges()) {
+        <div class="card-badges">
+          @if (checklistCount() > 0) {
+            <span class="badge">✓ {{ checklistDoneCount() }}/{{ checklistCount() }}</span>
+          }
+          @if (assigneesCount() > 0) {
+            <span class="badge">👤 {{ assigneesCount() }}</span>
+          }
+        </div>
+      }
+    </div>
+    <div class="card-actions">
+      <button type="button" class="btn-icon" (click)="toggleDatePicker()" title="Calendar / Due date">📅</button>
+      <a [href]="mailtoLink()" target="_blank" rel="noopener noreferrer" class="btn-icon btn-gmail" title="Email (Gmail)">✉</a>
+      <button type="button" class="btn-icon" (click)="onEdit()" title="Edit">✎</button>
+      <button type="button" class="btn-icon" (click)="onDelete()" title="Delete">×</button>
+    </div>
+  </div>
+  @if (showDatePicker) {
+    <div class="card-date-picker">
+      <input type="date" [(ngModel)]="dueDateInput" (keydown.enter)="setDueDate()" />
+      <div class="date-actions">
+        <button type="button" class="btn-small btn-primary" (click)="setDueDate()">Set date</button>
+        <button type="button" class="btn-small btn-ghost" (click)="clearDueDate()">Clear</button>
+      </div>
+    </div>
+  }
+  <div class="card-edit" *ngIf="editMode">
+    <input type="text" [(ngModel)]="title" (blur)="onSave()" (keydown.enter)="onSave()" />
+  </div>
+</div>

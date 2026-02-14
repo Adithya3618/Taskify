@@ -1,0 +1,55 @@
+<div class="home-container">
+  <header class="home-header">
+    <h1>Taskify</h1>
+    <p class="subtitle">Your Project Management Tool</p>
+  </header>
+
+  <section class="boards-section">
+    <h2>Your Boards</h2>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="loading">
+      <p>Loading boards...</p>
+      <p class="debug-hint">Check browser console (F12) for debug messages</p>
+    </div>
+
+    <!-- Demo Banner -->
+    <div *ngIf="useDemoData" class="demo-banner">
+      ⚠️ Showing demo data. API connection failed.
+    </div>
+
+    <!-- Boards Grid -->
+    <div *ngIf="!loading" class="boards-grid">
+      <!-- Project Cards -->
+      <div
+        class="board-card"
+        *ngFor="let project of projects; let i = index"
+        [style.background]="getProjectColor(i)"
+        (click)="openBoard(project.id)"
+      >
+        <div class="board-info">
+          <h3>{{ project.name }}</h3>
+          <p *ngIf="project.description">{{ project.description }}</p>
+        </div>
+      </div>
+
+      <!-- Add New Board Card -->
+      <div class="board-card add-board" (click)="createNewBoard()">
+        <span class="plus-icon">+</span>
+        <span>Create New Board</span>
+      </div>
+    </div>
+
+    <!-- API Error Message -->
+    <div *ngIf="apiError" class="api-error">
+      <p>⚠️ Could not connect to backend. Make sure Go server is running:</p>
+      <code>cd backend && go run cmd/server/main.go</code>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!loading && projects.length === 0 && !apiError" class="empty-state">
+      <p>No boards yet. Create your first board to get started!</p>
+      <button class="btn-primary" (click)="createNewBoard()">Create Board</button>
+    </div>
+  </section>
+</div>

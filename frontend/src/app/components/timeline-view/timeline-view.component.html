@@ -1,0 +1,47 @@
+<div class="timeline-view">
+  <div class="timeline-toolbar">
+    <button type="button" class="btn-nav" (click)="prevRange()">‹</button>
+    <span class="timeline-range">
+      {{ formatDate(rangeStart()) }} – {{ formatDate(rangeEnd()) }}
+    </span>
+    <button type="button" class="btn-nav" (click)="nextRange()">›</button>
+  </div>
+  <div class="timeline-scroll">
+    <div class="timeline-table">
+      <div class="timeline-header">
+        <div class="timeline-label-col">Task</div>
+        <div class="timeline-chart-col">
+          <div class="timeline-days-row">
+            @for (day of timelineDays(); track day.getTime()) {
+              <div class="timeline-day-cell">{{ day.getDate() }}</div>
+            }
+          </div>
+        </div>
+      </div>
+      @for (item of timelineCards(); track item.card.id) {
+        <div class="timeline-row">
+          <div class="timeline-label-col">
+            <span class="task-title">{{ item.card.title }}</span>
+            <span class="task-list">{{ item.listTitle }}</span>
+          </div>
+          <div class="timeline-chart-col">
+            <div class="timeline-bars-row">
+              <div
+                class="gantt-bar"
+                [style.left.px]="getBarLeft(item)"
+                [style.width.px]="getBarWidth(item)"
+                [title]="item.card.title + ' • ' + formatDate(item.start) + ' - ' + formatDate(item.end)"
+                (click)="openCard(item.card.id)"
+              >
+                {{ item.card.title }}
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+  @if (timelineCards().length === 0) {
+    <p class="timeline-empty">Add due dates (and optional start dates) to cards to see them on the timeline.</p>
+  }
+</div>
