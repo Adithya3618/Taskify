@@ -96,7 +96,7 @@ export class BoardComponent implements OnInit {
   }
 
   loadTasks(stage: Stage) {
-    this.apiService.getTasks(stage.id).subscribe({
+    this.apiService.getTasks(this.projectId, stage.id).subscribe({
       next: (tasks) => {
         stage.tasks = tasks;
       },
@@ -142,7 +142,8 @@ export class BoardComponent implements OnInit {
 
     const position = this.stages.find(s => s.id === stageId)?.tasks?.length || 0;
     const request: CreateTaskRequest = { title, description: '', position };
-    this.apiService.createTask(stageId, request).subscribe({
+    this.apiService.createTask(this.projectId, stageId, request).subscribe({
+
       next: (task: Task) => {
         const stage = this.stages.find(s => s.id === stageId);
         if (stage) {

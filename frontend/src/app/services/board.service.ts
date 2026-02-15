@@ -78,13 +78,13 @@ loadBoard(projectId: number): void {
       this.listsSignal.set(lists);
 
       // load tasks for each stage
-      this.loadTasksForStages(stages.map(s => s.id));
+      this.loadTasksForStages(projectId, stages.map(s => s.id));
     },
     error: (err) => console.error('Failed to load stages:', err)
   });
 }
 
-private loadTasksForStages(stageIds: number[]): void {
+private loadTasksForStages(projectId: number,stageIds: number[]): void {
   const all: any[] = [];
   let pending = stageIds.length;
 
@@ -94,7 +94,7 @@ private loadTasksForStages(stageIds: number[]): void {
   }
 
   stageIds.forEach(stageId => {
-    this.apiService.getTasks(stageId).subscribe({
+     this.apiService.getTasks(projectId, stageId).subscribe({
       next: (tasks) => {
         tasks.forEach(t => {
           all.push({
@@ -172,10 +172,20 @@ private loadTasksForStages(stageIds: number[]): void {
   if (!title.trim()) return;
 
   const stageId = parseInt(listId, 10);
+
+  // find which project(board) this stage(list) belongs to
+  const list = this.listsSignal().find(l => l.id === listId);
+  const projectId = list ? parseInt(list.boardId, 10) : NaN;
+
+  if (isNaN(projectId) || isNaN(stageId)) {
+    console.error('Invalid projectId/stageId', { projectId, stageId, listId });
+    return;
+  }
+
   const currentCards = this.cardsSignal().filter(c => c.listId === listId);
   const order = currentCards.length;
 
-  this.apiService.createTask(stageId, { title, description: '', position: order }).subscribe({
+  this.apiService.createTask(projectId, stageId, { title, description: '', position: order }).subscribe({
     next: (task) => {
       const card = {
         id: String(task.id),

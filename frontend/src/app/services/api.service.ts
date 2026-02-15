@@ -75,17 +75,19 @@ export class ApiService {
   }
 
   // ---------------- Tasks ----------------
-  getTasks(stageId: number): Observable<Task[]> {
-    return this.http.get<Task[]>(`${this.baseUrl}/stages/${stageId}/tasks`);
-  }
+  getTasks(projectId: number, stageId: number): Observable<Task[]> {
+  return this.http.get<Task[]>(
+    `${this.baseUrl}/projects/${projectId}/stages/${stageId}/tasks`
+  );
+}
 
-  createTask(stageId: number, request: CreateTaskRequest): Observable<Task> {
-    return this.http.post<Task>(
-      `${this.baseUrl}/stages/${stageId}/tasks`,
-      request,
-      { headers: this.jsonHeaders() }
-    );
-  }
+createTask(projectId: number, stageId: number, request: CreateTaskRequest): Observable<Task> {
+  return this.http.post<Task>(
+    `${this.baseUrl}/projects/${projectId}/stages/${stageId}/tasks`,
+    request,
+    { headers: this.jsonHeaders() }
+  );
+}
 
   updateTask(id: number, request: { title: string; description: string; position: number }): Observable<Task> {
     return this.http.put<Task>(
