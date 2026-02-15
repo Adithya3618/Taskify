@@ -16,7 +16,7 @@ import (
 func enableCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
-		
+
 		// Allow any localhost origin for development
 		if strings.HasPrefix(origin, "http://localhost:") {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
@@ -61,6 +61,6 @@ func main() {
 	corsHandler := enableCORS(router)
 
 	// Start server
-	log.Println("Server starting on http://localhost:8080")
+	log.Println("Server starting on http://localhost:8080/api/projects/")
 	log.Fatal(http.ListenAndServe(":8080", corsHandler))
 }
