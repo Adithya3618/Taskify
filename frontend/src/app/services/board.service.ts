@@ -43,85 +43,91 @@ export class BoardService {
   });
 
   constructor() {
-    this.seedData();
+  this.loadProjects();
+}
+
+
+  loadProjects(): void {
+  this.apiService.getProjects().subscribe({
+    next: (projects) => {
+      const boards = projects.map(p => ({ id: String(p.id), title: p.name, color: '#0079bf' }));
+      this.boardsSignal.set(boards);
+
+      // auto-select first project if nothing selected
+      if (boards.length && !this.currentBoardIdSignal()) {
+        this.setCurrentBoard(boards[0].id);
+        this.loadBoard(parseInt(boards[0].id, 10));
+      }
+    },
+    error: (err) => console.error('Failed to load projects:', err)
+  });
+}
+
+loadBoard(projectId: number): void {
+  this.apiService.getStages(projectId).subscribe({
+    next: (stages) => {
+      const lists = stages
+        .sort((a, b) => a.position - b.position)
+        .map(s => ({
+          id: String(s.id),
+          title: s.name,
+          boardId: String(projectId),
+          order: s.position
+        }));
+
+      this.listsSignal.set(lists);
+
+      // load tasks for each stage
+      this.loadTasksForStages(stages.map(s => s.id));
+    },
+    error: (err) => console.error('Failed to load stages:', err)
+  });
+}
+
+private loadTasksForStages(stageIds: number[]): void {
+  const all: any[] = [];
+  let pending = stageIds.length;
+
+  if (pending === 0) {
+    this.cardsSignal.set([]);
+    return;
   }
 
-  private seedData(): void {
-    // Use numeric IDs to match backend
-    const boardId = '1';
-    const board: Board = { id: boardId, title: "Meg's Trel", color: '#0079bf' };
-    this.boardsSignal.set([board]);
-    this.currentBoardIdSignal.set(board.id);
+  stageIds.forEach(stageId => {
+    this.apiService.getTasks(stageId).subscribe({
+      next: (tasks) => {
+        tasks.forEach(t => {
+          all.push({
+            id: String(t.id),
+            title: t.title,
+            description: t.description,
+            listId: String(stageId),
+            order: t.position,
+            comments: [],
+            checklist: [],
+            labels: [],
+            attachments: [],
+            assignees: []
+          });
+        });
+      },
+      error: (err) => console.error(`Failed to load tasks for stage ${stageId}:`, err),
+      complete: () => {
+        pending--;
+        if (pending === 0) {
+          this.cardsSignal.set(all.sort((a, b) => a.order - b.order));
+        }
+      }
+    });
+  });
+}
 
-    const lists: List[] = [
-      { id: '1', title: 'To Do', boardId: boardId, order: 0 },
-      { id: '2', title: 'In Progress', boardId: boardId, order: 1 },
-      { id: '3', title: 'Done', boardId: boardId, order: 2 },
-    ];
-    this.listsSignal.set(lists);
-
-    const cards: Card[] = [
-      {
-        id: '1',
-        title: 'Setup project',
-        listId: '1',
-        order: 0,
-        description: 'Initialize repo and dependencies.',
-        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-        startDate: new Date().toISOString().slice(0, 10),
-        labels: [{ id: 'l1', name: 'Dev', color: '#61bd4f' }],
-        assignees: ['Alex'],
-        checklist: [
-          { id: 'ch1', cardId: '1', title: 'Create repo', completed: true, order: 0 },
-          { id: 'ch2', cardId: '1', title: 'Install deps', completed: false, order: 1 },
-        ],
-        comments: [],
-        attachments: [],
-      },
-      {
-        id: '2',
-        title: 'Design UI',
-        listId: '1',
-        order: 1,
-        dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-        startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-        labels: [{ id: 'l2', name: 'Design', color: '#f2d600' }],
-        assignees: [],
-        checklist: [],
-        comments: [],
-        attachments: [],
-      },
-      {
-        id: '3',
-        title: 'Implement drag & drop',
-        listId: '2',
-        order: 0,
-        dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-        startDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-        labels: [{ id: 'l1', name: 'Dev', color: '#61bd4f' }],
-        assignees: ['Sam'],
-        checklist: [],
-        comments: [],
-        attachments: [],
-      },
-      {
-        id: '4',
-        title: 'Add new list',
-        listId: '3',
-        order: 0,
-        labels: [],
-        assignees: [],
-        checklist: [],
-        comments: [],
-        attachments: [],
-      },
-    ];
-    this.cardsSignal.set(cards);
-  }
 
   setCurrentBoard(id: string | null): void {
-    this.currentBoardIdSignal.set(id);
-  }
+  this.currentBoardIdSignal.set(id);
+  if (id) this.loadBoard(parseInt(id, 10));
+}
+
 
   getCardsForList(listId: string): Card[] {
     return [...this.cardsSignal().filter((c) => c.listId === listId)].sort((a, b) => a.order - b.order);
@@ -162,23 +168,33 @@ export class BoardService {
     });
   }
 
-  addCard(listId: string, title: string): Card {
-    const cards = this.cardsSignal().filter((c) => c.listId === listId);
-    const order = cards.length;
-    const card: Card = {
-      id: `card-${Date.now()}`,
-      title: title || 'New Card',
-      listId,
-      order,
-      comments: [],
-      checklist: [],
-      labels: [],
-      attachments: [],
-      assignees: [],
-    };
-    this.cardsSignal.update((c) => [...c, card]);
-    return card;
-  }
+  addCard(listId: string, title: string): void {
+  if (!title.trim()) return;
+
+  const stageId = parseInt(listId, 10);
+  const currentCards = this.cardsSignal().filter(c => c.listId === listId);
+  const order = currentCards.length;
+
+  this.apiService.createTask(stageId, { title, description: '', position: order }).subscribe({
+    next: (task) => {
+      const card = {
+        id: String(task.id),
+        title: task.title,
+        description: task.description,
+        listId,
+        order: task.position,
+        comments: [],
+        checklist: [],
+        labels: [],
+        attachments: [],
+        assignees: []
+      };
+      this.cardsSignal.update(c => [...c, card]);
+    },
+    error: (err) => console.error('Failed to create task:', err)
+  });
+}
+
 
   updateCard(cardId: string, updates: Partial<Card>): void {
     this.cardsSignal.update((cards) =>

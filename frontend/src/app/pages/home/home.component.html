@@ -1,55 +1,157 @@
-<div class="home-container">
-  <header class="home-header">
-    <h1>Taskify</h1>
-    <p class="subtitle">Your Project Management Tool</p>
+<div class="page">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">T</div>
+      <div class="brandText">
+        <h1>Taskify</h1>
+        <p>Your Project Management Tool</p>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn ghost" type="button" (click)="openCreateModal()">
+        + New Board
+      </button>
+    </div>
   </header>
 
-  <section class="boards-section">
-    <h2>Your Boards</h2>
+  <section class="section">
+    <div class="sectionHead">
+      <div>
+        <h2>Your Boards</h2>
+        <p class="muted">Select a board to open it.</p>
+      </div>
 
-    <!-- Loading State -->
-    <div *ngIf="loading" class="loading">
-      <p>Loading boards...</p>
-      <p class="debug-hint">Check browser console (F12) for debug messages</p>
+      <div class="status">
+        <span *ngIf="loading" class="badge">Loading</span>
+        <span *ngIf="useDemoData" class="badge warn">Demo mode</span>
+        <span *ngIf="!loading && !useDemoData && !apiError" class="badge ok">Connected</span>
+      </div>
     </div>
 
-    <!-- Demo Banner -->
-    <div *ngIf="useDemoData" class="demo-banner">
-      ⚠️ Showing demo data. API connection failed.
+    <!-- API Error -->
+    <div *ngIf="apiError" class="alert">
+      <div class="alertTitle">Could not connect to backend</div>
+      <div class="alertBody">
+        Make sure Go server is running:
+        <code>cd backend && go run cmd/server/main.go</code>
+      </div>
     </div>
 
-    <!-- Boards Grid -->
-    <div *ngIf="!loading" class="boards-grid">
+    <!-- Loading -->
+    <div *ngIf="loading" class="stateCard">
+      <div class="skeletonRow"></div>
+      <div class="skeletonRow small"></div>
+      <div class="skeletonGrid">
+        <div class="skeletonTile" *ngFor="let _ of [1,2,3,4]"></div>
+      </div>
+    </div>
+
+    <!-- Grid -->
+    <div *ngIf="!loading" class="grid">
       <!-- Project Cards -->
-      <div
-        class="board-card"
+      <button
+        class="card"
+        type="button"
         *ngFor="let project of projects; let i = index"
-        [style.background]="getProjectColor(i)"
         (click)="openBoard(project.id)"
       >
-        <div class="board-info">
-          <h3>{{ project.name }}</h3>
-          <p *ngIf="project.description">{{ project.description }}</p>
+        <div class="cardTop">
+          <div class="avatar" [style.background]="getProjectColor(i)">
+            {{ (project.name || 'B').slice(0,1).toUpperCase() }}
+          </div>
+
+          <!-- Delete action -->
+          <button
+            class="iconBtn"
+            type="button"
+            title="Delete board"
+            aria-label="Delete board"
+            (click)="$event.stopPropagation(); openDeleteModal(project)"
+          >
+            ⋮
+          </button>
         </div>
-      </div>
 
-      <!-- Add New Board Card -->
-      <div class="board-card add-board" (click)="createNewBoard()">
-        <span class="plus-icon">+</span>
-        <span>Create New Board</span>
-      </div>
-    </div>
+        <div class="title">{{ project.name }}</div>
+        <div class="desc">{{ project.description || 'No description yet' }}</div>
+      </button>
 
-    <!-- API Error Message -->
-    <div *ngIf="apiError" class="api-error">
-      <p>⚠️ Could not connect to backend. Make sure Go server is running:</p>
-      <code>cd backend && go run cmd/server/main.go</code>
+      <!-- Create tile (keep it) -->
+      <button class="card create" type="button" (click)="openCreateModal()">
+        <div class="plus">+</div>
+        <div class="title">Create new board</div>
+        <div class="desc">Start with a blank board</div>
+      </button>
     </div>
 
     <!-- Empty State -->
-    <div *ngIf="!loading && projects.length === 0 && !apiError" class="empty-state">
-      <p>No boards yet. Create your first board to get started!</p>
-      <button class="btn-primary" (click)="createNewBoard()">Create Board</button>
+    <div *ngIf="!loading && projects.length === 0 && !apiError" class="empty">
+      <div class="emptyIcon">📌</div>
+      <h3>No boards yet</h3>
+      <p>Create your first board to get started.</p>
+      <button class="btn primary" type="button" (click)="openCreateModal()">Create Board</button>
     </div>
   </section>
+
+  <!-- CREATE MODAL -->
+  <div *ngIf="showCreateModal" class="modalBackdrop" (click)="closeCreateModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modalHead">
+        <div>
+          <h3>Create new board</h3>
+          <p class="muted">Add a name and optional description.</p>
+        </div>
+        <button class="iconBtn" type="button" (click)="closeCreateModal()">✕</button>
+      </div>
+
+      <div class="modalBody">
+        <label class="field">
+          <span>Name</span>
+          <input [(ngModel)]="newBoardName" placeholder="e.g., Sprint Planning" />
+        </label>
+
+        <label class="field">
+          <span>Description</span>
+          <textarea [(ngModel)]="newBoardDesc" rows="3" placeholder="Short summary..."></textarea>
+        </label>
+      </div>
+
+      <div class="modalFoot">
+        <button class="btn ghost" type="button" (click)="closeCreateModal()">Cancel</button>
+        <button class="btn primary" type="button" (click)="createNewBoard()"
+          [disabled]="creating || !newBoardName.trim()">
+          {{ creating ? 'Creating...' : 'Create' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DELETE MODAL -->
+  <div *ngIf="showDeleteModal" class="modalBackdrop" (click)="closeDeleteModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modalHead">
+        <div>
+          <h3>Delete board</h3>
+          <p class="muted">This action cannot be undone.</p>
+        </div>
+        <button class="iconBtn" type="button" (click)="closeDeleteModal()">✕</button>
+      </div>
+
+      <div class="modalBody">
+        <p>
+          Are you sure you want to delete
+          <b>{{ projectToDelete?.name }}</b>?
+        </p>
+      </div>
+
+      <div class="modalFoot">
+        <button class="btn ghost" type="button" (click)="closeDeleteModal()">Cancel</button>
+        <button class="btn danger" type="button" (click)="confirmDeleteBoard()"
+          [disabled]="deleting">
+          {{ deleting ? 'Deleting...' : 'Delete' }}
+        </button>
+      </div>
+    </div>
+  </div>
 </div>

@@ -19,8 +19,10 @@ export class ChatService {
     if (this.socket) {
       this.socket.close();
     }
-
-    this.socket = new WebSocket(`ws://localhost:8080/ws/${projectId}`);
+const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+const host = window.location.host;
+this.socket = new WebSocket(`${proto}://${host}/ws/${projectId}`);
+this.socket = new WebSocket(`ws://localhost:8080/ws/${projectId}`);
 
     this.socket.onopen = () => {
       console.log('WebSocket connected');

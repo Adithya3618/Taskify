@@ -11,6 +11,7 @@ import { Project } from '../../models/project.model';
   imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss']
+
 })
 export class HomeComponent {
   projects: Project[] = [];
@@ -18,48 +19,52 @@ export class HomeComponent {
   apiError = false;
   useDemoData = false;
 
-  // Predefined colors for boards
+  // Avatar colors
   colors = ['#cdb4db', '#bde0fe', '#ffc8dd', '#ffafcc', '#a2d2ff', '#bde0fe'];
+
+  // ----- Create modal state -----
+  showCreateModal = false;
+  newBoardName = '';
+  newBoardDesc = '';
+  creating = false;
+
+  // ----- Delete modal state -----
+  showDeleteModal = false;
+  deleting = false;
+  projectToDelete: Project | null = null;
 
   constructor(
     private router: Router,
     private apiService: ApiService
   ) {
-    console.log('HomeComponent initialized');
     this.loadProjects();
-    
-    // Fallback timeout - show boards even if API fails
+
+    // Stop infinite loading if API hangs
     setTimeout(() => {
-      if (this.loading) {
-        console.log('API timeout - showing boards anyway');
-        this.loading = false;
-      }
+      if (this.loading) this.loading = false;
     }, 5000);
   }
 
   loadProjects() {
-    console.log('Loading projects from API...');
+    this.loading = true;
     this.apiService.getProjects().subscribe({
       next: (projects) => {
-        console.log('Projects loaded:', projects);
         this.projects = projects || [];
         this.loading = false;
+        this.apiError = false;
+        this.useDemoData = false;
       },
       error: (err) => {
         console.error('Failed to load projects:', err);
-        console.error('Error details:', err.message, err.status, err.url);
-        // Use empty array as fallback
         this.apiError = true;
         this.useDemoData = true;
-        // Add demo data so user can see the UI
+
+        // Demo fallback
         this.projects = [
           { id: 1, name: 'Demo Project', description: 'This is demo data', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
           { id: 2, name: 'Sample Board', description: 'Click to open board', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
         ];
         this.loading = false;
-      },
-      complete: () => {
-        console.log('Projects subscription complete');
       }
     });
   }
@@ -72,17 +77,75 @@ export class HomeComponent {
     this.router.navigate(['/board', projectId]);
   }
 
+  // -------------------------
+  // Create board (modal)
+  // -------------------------
+  openCreateModal() {
+    this.newBoardName = '';
+    this.newBoardDesc = '';
+    this.showCreateModal = true;
+  }
+
+  closeCreateModal() {
+    if (this.creating) return;
+    this.showCreateModal = false;
+  }
+
   createNewBoard() {
-    const name = prompt('Enter board name:');
-    if (name) {
-      this.apiService.createProject({ name, description: '' }).subscribe({
-        next: (project) => {
-          this.projects.push(project);
-        },
-        error: (err) => {
-          console.error('Failed to create project:', err);
-        }
-      });
-    }
+    const name = this.newBoardName.trim();
+    const description = this.newBoardDesc.trim();
+
+    if (!name) return;
+
+    this.creating = true;
+
+    this.apiService.createProject({ name, description }).subscribe({
+      next: (project) => {
+        // add to top
+        this.projects = [project, ...this.projects];
+        this.creating = false;
+        this.showCreateModal = false;
+
+        // if demo mode was active, switch off now
+        this.apiError = false;
+        this.useDemoData = false;
+      },
+      error: (err) => {
+        console.error('Failed to create project:', err);
+        this.creating = false;
+      }
+    });
+  }
+
+  // -------------------------
+  // Delete board (confirm)
+  // -------------------------
+  openDeleteModal(project: Project) {
+    this.projectToDelete = project;
+    this.showDeleteModal = true;
+  }
+
+  closeDeleteModal() {
+    if (this.deleting) return;
+    this.showDeleteModal = false;
+    this.projectToDelete = null;
+  }
+
+  confirmDeleteBoard() {
+    if (!this.projectToDelete) return;
+
+    this.deleting = true;
+
+    this.apiService.deleteProject(this.projectToDelete.id).subscribe({
+      next: () => {
+        this.projects = this.projects.filter(p => p.id !== this.projectToDelete!.id);
+        this.deleting = false;
+        this.closeDeleteModal();
+      },
+      error: (err) => {
+        console.error('Failed to delete project:', err);
+        this.deleting = false;
+      }
+    });
   }
 }
