@@ -106,6 +106,7 @@ ng serve
 ## Application is at 
 ```bash
 http://localhost:4200
+```
 
 # 🔮 Future Enhancements
 - User login and authentication system  
