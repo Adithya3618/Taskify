@@ -118,4 +118,4 @@ Nandhan – Backend development, chat system implementation
 
 Meghana – Frontend development, project and task UI
 
-Srija – Frontend development, chat interface and integration
+Sai Sreeja – Frontend development, chat interface and integration
