@@ -61,6 +61,6 @@ func main() {
 	corsHandler := enableCORS(router)
 
 	// Start server
-	log.Println("Server starting on http://localhost:8080/api/projects/")
+	log.Println("Server starting on http://localhost:8080/api/projects")
 	log.Fatal(http.ListenAndServe(":8080", corsHandler))
 }
