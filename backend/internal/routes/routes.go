@@ -42,8 +42,8 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	api.HandleFunc("/stages/{id}", stageController.DeleteStage).Methods("DELETE")
 
 	// Task routes
-	api.HandleFunc("/stages/{stageId}/tasks", taskController.CreateTask).Methods("POST")
-	api.HandleFunc("/stages/{stageId}/tasks", taskController.GetTasksByStage).Methods("GET")
+	api.HandleFunc("/projects/{projectId}/stages/{stageId}/tasks", taskController.CreateTask).Methods("POST")
+	api.HandleFunc("/projects/{projectId}/stages/{stageId}/tasks", taskController.GetTasksByStage).Methods("GET")
 	api.HandleFunc("/tasks/{id}", taskController.GetTask).Methods("GET")
 	api.HandleFunc("/tasks/{id}", taskController.UpdateTask).Methods("PUT")
 	api.HandleFunc("/tasks/{id}/move", taskController.MoveTask).Methods("PUT")
