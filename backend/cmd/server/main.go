@@ -43,7 +43,7 @@ func main() {
 	defer db.Close()
 
 	// Initialize router
-	router := mux.NewRouter()
+	router:= mux.NewRouter()
 
 	// Initialize routes
 	routes.SetupRoutes(router, db)
