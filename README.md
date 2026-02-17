@@ -2,7 +2,7 @@
 
 A modern **Project and Task Management Application** designed to help teams organize work, track progress, and communicate seamlessly — all within a single platform.
 
-This application brings together **task tracking and real-time collaboration**, eliminating the need to switch between multiple tools. Built as part of our Software Engineering coursework, the project focuses on solving real-world team coordination challenges through a full-stack implementation.
+This application brings together **task tracking and real-time collaboration**, eliminating the need to switch between multiple tools. Built as part of our Software Engineering coursework, the project focuses on solving real-world team coordination challenges through a full-stack  implementation.
 
 ---
 
