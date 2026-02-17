@@ -10,6 +10,7 @@ import { FormsModule } from '@angular/forms';
   templateUrl: './signup.component.html',
   styleUrls: ['./signup.component.scss'],
 })
+/** Signup page: name, email, password, confirm; link to login; redirects to home on submit. */
 export class SignupComponent {
   name = '';
   email = '';
