@@ -16,11 +16,25 @@ import { Project } from '../../models/project.model';
 export class HomeComponent {
   projects: Project[] = [];
   loading = true;
+  currentYear = new Date().getFullYear();
   apiError = false;
   useDemoData = false;
 
-  // Avatar colors
-  colors = ['#cdb4db', '#bde0fe', '#ffc8dd', '#ffafcc', '#a2d2ff', '#bde0fe'];
+  // Profile menu (placeholder user until auth is wired)
+  showProfileMenu = false;
+  userDisplayName = 'Guest User';
+  userEmail = 'guest@taskify.com';
+  get userInitial(): string {
+    return (this.userDisplayName || 'U').charAt(0).toUpperCase();
+  }
+
+  // Trello-style board colors (each board gets a unique color)
+  boardColors = [
+    '#0079bf', '#70b500', '#ff9f1a', '#eb5a46', '#c377e0',
+    '#00c2e0', '#51e898', '#ff78cb', '#344563', '#b3b9c4',
+    '#026aa7', '#4bce97', '#f5cd47', '#f87168', '#9f8fef',
+    '#4dadee', '#7bc86c', '#fad29c', '#ef7560', '#cd8de5'
+  ];
 
   // ----- Create modal state -----
   showCreateModal = false;
@@ -70,7 +84,15 @@ export class HomeComponent {
   }
 
   getProjectColor(index: number): string {
-    return this.colors[index % this.colors.length];
+    return this.boardColors[index % this.boardColors.length];
+  }
+
+  toggleProfileMenu() {
+    this.showProfileMenu = !this.showProfileMenu;
+  }
+
+  closeProfileMenu() {
+    this.showProfileMenu = false;
   }
 
   openBoard(projectId: number) {
