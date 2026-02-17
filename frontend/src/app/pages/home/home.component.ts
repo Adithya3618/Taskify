@@ -11,8 +11,8 @@ import { Project } from '../../models/project.model';
   imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss']
-
 })
+/** Home page: boards list, navbar with profile, login/signup links, footer. */
 export class HomeComponent {
   projects: Project[] = [];
   loading = true;
