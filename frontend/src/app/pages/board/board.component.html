@@ -18,20 +18,31 @@
             <button type="button" class="btn-delete" (click)="deleteStage(stage.id)" title="Delete list">×</button>
           </div>
           <div class="tasks-list">
-            <div class="task-card" *ngFor="let task of stage.tasks">
+            <div
+              class="task-card"
+              *ngFor="let task of stage.tasks"
+              (click)="openCardDetail(task, $event)"
+            >
               <div class="task-content">
                 <p class="task-title">{{ task.title }}</p>
-                <p class="task-desc" *ngIf="task.description">{{ task.description }}</p>
+                <p class="task-desc">{{ getDisplayDescription(task) }}</p>
               </div>
-              <button type="button" class="btn-delete-task" (click)="deleteTask(stage.id, task.id)" title="Delete task">×</button>
+              <button
+                type="button"
+                class="btn-delete-task"
+                (click)="deleteTask(stage.id, task.id); $event.stopPropagation()"
+                title="Delete card"
+              >
+                ×
+              </button>
             </div>
-            <p *ngIf="!stage.tasks?.length" class="no-tasks">No tasks yet</p>
+            <p *ngIf="!stage.tasks?.length" class="no-tasks">No cards yet</p>
           </div>
           <div class="add-task-form">
             <input
               type="text"
               [(ngModel)]="newTaskTitles[stage.id]"
-              placeholder="+ Add a task..."
+              placeholder="+ Add a card..."
               (keyup.enter)="createTask(stage.id)"
             />
             <button
@@ -48,7 +59,7 @@
           <input
             type="text"
             [(ngModel)]="newStageName"
-            placeholder="Enter list name..."
+            placeholder="Enter list title..."
             (keydown.enter)="createStage()"
             class="add-stage-input"
           />
@@ -64,4 +75,44 @@
       </div>
     </div>
   </div>
+
+  <!-- Card detail panel (slide-out) -->
+  <div class="card-detail-backdrop" *ngIf="detailTask" (click)="closeCardDetail()"></div>
+  <aside class="card-detail-panel" *ngIf="detailTask">
+    <div class="panel-header">
+      <span class="panel-list">{{ detailStageName }}</span>
+      <button type="button" class="btn-close-panel" (click)="closeCardDetail()">×</button>
+    </div>
+    <div class="panel-body">
+      <label class="field">
+        <span class="label">Title</span>
+        <input type="text" [(ngModel)]="detailTitle" placeholder="Card title" class="input" />
+      </label>
+      <label class="field">
+        <span class="label">Description</span>
+        <textarea [(ngModel)]="detailDesc" placeholder="Add a more detailed description..." rows="4" class="textarea"></textarea>
+      </label>
+      <label class="field">
+        <span class="label">Due date</span>
+        <input type="date" [(ngModel)]="detailDue" class="input" />
+      </label>
+      <label class="field">
+        <span class="label">Priority</span>
+        <select [(ngModel)]="detailPriority" class="select">
+          <option value="">None</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+      </label>
+      <label class="field">
+        <span class="label">Notes</span>
+        <textarea [(ngModel)]="detailNotes" placeholder="Additional notes..." rows="2" class="textarea"></textarea>
+      </label>
+      <div class="panel-actions">
+        <button type="button" class="btn-save" (click)="saveCardDetail()">Save</button>
+        <button type="button" class="btn-cancel" (click)="closeCardDetail()">Cancel</button>
+      </div>
+    </div>
+  </aside>
 </div>

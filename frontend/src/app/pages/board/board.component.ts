@@ -24,6 +24,15 @@ export class BoardComponent implements OnInit {
   newStageName = '';
   newTaskTitles: { [key: number]: string } = {};
 
+  // Card detail panel (click card → expand panel)
+  detailTask: Task | null = null;
+  detailStageName = '';
+  detailTitle = '';
+  detailDesc = '';
+  detailDue = '';
+  detailPriority = '';
+  detailNotes = '';
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -185,5 +194,40 @@ export class BoardComponent implements OnInit {
         }
       });
     }
+  }
+
+  openCardDetail(task: Task, event?: Event) {
+    if (event) (event as Event).stopPropagation();
+    const stage = this.stages.find(s => (s.tasks || []).some((t: Task) => t.id === task.id));
+    this.detailTask = task;
+    this.detailStageName = stage?.name || '';
+    this.detailTitle = task.title || '';
+    this.detailDesc = task.description || '';
+    this.detailDue = '';
+    this.detailPriority = '';
+    this.detailNotes = '';
+  }
+
+  closeCardDetail() {
+    this.detailTask = null;
+  }
+
+  saveCardDetail() {
+    if (!this.detailTask) return;
+    const task = this.detailTask;
+    const title = this.detailTitle.trim() || task.title;
+    const description = this.detailDesc;
+    this.apiService.updateTask(task.id, { title, description, position: task.position }).subscribe({
+      next: (updated) => {
+        task.title = updated.title;
+        task.description = updated.description;
+        this.closeCardDetail();
+      },
+      error: (err) => console.error('Failed to update task:', err)
+    });
+  }
+
+  getDisplayDescription(task: Task): string {
+    return task.description || 'Click to add description';
   }
 }
