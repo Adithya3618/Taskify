@@ -51,6 +51,12 @@
   display: flex;
   justify-content: flex-start;
   background: #f4f5f7;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+
+  &::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
 }
 
 .columns-container {
