@@ -18,7 +18,8 @@ export class BoardComponent implements OnInit {
   projectId: number = 0;
   project: Project | null = null;
   stages: Stage[] = [];
-  loading = true;
+  isLoading = false;
+  errorMsg = '';
 
   // New item inputs
   newStageName = '';
@@ -55,15 +56,16 @@ export class BoardComponent implements OnInit {
 
     // Fallback timeout - show board even if API fails
     setTimeout(() => {
-      if (this.loading) {
+      if (this.isLoading) {
         console.log('Board load timeout - showing board anyway');
-        this.loading = false;
+        this.isLoading = false;
       }
     }, 5000);
   }
 
   loadProject() {
-    this.loading = true;
+    this.isLoading = true;
+    this.errorMsg = '';
     console.log('Loading project from API...');
     this.apiService.getProject(this.projectId).subscribe({
       next: (project) => {
@@ -74,8 +76,9 @@ export class BoardComponent implements OnInit {
       error: (err) => {
         console.error('Failed to load project:', err);
         console.error('Error details:', err.message, err.status, err.url);
-        this.loading = false;
-        this.router.navigate(['/']);
+        this.stages = [];
+        this.isLoading = false;
+        this.errorMsg = err?.error?.message || err?.message || 'Failed to load board.';
       }
     });
   }
@@ -90,18 +93,14 @@ export class BoardComponent implements OnInit {
         if (this.stages.length > 0) {
           this.stages.forEach(stage => this.loadTasks(stage));
         }
-        this.loading = false;
+        this.isLoading = false;
       },
       error: (err) => {
         console.error('Failed to load stages:', err);
         console.error('Error details:', err.message, err.status, err.url);
-        // Add demo stages if API fails
-        this.stages = [
-          { id: 1, project_id: this.projectId, name: 'To Do', position: 0, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), tasks: [] },
-          { id: 2, project_id: this.projectId, name: 'In Progress', position: 1, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), tasks: [] },
-          { id: 3, project_id: this.projectId, name: 'Done', position: 2, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), tasks: [] }
-        ];
-        this.loading = false;
+        this.stages = [];
+        this.isLoading = false;
+        this.errorMsg = err?.error?.message || err?.message || 'Failed to load board.';
       }
     });
   }
@@ -145,6 +144,13 @@ export class BoardComponent implements OnInit {
         alert('Failed to create stage. Check console for details.');
       }
     });
+  }
+
+  openAddListDialog() {
+    const name = prompt('Enter stage title...');
+    if (!name || !name.trim()) return;
+    this.newStageName = name.trim();
+    this.createStage();
   }
 
   createTask(stageId: number) {

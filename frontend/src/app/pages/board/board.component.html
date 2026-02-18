@@ -3,19 +3,36 @@
   <div class="board-card">
     <header class="board-header">
       <button type="button" class="btn-back" (click)="goBack()">← Back to Boards</button>
-      <h1>{{ project?.name || 'Board' }}</h1>
+      <div class="header-main">
+        <h1>{{ project?.name || 'Board' }}</h1>
+        <p class="board-subtitle">{{ stages.length }} stage{{ stages.length === 1 ? '' : 's' }}</p>
+      </div>
     </header>
 
-    <div class="loading" *ngIf="loading">
-      <p>Loading board...</p>
+    <!-- Loading -->
+    <div *ngIf="isLoading" class="state-text">
+      Loading board...
     </div>
 
-    <div class="board-content" *ngIf="!loading">
+    <!-- Error -->
+    <div *ngIf="!isLoading && errorMsg" class="state-error">
+      {{ errorMsg }}
+    </div>
+
+    <!-- Empty stages -->
+    <div *ngIf="!isLoading && !errorMsg && (!stages || stages.length === 0)" class="empty-board">
+      <p>No stages yet. Add a stage to start organizing tasks.</p>
+      <button type="button" class="add-list-btn" (click)="openAddListDialog()">
+        + Add First Stage
+      </button>
+    </div>
+
+    <div class="board-content" *ngIf="!isLoading && !errorMsg && stages?.length">
       <div class="columns-container">
         <div class="column" *ngFor="let stage of stages">
           <div class="column-header">
             <h3>{{ stage.name }}</h3>
-            <button type="button" class="btn-delete" (click)="deleteStage(stage.id)" title="Delete list">×</button>
+            <button type="button" class="btn-delete" (click)="deleteStage(stage.id)" title="Delete stage">×</button>
           </div>
           <div class="tasks-list">
             <div
@@ -36,13 +53,15 @@
                 ×
               </button>
             </div>
-            <p *ngIf="!stage.tasks?.length" class="no-tasks">No cards yet</p>
+            <div *ngIf="!stage.tasks || stage.tasks.length === 0" class="state-text">
+              No tasks in this stage.
+            </div>
           </div>
           <div class="add-task-form">
             <input
               type="text"
               [(ngModel)]="newTaskTitles[stage.id]"
-              placeholder="+ Add a card..."
+              placeholder="+ Add a task..."
               (keyup.enter)="createTask(stage.id)"
             />
             <button
@@ -59,7 +78,7 @@
           <input
             type="text"
             [(ngModel)]="newStageName"
-            placeholder="Enter list title..."
+            placeholder="Enter stage title..."
             (keydown.enter)="createStage()"
             class="add-stage-input"
           />
@@ -69,7 +88,7 @@
             (click)="createStage()"
             [disabled]="!newStageName.trim()"
           >
-            + Add another list
+            + Add another stage
           </button>
         </div>
       </div>
