@@ -33,6 +33,8 @@ export class BoardComponent implements OnInit {
   detailPriority = '';
   detailNotes = '';
 
+  private readonly META_SEP = '\n---\n';
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -202,10 +204,11 @@ export class BoardComponent implements OnInit {
     this.detailTask = task;
     this.detailStageName = stage?.name || '';
     this.detailTitle = task.title || '';
-    this.detailDesc = task.description || '';
-    this.detailDue = '';
-    this.detailPriority = '';
-    this.detailNotes = '';
+    const parsed = this.parseCardMeta(task.description || '');
+    this.detailDesc = parsed.desc;
+    this.detailDue = parsed.due;
+    this.detailPriority = parsed.priority;
+    this.detailNotes = parsed.notes;
   }
 
   closeCardDetail() {
@@ -216,7 +219,12 @@ export class BoardComponent implements OnInit {
     if (!this.detailTask) return;
     const task = this.detailTask;
     const title = this.detailTitle.trim() || task.title;
-    const description = this.detailDesc;
+    const description = this.buildCardDescription(
+      this.detailDesc,
+      this.detailDue,
+      this.detailPriority,
+      this.detailNotes
+    );
     this.apiService.updateTask(task.id, { title, description, position: task.position }).subscribe({
       next: (updated) => {
         task.title = updated.title;
@@ -227,7 +235,34 @@ export class BoardComponent implements OnInit {
     });
   }
 
+  private parseCardMeta(description: string): { desc: string; due: string; priority: string; notes: string } {
+    const idx = description.indexOf(this.META_SEP);
+    let desc = description;
+    let due = '';
+    let priority = '';
+    let notes = '';
+    if (idx >= 0) {
+      desc = description.slice(0, idx).trim();
+      const meta = description.slice(idx + this.META_SEP.length);
+      meta.split('\n').forEach(line => {
+        if (line.startsWith('due:')) due = line.slice(4).trim();
+        else if (line.startsWith('priority:')) priority = line.slice(9).trim();
+        else if (line.startsWith('notes:')) notes = line.slice(6).trim();
+      });
+    }
+    return { desc, due, priority, notes };
+  }
+
+  private buildCardDescription(desc: string, due: string, priority: string, notes: string): string {
+    const parts: string[] = [];
+    if (due) parts.push('due:' + due);
+    if (priority) parts.push('priority:' + priority);
+    if (notes) parts.push('notes:' + notes);
+    if (parts.length === 0) return desc.trim();
+    return (desc.trim() + this.META_SEP + parts.join('\n'));
+  }
+
   getDisplayDescription(task: Task): string {
-    return task.description || 'Click to add description';
+    return this.parseCardMeta(task.description || '').desc || 'Click to add description';
   }
 }
