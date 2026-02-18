@@ -120,7 +120,7 @@ export class BoardComponent implements OnInit {
     const position = this.stages.length;
     const request: CreateStageRequest = { name, position };
     console.log('Creating stage for project', this.projectId, 'with name:', name, 'position:', position);
-    
+
     this.apiService.createStage(this.projectId, request).subscribe({
       next: (stage: Stage) => {
         console.log('Stage created successfully:', stage);

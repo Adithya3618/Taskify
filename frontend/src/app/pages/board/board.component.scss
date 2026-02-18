@@ -1,65 +1,83 @@
+// Page: soft background; board is one card in the center
 .board-container {
   min-height: 100vh;
-  background: #0079bf;
+  background: linear-gradient(135deg, #0d47a1 0%, #1565c0 50%, #1976d2 100%);
+  padding: 24px;
+  position: relative;
+}
+
+.board-card {
+  max-width: 1200px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
 }
 
 .board-header {
-  background: rgba(0, 0, 0, 0.15);
-  padding: 12px 16px;
+  background: linear-gradient(180deg, #172b4d 0%, #1a365d 100%);
+  padding: 14px 20px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 
   .btn-back {
     background: rgba(255, 255, 255, 0.2);
     border: none;
     color: white;
-    padding: 8px 12px;
-    border-radius: 4px;
+    padding: 8px 14px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 14px;
-    transition: background 0.2s;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.35);
     }
   }
 
   h1 {
     color: white;
     margin: 0;
-    font-size: 1.2rem;
-    font-weight: 600;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
   }
 }
 
 .board-content {
-  padding: 16px;
+  padding: 16px 20px 24px;
   overflow-x: auto;
+  display: flex;
+  justify-content: flex-start;
+  background: #f4f5f7;
 }
 
 .columns-container {
   display: flex;
-  gap: 12px;
-  min-height: calc(100vh - 100px);
+  gap: 10px;
+  align-items: flex-start;
+  min-height: 400px;
+  max-height: calc(100vh - 140px);
 }
 
 .column {
   background: #ebecf0;
   width: 272px;
   min-width: 272px;
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: 3px;
+  padding: 8px;
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 120px);
+  max-height: calc(100vh - 140px);
 }
 
 .column-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
+  padding: 4px 8px 4px 4px;
 
   h3 {
     margin: 0;
@@ -254,10 +272,9 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  background: #0079bf;
-  color: white;
-  font-size: 1.2rem;
+  min-height: 200px;
+  color: #5e6c84;
+  font-size: 1rem;
 }
 
 .no-tasks {
