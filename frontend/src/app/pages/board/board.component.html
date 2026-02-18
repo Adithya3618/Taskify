@@ -63,24 +63,8 @@
                 ×
               </button>
             </div>
-            <div *ngIf="!stage.tasks || stage.tasks.length === 0" class="state-text">
-              No tasks in this stage.
-            </div>
-          </div>
-          <div class="add-task-form">
-            <input
-              type="text"
-              [(ngModel)]="newTaskTitles[stage.id]"
-              placeholder="+ Add a task..."
-              (keyup.enter)="createTask(stage.id)"
-            />
-            <button
-              type="button"
-              class="btn-add-task"
-              *ngIf="newTaskTitles[stage.id]?.trim()"
-              (click)="createTask(stage.id)"
-            >
-              Add
+            <button class="btn-delete-task" (click)="deleteTask(stage.id, task.id, $event)" title="Delete task">
+              ×
             </button>
           </div>
         </div>
@@ -92,6 +76,40 @@
             (keydown.enter)="createStage()"
             class="add-stage-input"
           />
+
+          <div class="task-form-actions">
+            <button class="btn-link-details" type="button" (click)="toggleTaskDetails(stage.id)">
+              {{ showTaskDetails[stage.id] ? 'Hide details' : '+ Add details' }}
+            </button>
+          </div>
+
+          <div class="task-detail-fields" *ngIf="showTaskDetails[stage.id]">
+            <textarea
+              rows="2"
+              [(ngModel)]="newTaskDescs[stage.id]"
+              placeholder="Description (optional)"
+            ></textarea>
+            <div class="task-meta-grid">
+              <input
+                type="date"
+                [(ngModel)]="newTaskDues[stage.id]"
+                title="Due date"
+              />
+              <select [(ngModel)]="newTaskPriorities[stage.id]" [ngClass]="getCreatePriorityClass(stage.id)">
+                <option value="">Priority</option>
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+                <option value="Critical">Critical</option>
+              </select>
+            </div>
+            <textarea
+              rows="2"
+              [(ngModel)]="newTaskNotes[stage.id]"
+              placeholder="Notes (optional)"
+            ></textarea>
+          </div>
+
           <button
             type="button"
             class="btn-add-column"

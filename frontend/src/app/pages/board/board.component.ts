@@ -11,7 +11,7 @@ import { AuthService } from '../../services/auth.service';
 @Component({
   selector: 'app-board',
   standalone: true,
-  imports: [CommonModule, FormsModule, ErrorBannerComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './board.component.html',
   styleUrls: ['./board.component.scss']
 })
@@ -21,21 +21,11 @@ export class BoardComponent implements OnInit {
   stages: Stage[] = [];
   loading = true;
   private readonly boardOwnersKey = 'taskify.board.owners';
+  private readonly META_SEP = '\n---\n';
 
   // New item inputs
   newStageName = '';
   newTaskTitles: { [key: number]: string } = {};
-
-  // Card detail panel (click card → expand panel)
-  detailTask: Task | null = null;
-  detailStageName = '';
-  detailTitle = '';
-  detailDesc = '';
-  detailDue = '';
-  detailPriority = '';
-  detailNotes = '';
-
-  private readonly META_SEP = '\n---\n';
 
   constructor(
     private route: ActivatedRoute,
