@@ -6,11 +6,12 @@ import { ApiService } from '../../services/api.service';
 import { Project } from '../../models/project.model';
 import { Stage, CreateStageRequest } from '../../models/stage.model';
 import { Task, CreateTaskRequest } from '../../models/task.model';
+import { ErrorBannerComponent } from '../../components/error-banner/error-banner.component';
 
 @Component({
   selector: 'app-board',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ErrorBannerComponent],
   templateUrl: './board.component.html',
   styleUrls: ['./board.component.scss']
 })

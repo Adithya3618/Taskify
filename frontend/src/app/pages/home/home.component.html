@@ -34,10 +34,15 @@
       Loading boards...
     </div>
 
-    <!-- Error -->
-    <div *ngIf="!isLoading && errorMsg" class="state-error">
-      {{ errorMsg }}
-    </div>
+    <app-error-banner
+      *ngIf="!isLoading && errorMsg"
+      title="Backend unreachable"
+      [message]="errorMsg"
+      hint="Make sure the backend server is running (port 8080) or configure API base URL for deployment."
+      [canRetry]="true"
+      (retry)="loadProjects()"
+      (dismiss)="errorMsg = ''"
+    ></app-error-banner>
 
     <!-- Empty -->
     <div *ngIf="!isLoading && !errorMsg && (!projects || projects.length === 0)" class="state-text">

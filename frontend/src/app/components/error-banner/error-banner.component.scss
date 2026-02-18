@@ -1,0 +1,80 @@
+.banner {
+  margin: 14px 0;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 0, 0, 0.22);
+  background: rgba(255, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.left {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 0, 0, 0.12);
+  border: 1px solid rgba(255, 0, 0, 0.22);
+  font-size: 16px;
+  margin-top: 2px;
+}
+
+.text {
+  display: grid;
+  gap: 4px;
+}
+
+.title {
+  font-weight: 700;
+  color: #b00020;
+  line-height: 1.2;
+}
+
+.msg {
+  color: #7a0015;
+  opacity: 0.95;
+}
+
+.hint {
+  margin-top: 2px;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.btn {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #ffffff;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn:hover {
+  background: #f4f4f4;
+}
+
+.btn.ghost {
+  background: transparent;
+  border: 1px solid rgba(255, 0, 0, 0.22);
+  color: #b00020;
+}
+
+.btn.ghost:hover {
+  background: rgba(255, 0, 0, 0.06);
+}
