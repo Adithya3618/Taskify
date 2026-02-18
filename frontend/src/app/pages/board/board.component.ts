@@ -6,7 +6,7 @@ import { ApiService } from '../../services/api.service';
 import { Project } from '../../models/project.model';
 import { Stage, CreateStageRequest } from '../../models/stage.model';
 import { Task, CreateTaskRequest } from '../../models/task.model';
-import { ErrorBannerComponent } from '../../components/error-banner/error-banner.component';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-board',
@@ -19,8 +19,8 @@ export class BoardComponent implements OnInit {
   projectId: number = 0;
   project: Project | null = null;
   stages: Stage[] = [];
-  isLoading = false;
-  errorMsg = '';
+  loading = true;
+  private readonly boardOwnersKey = 'taskify.board.owners';
 
   // New item inputs
   newStageName = '';
@@ -40,14 +40,25 @@ export class BoardComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private apiService: ApiService
+    private apiService: ApiService,
+    private authService: AuthService
   ) {}
 
   ngOnInit() {
     console.log('BoardComponent initialized');
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser) {
+      this.router.navigate(['/login']);
+      return;
+    }
+
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.projectId = +id;
+      if (!this.canAccessBoard(this.projectId, currentUser.email)) {
+        this.router.navigate(['/boards']);
+        return;
+      }
       console.log('Loading project ID:', this.projectId);
       this.loadProject();
     } else {
@@ -64,6 +75,16 @@ export class BoardComponent implements OnInit {
     }, 5000);
   }
 
+  private canAccessBoard(projectId: number, email: string): boolean {
+    try {
+      const raw = localStorage.getItem(this.boardOwnersKey);
+      const owners = raw ? JSON.parse(raw) as Record<string, string> : {};
+      return owners[String(projectId)] === email.trim().toLowerCase();
+    } catch {
+      return false;
+    }
+  }
+
   loadProject() {
     this.isLoading = true;
     this.errorMsg = '';
@@ -77,9 +98,15 @@ export class BoardComponent implements OnInit {
       error: (err) => {
         console.error('Failed to load project:', err);
         console.error('Error details:', err.message, err.status, err.url);
-        this.stages = [];
-        this.isLoading = false;
-        this.errorMsg = err?.error?.message || err?.message || 'Failed to load board.';
+        // Keep user on board page even if backend is unavailable.
+        this.project = {
+          id: this.projectId,
+          name: `Board ${this.projectId}`,
+          description: 'Demo board (backend unavailable)',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        this.loadStages();
       }
     });
   }
@@ -203,73 +230,5 @@ export class BoardComponent implements OnInit {
         }
       });
     }
-  }
-
-  openCardDetail(task: Task, event?: Event) {
-    if (event) (event as Event).stopPropagation();
-    const stage = this.stages.find(s => (s.tasks || []).some((t: Task) => t.id === task.id));
-    this.detailTask = task;
-    this.detailStageName = stage?.name || '';
-    this.detailTitle = task.title || '';
-    const parsed = this.parseCardMeta(task.description || '');
-    this.detailDesc = parsed.desc;
-    this.detailDue = parsed.due;
-    this.detailPriority = parsed.priority;
-    this.detailNotes = parsed.notes;
-  }
-
-  closeCardDetail() {
-    this.detailTask = null;
-  }
-
-  saveCardDetail() {
-    if (!this.detailTask) return;
-    const task = this.detailTask;
-    const title = this.detailTitle.trim() || task.title;
-    const description = this.buildCardDescription(
-      this.detailDesc,
-      this.detailDue,
-      this.detailPriority,
-      this.detailNotes
-    );
-    this.apiService.updateTask(task.id, { title, description, position: task.position }).subscribe({
-      next: (updated) => {
-        task.title = updated.title;
-        task.description = updated.description;
-        this.closeCardDetail();
-      },
-      error: (err) => console.error('Failed to update task:', err)
-    });
-  }
-
-  private parseCardMeta(description: string): { desc: string; due: string; priority: string; notes: string } {
-    const idx = description.indexOf(this.META_SEP);
-    let desc = description;
-    let due = '';
-    let priority = '';
-    let notes = '';
-    if (idx >= 0) {
-      desc = description.slice(0, idx).trim();
-      const meta = description.slice(idx + this.META_SEP.length);
-      meta.split('\n').forEach(line => {
-        if (line.startsWith('due:')) due = line.slice(4).trim();
-        else if (line.startsWith('priority:')) priority = line.slice(9).trim();
-        else if (line.startsWith('notes:')) notes = line.slice(6).trim();
-      });
-    }
-    return { desc, due, priority, notes };
-  }
-
-  private buildCardDescription(desc: string, due: string, priority: string, notes: string): string {
-    const parts: string[] = [];
-    if (due) parts.push('due:' + due);
-    if (priority) parts.push('priority:' + priority);
-    if (notes) parts.push('notes:' + notes);
-    if (parts.length === 0) return desc.trim();
-    return (desc.trim() + this.META_SEP + parts.join('\n'));
-  }
-
-  getDisplayDescription(task: Task): string {
-    return this.parseCardMeta(task.description || '').desc || 'Click to add description';
   }
 }

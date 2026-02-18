@@ -1,0 +1,70 @@
+<div class="page">
+  <nav class="navbar">
+    <a routerLink="/" class="brand">
+      <div class="logo">T</div>
+      <span class="brandName">Taskify</span>
+    </a>
+    <div class="navTabs">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="navTab">Home</a>
+      <a routerLink="/boards" routerLinkActive="active" class="navTab">Boards</a>
+      <a routerLink="/features" routerLinkActive="active" class="navTab">Features</a>
+      <a routerLink="/about" routerLinkActive="active" class="navTab">About</a>
+    </div>
+    <div class="navActions">
+      <a routerLink="/login" class="btn navBtn">Login</a>
+      <a routerLink="/signup" class="btn btnPrimary">Sign up</a>
+    </div>
+  </nav>
+
+  <main class="heroWrap">
+    <section class="hero">
+      <p class="eyebrow">Project Workspace</p>
+      <h1>Plan faster with clear boards and focused team workflow</h1>
+      <p class="lead">
+        Taskify helps you organize stages, track tasks, and keep collaboration visible. To start using boards, please log in or create an account.
+      </p>
+      <div class="ctaRow">
+        <a routerLink="/signup" class="btn ctaPrimary">Create Free Account</a>
+        <a routerLink="/login" class="btn ctaSecondary">Log In</a>
+      </div>
+      <p class="microCopy">New here? Registration takes less than a minute.</p>
+    </section>
+
+    <aside class="previewCard">
+      <div class="previewTop">
+        <span class="dot red"></span>
+        <span class="dot yellow"></span>
+        <span class="dot green"></span>
+      </div>
+      <h3>What you get after signing in</h3>
+      <div class="chipGrid">
+        <span class="chip">Create boards</span>
+        <span class="chip">Rename & delete boards</span>
+        <span class="chip">Kanban stages</span>
+        <span class="chip">Task cards</span>
+        <span class="chip">Demo fallback mode</span>
+        <span class="chip">Responsive UI</span>
+      </div>
+      <a routerLink="/features" class="miniLink">View full feature list</a>
+    </aside>
+  </main>
+
+  <section class="trustRow">
+    <div class="trustItem">
+      <div class="trustValue">Fast setup</div>
+      <p>Create your first project board in seconds.</p>
+    </div>
+    <div class="trustItem">
+      <div class="trustValue">Clear workflow</div>
+      <p>Track every task from backlog to done.</p>
+    </div>
+    <div class="trustItem">
+      <div class="trustValue">Built for teams</div>
+      <p>Share a single source of progress with your team.</p>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>© {{ currentYear }} Taskify</p>
+  </footer>
+</div>

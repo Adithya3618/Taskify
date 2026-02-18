@@ -77,15 +77,97 @@
   transition: 0.2s;
 }
 
-.card:hover {
-  transform: translateY(-6px);
-  background: rgba(255,255,255,0.22);
+.card.boardCard {
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  overflow: visible;
+  position: relative;
+}
+
+.card.boardCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.cardColorBar {
+  height: 8px;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.cardBody {
+  padding: 14px 16px;
 }
 
 .cardTop {
+  position: relative; // important for menu positioning
   display: flex;
   justify-content: space-between;
   margin-bottom: 10px;
+}
+
+.menuWrap {
+  position: relative;
+}
+
+.menuIcon {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 8px;
+  color: #5e6c84;
+}
+
+.menuIcon:hover {
+  background: #f4f5f7;
+  color: #172b4d;
+}
+
+.boardMenu {
+  position: absolute;
+  top: 34px;
+  right: 0;
+  width: 180px;
+  background: #fff;
+  border: 1px solid #e0e4e8;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.14);
+  padding: 8px;
+  z-index: 50;
+}
+
+.boardMenuItem {
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 10px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #172b4d;
+}
+
+.boardMenuItem:hover {
+  background: #f4f5f7;
+}
+
+.boardMenuDivider {
+  height: 1px;
+  background: #e0e4e8;
+  margin: 6px 4px;
+}
+
+.boardMenuItem.danger {
+  color: #b42318;
+}
+
+.boardMenuItem.danger:hover {
+  background: rgba(180, 35, 24, 0.08);
 }
 
 .avatar {
@@ -181,8 +263,82 @@
   padding: 12px 0;
 }
 
-.state-error {
-  padding: 12px;
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.closeBtn {
+  background: #f4f5f7;
+  border: none;
+  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  color: #5e6c84;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.closeBtn:hover {
+  background: #eef1f4;
+  color: #172b4d;
+}
+
+.btn.secondary {
+  background: rgba(9, 30, 66, 0.08);
+  color: #172b4d;
+}
+
+.modalFoot .btn.primary {
+  background: #0079bf;
+  color: #fff;
+}
+
+.modalFoot .btn.ghost {
+  color: #5e6c84;
+}
+
+.btn.danger {
+  background: #eb5a46;
+  color: #fff;
+}
+
+.btn.danger:hover:not(:disabled) {
+  background: #cf513d;
+}
+
+// ----- Badge, alert, empty state -----
+.badge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #e4e8ec;
+  color: #5e6c84;
+}
+
+.badge.warn {
+  background: #fff4e6;
+  color: #b7791f;
+}
+
+.badge.ok {
+  background: #e3fcef;
+  color: #006644;
+}
+
+.alert {
+  background: #fff;
+  border: 1px solid #dfe1e6;
   border-radius: 8px;
   background: rgba(255, 0, 0, 0.08);
 }

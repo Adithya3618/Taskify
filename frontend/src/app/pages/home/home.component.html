@@ -1,10 +1,40 @@
-<div class="page">
-  <header class="topbar">
-    <div class="brand">
+<div class="page" (click)="onPageClick()">
+  <!-- Navigation bar -->
+  <nav class="navbar">
+    <a routerLink="/" class="brand">
       <div class="logo">T</div>
-      <div class="brandText">
-        <h1>Taskify</h1>
-        <p>Your Project Management Tool</p>
+      <span class="brandName">Taskify</span>
+    </a>
+    <div class="navTabs">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="navTab">Home</a>
+      <a routerLink="/boards" routerLinkActive="active" class="navTab">Boards</a>
+      <a routerLink="/features" routerLinkActive="active" class="navTab">Features</a>
+      <a routerLink="/about" routerLinkActive="active" class="navTab">About</a>
+    </div>
+    <div class="navActions">
+      <div class="profileWrap">
+        <button
+          class="profileIcon"
+          type="button"
+          aria-label="Profile"
+          (click)="toggleProfileMenu()"
+        >
+          <span class="profileAvatar">{{ userInitial }}</span>
+        </button>
+        <div *ngIf="showProfileMenu" class="profileDropdown" (click)="$event.stopPropagation()">
+          <div class="profileDropdownHead">
+            <span class="profileDropdownAvatar">{{ userInitial }}</span>
+            <div class="profileDropdownInfo">
+              <span class="profileName">{{ userDisplayName }}</span>
+              <span class="profileEmail">{{ userEmail }}</span>
+            </div>
+          </div>
+          <div class="profileDropdownDivider"></div>
+          <a routerLink="/boards" class="profileDropdownItem" (click)="closeProfileMenu()">My boards</a>
+          <button type="button" class="profileDropdownItem profileDropdownLogout" (click)="logout()">
+            Log out
+          </button>
+        </div>
       </div>
     </div>
 
@@ -19,7 +49,7 @@
     <div class="sectionHead">
       <div>
         <h2>Your Boards</h2>
-        <p class="muted">Select a board to open it.</p>
+        <p class="muted">Showing boards created by {{ userDisplayName }}.</p>
       </div>
 
       <div class="status">
@@ -58,9 +88,22 @@
         *ngFor="let project of projects; let i = index"
         (click)="openBoard(project.id)"
       >
-        <div class="cardTop">
-          <div class="avatar" [style.background]="getProjectColor(i)">
-            {{ (project.name || 'B').slice(0,1).toUpperCase() }}
+        <div class="cardColorBar" [style.background]="getProjectColor(i)"></div>
+        <div class="cardBody">
+          <div class="cardTop">
+            <div class="avatar" [style.background]="getProjectColor(i)">
+              {{ (project.name || 'B').slice(0,1).toUpperCase() }}
+            </div>
+            <div class="menuWrap" (click)="$event.stopPropagation()">
+              <button class="menuIcon" (click)="toggleBoardMenu(project.id, $event)">⋮</button>
+
+              <div class="boardMenu" *ngIf="openMenuProjectId === project.id">
+                <button class="boardMenuItem" (click)="openBoardFromMenu(project.id, $event)">Open</button>
+                <button class="boardMenuItem" (click)="openRenameModal(project, $event)">Rename</button>
+                <div class="boardMenuDivider"></div>
+                <button class="boardMenuItem danger" (click)="openDeleteModal(project, $event)">Delete</button>
+              </div>
+            </div>
           </div>
 
           <!-- Delete action -->
@@ -87,6 +130,20 @@
       </button>
     </div>
   </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footerInner">
+      <div class="footerBrand">Taskify</div>
+      <div class="footerLinks">
+        <a routerLink="/features">Features</a>
+        <a routerLink="/about">About</a>
+        <a href="#">Contact</a>
+        <a href="#">Privacy</a>
+      </div>
+      <p class="footerCopy">© {{ currentYear }} Taskify. Your project management tool.</p>
+    </div>
+  </footer>
 
   <!-- CREATE MODAL -->
   <div *ngIf="showCreateModal" class="modalBackdrop" (click)="closeCreateModal()">
@@ -145,6 +202,29 @@
           [disabled]="deleting">
           {{ deleting ? 'Deleting...' : 'Delete' }}
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rename Board Modal -->
+  <div class="modalBackdrop" *ngIf="renameModalOpen" (click)="closeRenameModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modalHeader">
+        <h3>Rename board</h3>
+        <button class="closeBtn" (click)="closeRenameModal()">✕</button>
+      </div>
+
+      <div class="modalBody">
+        <label class="fieldLabel">Board Name</label>
+        <input class="input" [(ngModel)]="renameName" placeholder="Enter board name" />
+
+        <label class="fieldLabel" style="margin-top: 10px;">Description</label>
+        <textarea class="textarea" [(ngModel)]="renameDesc" placeholder="Optional description"></textarea>
+      </div>
+
+      <div class="modalFooter">
+        <button class="btn secondary" (click)="closeRenameModal()">Cancel</button>
+        <button class="btn danger" (click)="saveRename()">Save</button>
       </div>
     </div>
   </div>

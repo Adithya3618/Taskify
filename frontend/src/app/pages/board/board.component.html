@@ -1,13 +1,18 @@
-<div class="board-container">
-  <!-- Board as a card -->
-  <div class="board-card">
-    <header class="board-header">
-      <button type="button" class="btn-back" (click)="goBack()">← Back to Boards</button>
-      <div class="header-main">
-        <h1>{{ project?.name || 'Board' }}</h1>
-        <p class="board-subtitle">{{ stages.length }} stage{{ stages.length === 1 ? '' : 's' }}</p>
-      </div>
-    </header>
+<div class="board-container trello-bg">
+  <!-- Trello-like board top bar -->
+  <header class="board-topbar">
+    <div class="left">
+      <button class="btn-back" (click)="goBack()">← Back</button>
+      <h1 class="board-title">{{ project?.name || 'Board' }}</h1>
+      <span class="pill">Board</span>
+    </div>
+
+    <div class="right">
+      <button class="btn-ghost">Filter</button>
+      <button class="btn-primary">Share</button>
+      <button class="btn-ghost">⋯</button>
+    </div>
+  </header>
 
     <!-- Loading -->
     <div *ngIf="isLoading" class="state-text">
@@ -99,44 +104,4 @@
       </div>
     </div>
   </div>
-
-  <!-- Card detail panel (slide-out) -->
-  <div class="card-detail-backdrop" *ngIf="detailTask" (click)="closeCardDetail()"></div>
-  <aside class="card-detail-panel" *ngIf="detailTask">
-    <div class="panel-header">
-      <span class="panel-list">{{ detailStageName }}</span>
-      <button type="button" class="btn-close-panel" (click)="closeCardDetail()">×</button>
-    </div>
-    <div class="panel-body">
-      <label class="field">
-        <span class="label">Title</span>
-        <input type="text" [(ngModel)]="detailTitle" placeholder="Card title" class="input" />
-      </label>
-      <label class="field">
-        <span class="label">Description</span>
-        <textarea [(ngModel)]="detailDesc" placeholder="Add a more detailed description..." rows="4" class="textarea"></textarea>
-      </label>
-      <label class="field">
-        <span class="label">Due date</span>
-        <input type="date" [(ngModel)]="detailDue" class="input" />
-      </label>
-      <label class="field">
-        <span class="label">Priority</span>
-        <select [(ngModel)]="detailPriority" class="select">
-          <option value="">None</option>
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
-        </select>
-      </label>
-      <label class="field">
-        <span class="label">Notes</span>
-        <textarea [(ngModel)]="detailNotes" placeholder="Additional notes..." rows="2" class="textarea"></textarea>
-      </label>
-      <div class="panel-actions">
-        <button type="button" class="btn-save" (click)="saveCardDetail()">Save</button>
-        <button type="button" class="btn-cancel" (click)="closeCardDetail()">Cancel</button>
-      </div>
-    </div>
-  </aside>
 </div>

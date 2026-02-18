@@ -79,11 +79,8 @@
 
 .columns-container {
   display: flex;
-  gap: 14px;
+  gap: 12px;
   align-items: flex-start;
-  min-height: 520px;
-  max-height: calc(100vh - 140px);
-  padding-bottom: 8px;
 }
 
 .column {
@@ -95,8 +92,6 @@
   padding: 10px;
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 140px);
-  box-shadow: 0 6px 18px rgba(20, 49, 102, 0.08);
 }
 
 .column-header {
@@ -130,10 +125,10 @@
 }
 
 .tasks-list {
-  flex: 1;
+  flex: 0 1 auto;
   overflow-y: auto;
-  min-height: 96px;
-  padding-right: 2px;
+  min-height: 50px;
+  max-height: calc(100vh - 260px);
 }
 
 .task-card {
@@ -377,174 +372,77 @@
   margin-top: 8px;
 }
 
-// Card detail panel (slide-out)
-.card-detail-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 100;
-  animation: fadeIn 0.2s ease;
+/* ===== Trello-like board shell ===== */
+.trello-bg {
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.28)),
+    url("/assets/board-bg.jpg");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
 }
 
-.card-detail-panel {
-  position: fixed;
+.board-topbar {
+  position: sticky;
   top: 0;
-  right: 0;
-  width: 380px;
-  max-width: 100%;
-  height: 100vh;
-  background: #fff;
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
-  z-index: 101;
-  display: flex;
-  flex-direction: column;
-  animation: slideIn 0.25s ease;
-}
+  z-index: 50;
 
-.panel-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid #ebecf0;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  background: #fafbfc;
+  justify-content: space-between;
 
-  .panel-list {
-    font-size: 12px;
-    color: #5e6c84;
-    font-weight: 600;
-  }
+  padding: 14px 18px;
+  margin-bottom: 12px;
 
-  .btn-close-panel {
-    background: none;
-    border: none;
-    font-size: 24px;
-    color: #6b778c;
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 4px;
-    line-height: 1;
-
-    &:hover {
-      background: rgba(0, 0, 0, 0.08);
-      color: #172b4d;
-    }
-  }
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
 }
 
-.panel-body {
-  padding: 20px;
-  overflow-y: auto;
-  flex: 1;
-}
-
-.field {
-  display: block;
-  margin-bottom: 16px;
-
-  .label {
-    display: block;
-    font-size: 12px;
-    font-weight: 600;
-    color: #5e6c84;
-    margin-bottom: 6px;
-  }
-
-  .input,
-  .textarea,
-  .select {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #dfe1e6;
-    border-radius: 6px;
-    font-size: 14px;
-    font-family: inherit;
-    box-sizing: border-box;
-
-    &:focus {
-      outline: none;
-      border-color: #0079bf;
-      box-shadow: 0 0 0 2px rgba(0, 121, 191, 0.25);
-    }
-  }
-
-  .textarea {
-    resize: vertical;
-    min-height: 80px;
-  }
-
-  .select {
-    cursor: pointer;
-    background: #fff;
-  }
-}
-
-.panel-actions {
+.board-topbar .left {
   display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.board-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.pill {
+  font-size: 12px;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.board-topbar .right {
+  display: flex;
+  align-items: center;
   gap: 10px;
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid #ebecf0;
-
-  .btn-save {
-    background: #0079bf;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-
-    &:hover {
-      background: #026aa7;
-    }
-  }
-
-  .btn-cancel {
-    background: #ebecf0;
-    color: #172b4d;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 6px;
-    font-size: 14px;
-    cursor: pointer;
-
-    &:hover {
-      background: #dfe1e6;
-    }
-  }
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+.btn-ghost,
+.btn-primary,
+.btn-back {
+  border: none;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 600;
 }
 
-@keyframes slideIn {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+.btn-back,
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
 }
 
-@media (max-width: 900px) {
-  .board-container {
-    padding: 12px 10px;
-  }
-
-  .board-card {
-    border-radius: 14px;
-  }
-
-  .board-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .board-content {
-    padding: 14px 12px 18px;
-  }
-
-  .columns-container {
-    min-height: 420px;
-  }
+.btn-primary {
+  background: rgba(0, 121, 191, 0.95);
+  color: #fff;
 }
