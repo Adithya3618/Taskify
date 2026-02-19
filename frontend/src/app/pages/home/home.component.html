@@ -1,19 +1,46 @@
 <div class="page">
-  <header class="topbar">
-    <div class="brand">
+  <!-- Navigation bar -->
+  <nav class="navbar">
+    <a routerLink="/" class="brand">
       <div class="logo">T</div>
-      <div class="brandText">
-        <h1>Taskify</h1>
-        <p>Your Project Management Tool</p>
+      <span class="brandName">Taskify</span>
+    </a>
+    <div class="navTabs">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="navTab">Home</a>
+      <a routerLink="/" class="navTab">Boards</a>
+      <a href="#features" class="navTab">Features</a>
+      <a href="#about" class="navTab">About</a>
+    </div>
+    <div class="navActions">
+      <a routerLink="/login" class="btn navBtn">Login</a>
+      <a routerLink="/signup" class="btn btnPrimary">Sign up</a>
+      <div class="profileWrap">
+        <button
+          class="profileIcon"
+          type="button"
+          aria-label="Profile"
+          (click)="toggleProfileMenu()"
+        >
+          <span class="profileAvatar">{{ userInitial }}</span>
+        </button>
+        <div *ngIf="showProfileMenu" class="profileDropdown" (click)="$event.stopPropagation()">
+          <div class="profileDropdownHead">
+            <span class="profileDropdownAvatar">{{ userInitial }}</span>
+            <div class="profileDropdownInfo">
+              <span class="profileName">{{ userDisplayName }}</span>
+              <span class="profileEmail">{{ userEmail }}</span>
+            </div>
+          </div>
+          <div class="profileDropdownDivider"></div>
+          <a routerLink="/" class="profileDropdownItem" (click)="closeProfileMenu()">My boards</a>
+          <button type="button" class="profileDropdownItem profileDropdownLogout" (click)="closeProfileMenu()">
+            Log out
+          </button>
+        </div>
       </div>
     </div>
-
-    <div class="actions">
-      <button class="btn ghost" type="button" (click)="openCreateModal()">
-        + New Board
-      </button>
-    </div>
-  </header>
+  </nav>
+  <div *ngIf="showProfileMenu" class="profileBackdrop" (click)="closeProfileMenu()"></div>
 
   <section class="section">
     <div class="sectionHead">
@@ -21,19 +48,19 @@
         <h2>Your Boards</h2>
         <p class="muted">Select a board to open it.</p>
       </div>
-
-      <div class="status">
-        <span *ngIf="isLoading" class="badge">Loading</span>
-        <span *ngIf="useDemoData" class="badge warn">Demo mode</span>
-        <span *ngIf="!isLoading && !useDemoData && !apiError && !errorMsg" class="badge ok">Connected</span>
+      <div class="sectionRight">
+        <div class="status">
+          <span *ngIf="isLoading" class="badge">Loading</span>
+          <span *ngIf="useDemoData" class="badge warn">Demo mode</span>
+          <span *ngIf="!isLoading && !useDemoData && !apiError && !errorMsg" class="badge ok">Connected</span>
+        </div>
+        <button class="btn ghost" type="button" (click)="openCreateModal()">
+          + New Board
+        </button>
       </div>
     </div>
 
-    <!-- Loading -->
-    <div *ngIf="isLoading" class="state-text">
-      Loading boards...
-    </div>
-
+    <!-- API Error (main's reusable banner with retry) -->
     <app-error-banner
       *ngIf="!isLoading && errorMsg"
       title="Backend unreachable"
@@ -44,49 +71,77 @@
       (dismiss)="errorMsg = ''"
     ></app-error-banner>
 
-    <!-- Empty -->
-    <div *ngIf="!isLoading && !errorMsg && (!projects || projects.length === 0)" class="state-text">
-      No boards yet. Create your first board to get started.
+    <!-- Loading (your skeleton UI) -->
+    <div *ngIf="isLoading" class="stateCard">
+      <div class="skeletonRow"></div>
+      <div class="skeletonRow small"></div>
+      <div class="skeletonGrid">
+        <div class="skeletonTile" *ngFor="let _ of [1,2,3,4]"></div>
+      </div>
+    </div>
+
+    <!-- Empty State (your branch: icon + Create Board button) -->
+    <div *ngIf="!isLoading && projects.length === 0 && !errorMsg" class="empty">
+      <div class="emptyIcon">📌</div>
+      <h3>No boards yet</h3>
+      <p>Create your first board to get started.</p>
+      <button class="btn primary" type="button" (click)="openCreateModal()">Create Board</button>
     </div>
 
     <!-- Grid -->
-    <div *ngIf="!isLoading && !errorMsg && projects?.length" class="grid">
+    <div *ngIf="!isLoading" class="grid">
       <!-- Project Cards -->
       <button
-        class="card"
+        class="card boardCard"
         type="button"
         *ngFor="let project of projects; let i = index"
         (click)="openBoard(project.id)"
       >
-        <div class="cardTop">
-          <div class="avatar" [style.background]="getProjectColor(i)">
-            {{ (project.name || 'B').slice(0,1).toUpperCase() }}
+        <div class="cardColorBar" [style.background]="getProjectColor(i)"></div>
+        <div class="cardBody">
+          <div class="cardTop">
+            <div class="avatar" [style.background]="getProjectColor(i)">
+              {{ (project.name || 'B').slice(0,1).toUpperCase() }}
+            </div>
+            <button
+              class="iconBtn"
+              type="button"
+              title="Delete board"
+              aria-label="Delete board"
+              (click)="$event.stopPropagation(); openDeleteModal(project)"
+            >
+              ⋮
+            </button>
           </div>
-
-          <!-- Delete action -->
-          <button
-            class="iconBtn"
-            type="button"
-            title="Delete board"
-            aria-label="Delete board"
-            (click)="$event.stopPropagation(); openDeleteModal(project)"
-          >
-            ⋮
-          </button>
+          <div class="title">{{ project.name }}</div>
+          <div class="desc">{{ project.description || 'No description yet' }}</div>
         </div>
-
-        <div class="title">{{ project.name }}</div>
-        <div class="desc">{{ project.description || 'No description yet' }}</div>
       </button>
 
       <!-- Create tile (keep it) -->
       <button class="card create" type="button" (click)="openCreateModal()">
-        <div class="plus">+</div>
-        <div class="title">Create new board</div>
-        <div class="desc">Start with a blank board</div>
+        <div class="cardBody">
+          <div class="plus">+</div>
+          <div class="title">Create new board</div>
+          <div class="desc">Start with a blank board</div>
+        </div>
       </button>
     </div>
   </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footerInner">
+      <div class="footerBrand">Taskify</div>
+      <div class="footerLinks">
+        <a href="#features">Features</a>
+        <a href="#about">About</a>
+        <a href="#">Contact</a>
+        <a href="#">Privacy</a>
+      </div>
+      <p class="footerCopy">© {{ currentYear }} Taskify. Your project management tool.</p>
+    </div>
+  </footer>
 
   <!-- CREATE MODAL -->
   <div *ngIf="showCreateModal" class="modalBackdrop" (click)="closeCreateModal()">

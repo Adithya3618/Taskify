@@ -1,0 +1,60 @@
+<div class="page">
+  <div class="card">
+    <a routerLink="/" class="backLink">← Back to home</a>
+    <div class="logo">T</div>
+    <h1>Create your account</h1>
+    <p class="subtitle">Sign up to get started with Taskify.</p>
+
+    <form (ngSubmit)="onSubmit()" class="form">
+      <label class="field">
+        <span>Name</span>
+        <input
+          type="text"
+          [(ngModel)]="name"
+          name="name"
+          placeholder="Your name"
+          autocomplete="name"
+        />
+      </label>
+      <label class="field">
+        <span>Email</span>
+        <input
+          type="email"
+          [(ngModel)]="email"
+          name="email"
+          placeholder="you@example.com"
+          autocomplete="email"
+        />
+      </label>
+      <label class="field">
+        <span>Password</span>
+        <input
+          type="password"
+          [(ngModel)]="password"
+          name="password"
+          placeholder="••••••••"
+          autocomplete="new-password"
+        />
+      </label>
+      <label class="field">
+        <span>Confirm password</span>
+        <input
+          type="password"
+          [(ngModel)]="confirmPassword"
+          name="confirmPassword"
+          placeholder="••••••••"
+          autocomplete="new-password"
+        />
+      </label>
+      <p *ngIf="error" class="error">{{ error }}</p>
+      <button type="submit" class="btn primary" [disabled]="loading">
+        {{ loading ? 'Creating account...' : 'Sign up' }}
+      </button>
+    </form>
+
+    <p class="footerText">
+      Already have an account?
+      <a routerLink="/login">Log in</a>
+    </p>
+  </div>
+</div>
