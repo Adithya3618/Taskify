@@ -1,0 +1,15 @@
+<div *ngIf="message" class="banner" role="alert">
+  <div class="left">
+    <div class="icon">⚠</div>
+    <div class="text">
+      <div class="title">{{ title }}</div>
+      <div class="msg">{{ message }}</div>
+      <div class="hint" *ngIf="hint">{{ hint }}</div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button *ngIf="canRetry" class="btn" (click)="onRetry()">Retry</button>
+    <button class="btn ghost" (click)="onDismiss()">Dismiss</button>
+  </div>
+</div>

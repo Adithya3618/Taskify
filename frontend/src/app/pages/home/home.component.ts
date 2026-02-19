@@ -4,19 +4,21 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { Project } from '../../models/project.model';
+import { ErrorBannerComponent } from '../../components/error-banner/error-banner.component';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, ErrorBannerComponent],
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss']
 })
 /** Home page: boards list, navbar with profile, login/signup links, footer. */
 export class HomeComponent {
   projects: Project[] = [];
-  loading = true;
+  isLoading = true;
   currentYear = new Date().getFullYear();
+  errorMsg = '';
   apiError = false;
   useDemoData = false;
 
@@ -55,16 +57,17 @@ export class HomeComponent {
 
     // Stop infinite loading if API hangs
     setTimeout(() => {
-      if (this.loading) this.loading = false;
+      if (this.isLoading) this.isLoading = false;
     }, 5000);
   }
 
   loadProjects() {
-    this.loading = true;
+    this.isLoading = true;
+    this.errorMsg = '';
     this.apiService.getProjects().subscribe({
       next: (projects) => {
         this.projects = projects || [];
-        this.loading = false;
+        this.isLoading = false;
         this.apiError = false;
         this.useDemoData = false;
       },
@@ -72,13 +75,13 @@ export class HomeComponent {
         console.error('Failed to load projects:', err);
         this.apiError = true;
         this.useDemoData = true;
-
-        // Demo fallback
+        this.errorMsg = 'Failed to load boards';
+        // Demo fallback (your branch): show sample boards when API is down
         this.projects = [
           { id: 1, name: 'Demo Project', description: 'This is demo data', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
           { id: 2, name: 'Sample Board', description: 'Click to open board', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
         ];
-        this.loading = false;
+        this.isLoading = false;
       }
     });
   }
@@ -131,6 +134,7 @@ export class HomeComponent {
         // if demo mode was active, switch off now
         this.apiError = false;
         this.useDemoData = false;
+        this.errorMsg = '';
       },
       error: (err) => {
         console.error('Failed to create project:', err);
