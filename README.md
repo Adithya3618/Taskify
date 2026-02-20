@@ -92,7 +92,7 @@ The application follows a clean client–server architecture:
 # ⚙️ Running the Project Locally
 
 ## Backend Setup
-```bash
+```bash ![1771628297360](image/README/1771628297360.png)![1771628300694](image/README/1771628300694.png)![1771628301067](image/README/1771628301067.png)
 cd backend
 go mod tidy
 go run main.go
