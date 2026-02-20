@@ -1,0 +1,40 @@
+<div class="page">
+  <div class="card">
+    <a routerLink="/" class="backLink">← Back to home</a>
+    <div class="logo">T</div>
+    <h1>Log in to Taskify</h1>
+    <p class="subtitle">Enter your credentials to continue.</p>
+
+    <form (ngSubmit)="onSubmit()" class="form">
+      <label class="field">
+        <span>Email</span>
+        <input
+          type="email"
+          [(ngModel)]="email"
+          name="email"
+          placeholder="you@example.com"
+          autocomplete="email"
+        />
+      </label>
+      <label class="field">
+        <span>Password</span>
+        <input
+          type="password"
+          [(ngModel)]="password"
+          name="password"
+          placeholder="••••••••"
+          autocomplete="current-password"
+        />
+      </label>
+      <p *ngIf="error" class="error">{{ error }}</p>
+      <button type="submit" class="btn primary" [disabled]="loading">
+        {{ loading ? 'Signing in...' : 'Log in' }}
+      </button>
+    </form>
+
+    <p class="footerText">
+      Don't have an account?
+      <a routerLink="/signup">Sign up</a>
+    </p>
+  </div>
+</div>

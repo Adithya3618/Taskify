@@ -1,0 +1,63 @@
+<div class="page">
+  <nav class="navbar">
+    <a routerLink="/" class="brand"><span class="logo">T</span><span>Taskify</span></a>
+    <div class="navTabs">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="navTab">Home</a>
+      <a routerLink="/boards" routerLinkActive="active" class="navTab">Boards</a>
+      <a routerLink="/features" routerLinkActive="active" class="navTab">Features</a>
+      <a routerLink="/about" routerLinkActive="active" class="navTab">About</a>
+    </div>
+  </nav>
+
+  <main class="content">
+    <section class="hero">
+      <p class="eyebrow">About Taskify</p>
+      <h1>Built to turn project chaos into clear, trackable flow</h1>
+      <p class="lead">
+        Taskify is a Kanban workspace where teams can structure boards, split work into stages, and track progress without losing context.
+      </p>
+    </section>
+
+    <section class="grid two">
+      <article class="card">
+        <h3>Why Taskify exists</h3>
+        <p>
+          Most teams lose momentum when tasks are scattered across chats and docs. Taskify keeps every board, stage, and task in one place so work is easy to follow.
+        </p>
+      </article>
+      <article class="card">
+        <h3>How it works today</h3>
+        <p>
+          The app is built with Angular on the frontend and API-backed project operations. If the backend is unavailable, Taskify still supports demo-safe behavior for uninterrupted UX.
+        </p>
+      </article>
+    </section>
+
+    <section class="timeline">
+      <h2>Experience Principles</h2>
+      <div class="steps">
+        <div class="step">
+          <span class="dot"></span>
+          <div>
+            <h4>Fast onboarding</h4>
+            <p>New users can sign up quickly and start creating boards immediately.</p>
+          </div>
+        </div>
+        <div class="step">
+          <span class="dot"></span>
+          <div>
+            <h4>Clear ownership</h4>
+            <p>Boards are scoped to the signed-in user for safer, private workflow management.</p>
+          </div>
+        </div>
+        <div class="step">
+          <span class="dot"></span>
+          <div>
+            <h4>Focused execution</h4>
+            <p>Kanban stages and task cards keep teams centered on next actions and delivery.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>

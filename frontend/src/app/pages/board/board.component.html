@@ -1,142 +1,175 @@
-<div class="board-container">
-  <!-- Board as a card -->
-  <div class="board-card">
-    <header class="board-header">
-      <button type="button" class="btn-back" (click)="goBack()">← Back to Boards</button>
-      <div class="header-main">
-        <h1>{{ project?.name || 'Board' }}</h1>
-        <p class="board-subtitle">{{ stages.length }} stage{{ stages.length === 1 ? '' : 's' }}</p>
-      </div>
-    </header>
-
-    <!-- Loading -->
-    <div *ngIf="isLoading" class="state-text">
-      Loading board...
+<div class="board-container trello-bg">
+  <!-- Trello-like board top bar -->
+  <header class="board-topbar">
+    <div class="left">
+      <button class="btn-back" (click)="goBack()">← Back</button>
+      <h1 class="board-title">{{ project?.name || 'Board' }}</h1>
+      <span class="pill">Board</span>
     </div>
 
-    <app-error-banner
-      *ngIf="!isLoading && errorMsg"
-      title="Failed to load board"
-      [message]="errorMsg"
-      hint="Try refreshing, or check if backend is running."
-      [canRetry]="true"
-      (retry)="loadProject()"
-      (dismiss)="errorMsg = ''"
-    ></app-error-banner>
-
-    <!-- Empty stages -->
-    <div *ngIf="!isLoading && !errorMsg && (!stages || stages.length === 0)" class="empty-board">
-      <p>No stages yet. Add a stage to start organizing tasks.</p>
-      <button type="button" class="add-list-btn" (click)="openAddListDialog()">
-        + Add First Stage
-      </button>
+    <div class="right">
+      <button class="btn-ghost">Filter</button>
+      <button class="btn-primary">Share</button>
+      <button class="btn-ghost">⋯</button>
     </div>
+  </header>
 
-    <div class="board-content" *ngIf="!isLoading && !errorMsg && stages?.length">
-      <div class="columns-container">
-        <div class="column" *ngFor="let stage of stages">
-          <div class="column-header">
-            <h3>{{ stage.name }}</h3>
-            <button type="button" class="btn-delete" (click)="deleteStage(stage.id)" title="Delete stage">×</button>
-          </div>
-          <div class="tasks-list">
-            <div
-              class="task-card"
-              *ngFor="let task of stage.tasks"
-              (click)="openCardDetail(task, $event)"
-            >
-              <div class="task-content">
-                <p class="task-title">{{ task.title }}</p>
-                <p class="task-desc">{{ getDisplayDescription(task) }}</p>
-              </div>
-              <button
-                type="button"
-                class="btn-delete-task"
-                (click)="deleteTask(stage.id, task.id); $event.stopPropagation()"
-                title="Delete card"
-              >
-                ×
-              </button>
-            </div>
-            <div *ngIf="!stage.tasks || stage.tasks.length === 0" class="state-text">
-              No tasks in this stage.
-            </div>
-          </div>
-          <div class="add-task-form">
-            <input
-              type="text"
-              [(ngModel)]="newTaskTitles[stage.id]"
-              placeholder="+ Add a task..."
-              (keyup.enter)="createTask(stage.id)"
-            />
-            <button
-              type="button"
-              class="btn-add-task"
-              *ngIf="newTaskTitles[stage.id]?.trim()"
-              (click)="createTask(stage.id)"
-            >
-              Add
-            </button>
-          </div>
-        </div>
-        <div class="column add-column">
-          <input
-            type="text"
-            [(ngModel)]="newStageName"
-            placeholder="Enter stage title..."
-            (keydown.enter)="createStage()"
-            class="add-stage-input"
-          />
-          <button
-            type="button"
-            class="btn-add-column"
-            (click)="createStage()"
-            [disabled]="!newStageName.trim()"
-          >
-            + Add another stage
+  <!-- Loading State -->
+  <div class="loading" *ngIf="loading">
+    <p>Loading board...</p>
+    <p class="debug-hint">Check browser console (F12) for debug messages</p>
+  </div>
+
+  <!-- Board Content -->
+  <div class="board-content" *ngIf="!loading">
+    <div class="columns-container">
+      <!-- Stage Columns -->
+      <div class="column" *ngFor="let stage of stages">
+        <div class="column-header">
+          <h3>{{ stage.name }}</h3>
+          <button class="btn-delete" (click)="deleteStage(stage.id)" title="Delete stage">
+            ×
           </button>
         </div>
+
+        <!-- Tasks -->
+        <div class="tasks-list">
+          <div class="task-card" *ngFor="let task of stage.tasks" [ngClass]="getPriorityClass(task)" (click)="openTaskDetail(task, $event)">
+            <div class="task-content">
+              <p class="task-title">{{ task.title }}</p>
+              <p class="task-desc" *ngIf="getDisplayDescription(task)">{{ getDisplayDescription(task) }}</p>
+              <div class="task-meta-row" *ngIf="getTaskPriority(task) || getTaskDue(task)">
+                <span class="meta-pill priority-pill" [ngClass]="getPriorityClass(task)" *ngIf="getTaskPriority(task)">
+                  {{ getTaskPriority(task) }}
+                </span>
+                <span class="meta-pill due-pill" *ngIf="getTaskDue(task)">
+                  Due {{ getTaskDue(task) }}
+                </span>
+              </div>
+            </div>
+            <button class="btn-delete-task" (click)="deleteTask(stage.id, task.id, $event)" title="Delete task">
+              ×
+            </button>
+          </div>
+          
+          <p *ngIf="!stage.tasks?.length" class="no-tasks">No tasks yet</p>
+        </div>
+
+        <!-- Add Task -->
+        <div class="add-task-form">
+          <input
+            type="text"
+            [(ngModel)]="newTaskTitles[stage.id]"
+            placeholder="+ Add a task..."
+            (keyup.enter)="createTask(stage.id)"
+          />
+
+          <div class="task-form-actions">
+            <button class="btn-link-details" type="button" (click)="toggleTaskDetails(stage.id)">
+              {{ showTaskDetails[stage.id] ? 'Hide details' : '+ Add details' }}
+            </button>
+          </div>
+
+          <div class="task-detail-fields" *ngIf="showTaskDetails[stage.id]">
+            <textarea
+              rows="2"
+              [(ngModel)]="newTaskDescs[stage.id]"
+              placeholder="Description (optional)"
+            ></textarea>
+            <div class="task-meta-grid">
+              <input
+                type="date"
+                [(ngModel)]="newTaskDues[stage.id]"
+                title="Due date"
+              />
+              <select [(ngModel)]="newTaskPriorities[stage.id]" [ngClass]="getCreatePriorityClass(stage.id)">
+                <option value="">Priority</option>
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+                <option value="Critical">Critical</option>
+              </select>
+            </div>
+            <textarea
+              rows="2"
+              [(ngModel)]="newTaskNotes[stage.id]"
+              placeholder="Notes (optional)"
+            ></textarea>
+          </div>
+
+          <button
+            class="btn-add-task"
+            *ngIf="newTaskTitles[stage.id]?.trim()"
+            (click)="createTask(stage.id)"
+          >
+            Add
+          </button>
+        </div>
+      </div>
+
+      <!-- Add Stage Column -->
+      <div class="column add-column">
+        <input
+          type="text"
+          [(ngModel)]="newStageName"
+          placeholder="Enter list name..."
+          (keydown.enter)="createStage()"
+          class="add-stage-input"
+        />
+        <button
+          class="btn-add-column"
+          (click)="createStage()"
+          [disabled]="!newStageName.trim()"
+        >
+          + Add another list
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- Card detail panel (slide-out) -->
-  <div class="card-detail-backdrop" *ngIf="detailTask" (click)="closeCardDetail()"></div>
-  <aside class="card-detail-panel" *ngIf="detailTask">
-    <div class="panel-header">
-      <span class="panel-list">{{ detailStageName }}</span>
-      <button type="button" class="btn-close-panel" (click)="closeCardDetail()">×</button>
-    </div>
-    <div class="panel-body">
-      <label class="field">
-        <span class="label">Title</span>
-        <input type="text" [(ngModel)]="detailTitle" placeholder="Card title" class="input" />
-      </label>
-      <label class="field">
-        <span class="label">Description</span>
-        <textarea [(ngModel)]="detailDesc" placeholder="Add a more detailed description..." rows="4" class="textarea"></textarea>
-      </label>
-      <label class="field">
-        <span class="label">Due date</span>
-        <input type="date" [(ngModel)]="detailDue" class="input" />
-      </label>
-      <label class="field">
-        <span class="label">Priority</span>
-        <select [(ngModel)]="detailPriority" class="select">
-          <option value="">None</option>
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
-        </select>
-      </label>
-      <label class="field">
-        <span class="label">Notes</span>
-        <textarea [(ngModel)]="detailNotes" placeholder="Additional notes..." rows="2" class="textarea"></textarea>
-      </label>
-      <div class="panel-actions">
-        <button type="button" class="btn-save" (click)="saveCardDetail()">Save</button>
-        <button type="button" class="btn-cancel" (click)="closeCardDetail()">Cancel</button>
+  <!-- Task Detail Modal -->
+  <div class="task-modal-backdrop" *ngIf="detailTask" (click)="closeTaskDetail()">
+    <div class="task-modal" (click)="$event.stopPropagation()">
+      <div class="task-modal-header">
+        <div>
+          <h3>Task Details</h3>
+          <p>{{ detailStageName }}</p>
+        </div>
+        <button class="btn-close-modal" (click)="closeTaskDetail()" title="Close">×</button>
+      </div>
+
+      <div class="task-modal-body">
+        <label>Title</label>
+        <input type="text" [(ngModel)]="detailTitle" />
+
+        <label>Description</label>
+        <textarea rows="3" [(ngModel)]="detailDesc"></textarea>
+
+        <div class="task-modal-grid">
+          <div>
+            <label>Due Date</label>
+            <input type="date" [(ngModel)]="detailDue" />
+          </div>
+          <div>
+            <label>Priority</label>
+            <select [(ngModel)]="detailPriority">
+              <option value="">None</option>
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+              <option value="Critical">Critical</option>
+            </select>
+          </div>
+        </div>
+
+        <label>Notes</label>
+        <textarea rows="4" [(ngModel)]="detailNotes"></textarea>
+      </div>
+
+      <div class="task-modal-footer">
+        <button class="btn-modal-ghost" (click)="closeTaskDetail()">Cancel</button>
+        <button class="btn-modal-primary" (click)="saveTaskDetail()">Save</button>
       </div>
     </div>
-  </aside>
+  </div>
 </div>
