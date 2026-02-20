@@ -9,15 +9,15 @@ import { AuthService } from '../../services/auth.service';
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, ErrorBannerComponent],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss']
-
 })
+/** Home page: boards list, navbar with profile, login/signup links, footer. */
 export class HomeComponent {
   projects: Project[] = [];
-  isLoading = false;
-  errorMsg = '';
+  loading = true;
+  currentYear = new Date().getFullYear();
   apiError = false;
   useDemoData = false;
   private readonly boardOwnersKey = 'taskify.board.owners';
@@ -77,13 +77,12 @@ export class HomeComponent {
 
     // Stop infinite loading if API hangs
     setTimeout(() => {
-      if (this.isLoading) this.isLoading = false;
+      if (this.loading) this.loading = false;
     }, 5000);
   }
 
   loadProjects() {
-    this.isLoading = true;
-    this.errorMsg = '';
+    this.loading = true;
     this.apiService.getProjects().subscribe({
       next: (projects) => {
         this.projects = this.filterProjectsForCurrentUser(projects || []);
@@ -93,8 +92,6 @@ export class HomeComponent {
       },
       error: (err) => {
         console.error('Failed to load projects:', err);
-        this.projects = [];
-        this.isLoading = false;
         this.apiError = true;
         this.useDemoData = true;
 
@@ -135,7 +132,15 @@ export class HomeComponent {
   }
 
   getProjectColor(index: number): string {
-    return this.colors[index % this.colors.length];
+    return this.boardColors[index % this.boardColors.length];
+  }
+
+  toggleProfileMenu() {
+    this.showProfileMenu = !this.showProfileMenu;
+  }
+
+  closeProfileMenu() {
+    this.showProfileMenu = false;
   }
 
   logout() {
