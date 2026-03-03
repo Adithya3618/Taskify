@@ -16,11 +16,11 @@ func NewProjectService(db *sql.DB) *ProjectService {
 	return &ProjectService{db: db}
 }
 
-// CreateProject creates a new project
-func (s *ProjectService) CreateProject(name, description string) (*models.Project, error) {
+// CreateProject creates a new project (user_id from JWT)
+func (s *ProjectService) CreateProject(userID, name, description string) (*models.Project, error) {
 	result, err := s.db.Exec(
-		"INSERT INTO projects (name, description) VALUES (?, ?)",
-		name, description,
+		"INSERT INTO projects (user_id, name, description) VALUES (?, ?, ?)",
+		userID, name, description,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create project: %v", err)
@@ -33,6 +33,7 @@ func (s *ProjectService) CreateProject(name, description string) (*models.Projec
 
 	return &models.Project{
 		ID:          id,
+		UserID:      userID,
 		Name:        name,
 		Description: description,
 		CreatedAt:   time.Now(),
@@ -40,10 +41,11 @@ func (s *ProjectService) CreateProject(name, description string) (*models.Projec
 	}, nil
 }
 
-// GetAllProjects retrieves all projects
-func (s *ProjectService) GetAllProjects() ([]models.Project, error) {
+// GetAllProjects retrieves all projects for a specific user
+func (s *ProjectService) GetAllProjects(userID string) ([]models.Project, error) {
 	rows, err := s.db.Query(
-		"SELECT id, name, description, created_at, updated_at FROM projects ORDER BY created_at DESC",
+		"SELECT id, user_id, name, description, created_at, updated_at FROM projects WHERE user_id = ? ORDER BY created_at DESC",
+		userID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query projects: %v", err)
@@ -53,52 +55,61 @@ func (s *ProjectService) GetAllProjects() ([]models.Project, error) {
 	var projects []models.Project
 	for rows.Next() {
 		var project models.Project
-		err := rows.Scan(&project.ID, &project.Name, &project.Description, &project.CreatedAt, &project.UpdatedAt)
+		err := rows.Scan(&project.ID, &project.UserID, &project.Name, &project.Description, &project.CreatedAt, &project.UpdatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan project: %v", err)
 		}
 		projects = append(projects, project)
 	}
-
 	return projects, nil
 }
 
-// GetProjectByID retrieves a project by ID
-func (s *ProjectService) GetProjectByID(id int64) (*models.Project, error) {
-	var project models.Project
-	err := s.db.QueryRow(
-		"SELECT id, name, description, created_at, updated_at FROM projects WHERE id = ?",
-		id,
-	).Scan(&project.ID, &project.Name, &project.Description, &project.CreatedAt, &project.UpdatedAt)
+// GetProject retrieves a single project by ID (must belong to user)
+func (s *ProjectService) GetProject(userID string, id int64) (*models.Project, error) {
+	row := s.db.QueryRow(
+		"SELECT id, user_id, name, description, created_at, updated_at FROM projects WHERE id = ? AND user_id = ?",
+		id, userID,
+	)
 
+	var project models.Project
+	err := row.Scan(&project.ID, &project.UserID, &project.Name, &project.Description, &project.CreatedAt, &project.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get project: %v", err)
 	}
-
 	return &project, nil
 }
 
-// UpdateProject updates a project
-func (s *ProjectService) UpdateProject(id int64, name, description string) (*models.Project, error) {
+// UpdateProject updates a project (must belong to user)
+func (s *ProjectService) UpdateProject(userID string, id int64, name, description string) (*models.Project, error) {
 	_, err := s.db.Exec(
-		"UPDATE projects SET name = ?, description = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-		name, description, id,
+		"UPDATE projects SET name = ?, description = ?, updated_at = ? WHERE id = ? AND user_id = ?",
+		name, description, time.Now(), id, userID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update project: %v", err)
 	}
 
-	return s.GetProjectByID(id)
+	return s.GetProject(userID, id)
 }
 
-// DeleteProject deletes a project
-func (s *ProjectService) DeleteProject(id int64) error {
-	_, err := s.db.Exec("DELETE FROM projects WHERE id = ?", id)
+// DeleteProject deletes a project (must belong to user)
+func (s *ProjectService) DeleteProject(userID string, id int64) error {
+	result, err := s.db.Exec("DELETE FROM projects WHERE id = ? AND user_id = ?", id, userID)
 	if err != nil {
 		return fmt.Errorf("failed to delete project: %v", err)
 	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %v", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("project not found or access denied")
+	}
+
 	return nil
 }

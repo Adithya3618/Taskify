@@ -39,8 +39,8 @@ export class SignupComponent {
       this.error = 'Please enter a password.';
       return;
     }
-    if (this.password.length < 6) {
-      this.error = 'Password must be at least 6 characters.';
+    if (this.password.length < 8) {
+      this.error = 'Password must be at least 8 characters.';
       return;
     }
     if (this.password !== this.confirmPassword) {
@@ -49,17 +49,19 @@ export class SignupComponent {
     }
     this.loading = true;
 
-    const result = this.authService.register({
+    this.authService.register({
       name: this.name,
       email: this.email,
       password: this.password
+    }).subscribe({
+      next: () => {
+        this.loading = false;
+        this.router.navigate(['/boards']);
+      },
+      error: (err) => {
+        this.loading = false;
+        this.error = err.error?.error || 'Signup failed.';
+      }
     });
-    this.loading = false;
-    if (!result.ok) {
-      this.error = result.error || 'Signup failed.';
-      return;
-    }
-
-    this.router.navigate(['/boards']);
   }
 }

@@ -35,13 +35,15 @@ export class LoginComponent {
     }
     this.loading = true;
 
-    const result = this.authService.login(this.email, this.password);
-    this.loading = false;
-    if (!result.ok) {
-      this.error = result.error || 'Login failed.';
-      return;
-    }
-
-    this.router.navigate(['/boards']);
+    this.authService.login(this.email, this.password).subscribe({
+      next: () => {
+        this.loading = false;
+        this.router.navigate(['/boards']);
+      },
+      error: (err) => {
+        this.loading = false;
+        this.error = err.error?.error || 'Login failed.';
+      }
+    });
   }
 }
