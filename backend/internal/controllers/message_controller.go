@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"backend/internal/helpers"
 	"backend/internal/services"
 
 	"github.com/gorilla/mux"
@@ -20,6 +21,12 @@ func NewMessageController(service *services.MessageService) *MessageController {
 
 // CreateMessage handles POST /api/projects/:projectId/messages
 func (c *MessageController) CreateMessage(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	projectID, err := strconv.ParseInt(vars["projectId"], 10, 64)
 	if err != nil {
@@ -42,7 +49,7 @@ func (c *MessageController) CreateMessage(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	message, err := c.service.CreateMessage(projectID, req.SenderName, req.Content)
+	message, err := c.service.CreateMessage(userID, projectID, req.SenderName, req.Content)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -55,6 +62,12 @@ func (c *MessageController) CreateMessage(w http.ResponseWriter, r *http.Request
 
 // GetMessagesByProject handles GET /api/projects/:projectId/messages
 func (c *MessageController) GetMessagesByProject(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	projectID, err := strconv.ParseInt(vars["projectId"], 10, 64)
 	if err != nil {
@@ -62,7 +75,7 @@ func (c *MessageController) GetMessagesByProject(w http.ResponseWriter, r *http.
 		return
 	}
 
-	messages, err := c.service.GetMessagesByProject(projectID)
+	messages, err := c.service.GetMessagesByProject(userID, projectID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -74,6 +87,12 @@ func (c *MessageController) GetMessagesByProject(w http.ResponseWriter, r *http.
 
 // GetRecentMessages handles GET /api/projects/:projectId/messages/recent
 func (c *MessageController) GetRecentMessages(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	projectID, err := strconv.ParseInt(vars["projectId"], 10, 64)
 	if err != nil {
@@ -81,7 +100,7 @@ func (c *MessageController) GetRecentMessages(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	messages, err := c.service.GetRecentMessages(projectID)
+	messages, err := c.service.GetRecentMessages(userID, projectID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -93,6 +112,12 @@ func (c *MessageController) GetRecentMessages(w http.ResponseWriter, r *http.Req
 
 // DeleteMessage handles DELETE /api/messages/:id
 func (c *MessageController) DeleteMessage(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	id, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil {
@@ -100,7 +125,7 @@ func (c *MessageController) DeleteMessage(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := c.service.DeleteMessage(id); err != nil {
+	if err := c.service.DeleteMessage(userID, id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"backend/internal/helpers"
 	"backend/internal/services"
 
 	"github.com/gorilla/mux"
@@ -20,6 +21,12 @@ func NewProjectController(service *services.ProjectService) *ProjectController {
 
 // CreateProject handles POST /api/projects
 func (c *ProjectController) CreateProject(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	var req struct {
 		Name        string `json:"name"`
 		Description string `json:"description"`
@@ -35,7 +42,7 @@ func (c *ProjectController) CreateProject(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	project, err := c.service.CreateProject(req.Name, req.Description)
+	project, err := c.service.CreateProject(userID, req.Name, req.Description)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -48,7 +55,13 @@ func (c *ProjectController) CreateProject(w http.ResponseWriter, r *http.Request
 
 // GetAllProjects handles GET /api/projects
 func (c *ProjectController) GetAllProjects(w http.ResponseWriter, r *http.Request) {
-	projects, err := c.service.GetAllProjects()
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	projects, err := c.service.GetAllProjects(userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -60,6 +73,12 @@ func (c *ProjectController) GetAllProjects(w http.ResponseWriter, r *http.Reques
 
 // GetProject handles GET /api/projects/:id
 func (c *ProjectController) GetProject(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	id, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil {
@@ -67,7 +86,7 @@ func (c *ProjectController) GetProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	project, err := c.service.GetProjectByID(id)
+	project, err := c.service.GetProject(userID, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -84,6 +103,12 @@ func (c *ProjectController) GetProject(w http.ResponseWriter, r *http.Request) {
 
 // UpdateProject handles PUT /api/projects/:id
 func (c *ProjectController) UpdateProject(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	id, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil {
@@ -106,9 +131,14 @@ func (c *ProjectController) UpdateProject(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	project, err := c.service.UpdateProject(id, req.Name, req.Description)
+	project, err := c.service.UpdateProject(userID, id, req.Name, req.Description)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if project == nil {
+		http.Error(w, "Project not found or access denied", http.StatusNotFound)
 		return
 	}
 
@@ -118,6 +148,12 @@ func (c *ProjectController) UpdateProject(w http.ResponseWriter, r *http.Request
 
 // DeleteProject handles DELETE /api/projects/:id
 func (c *ProjectController) DeleteProject(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	id, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil {
@@ -125,7 +161,7 @@ func (c *ProjectController) DeleteProject(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := c.service.DeleteProject(id); err != nil {
+	if err := c.service.DeleteProject(userID, id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

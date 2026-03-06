@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"backend/internal/helpers"
 	"backend/internal/services"
 
 	"github.com/gorilla/mux"
@@ -18,8 +19,22 @@ func NewStageController(service *services.StageService) *StageController {
 	return &StageController{service: service}
 }
 
+// getUserID extracts user_id from request context
+func getUserID(r *http.Request) string {
+	if userID, ok := r.Context().Value("user_id").(string); ok {
+		return userID
+	}
+	return ""
+}
+
 // CreateStage handles POST /api/projects/:projectId/stages
 func (c *StageController) CreateStage(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	projectID, err := strconv.ParseInt(vars["projectId"], 10, 64)
 	if err != nil {
@@ -42,7 +57,7 @@ func (c *StageController) CreateStage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stage, err := c.service.CreateStage(projectID, req.Name, req.Position)
+	stage, err := c.service.CreateStage(userID, projectID, req.Name, req.Position)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -55,6 +70,12 @@ func (c *StageController) CreateStage(w http.ResponseWriter, r *http.Request) {
 
 // GetStagesByProject handles GET /api/projects/:projectId/stages
 func (c *StageController) GetStagesByProject(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	projectID, err := strconv.ParseInt(vars["projectId"], 10, 64)
 	if err != nil {
@@ -62,7 +83,7 @@ func (c *StageController) GetStagesByProject(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	stages, err := c.service.GetStagesByProject(projectID)
+	stages, err := c.service.GetStagesByProject(userID, projectID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -74,6 +95,12 @@ func (c *StageController) GetStagesByProject(w http.ResponseWriter, r *http.Requ
 
 // GetStage handles GET /api/stages/:id
 func (c *StageController) GetStage(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	id, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil {
@@ -81,7 +108,7 @@ func (c *StageController) GetStage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stage, err := c.service.GetStageByID(id)
+	stage, err := c.service.GetStageByID(userID, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -98,6 +125,12 @@ func (c *StageController) GetStage(w http.ResponseWriter, r *http.Request) {
 
 // UpdateStage handles PUT /api/stages/:id
 func (c *StageController) UpdateStage(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	id, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil {
@@ -115,9 +148,14 @@ func (c *StageController) UpdateStage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stage, err := c.service.UpdateStage(id, req.Name, req.Position)
+	stage, err := c.service.UpdateStage(userID, id, req.Name, req.Position)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if stage == nil {
+		http.Error(w, "Stage not found or access denied", http.StatusNotFound)
 		return
 	}
 
@@ -127,6 +165,12 @@ func (c *StageController) UpdateStage(w http.ResponseWriter, r *http.Request) {
 
 // DeleteStage handles DELETE /api/stages/:id
 func (c *StageController) DeleteStage(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	id, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil {
@@ -134,7 +178,7 @@ func (c *StageController) DeleteStage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := c.service.DeleteStage(id); err != nil {
+	if err := c.service.DeleteStage(userID, id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

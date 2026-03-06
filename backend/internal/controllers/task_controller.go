@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"backend/internal/helpers"
 	"backend/internal/services"
 
 	"github.com/gorilla/mux"
@@ -20,6 +21,12 @@ func NewTaskController(service *services.TaskService) *TaskController {
 
 // CreateTask handles POST /api/stages/:stageId/tasks
 func (c *TaskController) CreateTask(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	stageID, err := strconv.ParseInt(vars["stageId"], 10, 64)
 	if err != nil {
@@ -43,7 +50,7 @@ func (c *TaskController) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := c.service.CreateTask(stageID, req.Title, req.Description, req.Position)
+	task, err := c.service.CreateTask(userID, stageID, req.Title, req.Description, req.Position)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -56,6 +63,12 @@ func (c *TaskController) CreateTask(w http.ResponseWriter, r *http.Request) {
 
 // GetTasksByStage handles GET /api/stages/:stageId/tasks
 func (c *TaskController) GetTasksByStage(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	stageID, err := strconv.ParseInt(vars["stageId"], 10, 64)
 	if err != nil {
@@ -63,7 +76,7 @@ func (c *TaskController) GetTasksByStage(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	tasks, err := c.service.GetTasksByStage(stageID)
+	tasks, err := c.service.GetTasksByStage(userID, stageID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -75,6 +88,12 @@ func (c *TaskController) GetTasksByStage(w http.ResponseWriter, r *http.Request)
 
 // GetTask handles GET /api/tasks/:id
 func (c *TaskController) GetTask(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	id, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil {
@@ -82,7 +101,7 @@ func (c *TaskController) GetTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := c.service.GetTaskByID(id)
+	task, err := c.service.GetTaskByID(userID, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -99,6 +118,12 @@ func (c *TaskController) GetTask(w http.ResponseWriter, r *http.Request) {
 
 // UpdateTask handles PUT /api/tasks/:id
 func (c *TaskController) UpdateTask(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	id, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil {
@@ -117,9 +142,14 @@ func (c *TaskController) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := c.service.UpdateTask(id, req.Title, req.Description, req.Position)
+	task, err := c.service.UpdateTask(userID, id, req.Title, req.Description, req.Position)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if task == nil {
+		http.Error(w, "Task not found or access denied", http.StatusNotFound)
 		return
 	}
 
@@ -129,6 +159,12 @@ func (c *TaskController) UpdateTask(w http.ResponseWriter, r *http.Request) {
 
 // MoveTask handles PUT /api/tasks/:id/move
 func (c *TaskController) MoveTask(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	id, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil {
@@ -146,9 +182,14 @@ func (c *TaskController) MoveTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := c.service.MoveTask(id, int64(req.NewStageID), req.NewPos)
+	task, err := c.service.MoveTask(userID, id, int64(req.NewStageID), req.NewPos)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if task == nil {
+		http.Error(w, "Task not found or access denied", http.StatusNotFound)
 		return
 	}
 
@@ -158,6 +199,12 @@ func (c *TaskController) MoveTask(w http.ResponseWriter, r *http.Request) {
 
 // DeleteTask handles DELETE /api/tasks/:id
 func (c *TaskController) DeleteTask(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	vars := mux.Vars(r)
 	id, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil {
@@ -165,7 +212,7 @@ func (c *TaskController) DeleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := c.service.DeleteTask(id); err != nil {
+	if err := c.service.DeleteTask(userID, id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
