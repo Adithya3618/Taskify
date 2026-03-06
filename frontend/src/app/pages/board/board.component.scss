@@ -589,3 +589,149 @@
   background: rgba(0, 121, 191, 0.95);
   color: #fff;
 }
+
+.profileWrap {
+  position: relative;
+}
+
+.profileIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.profileDropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 230px;
+  background: #fff;
+  border: 1px solid #dfe1e6;
+  border-radius: 10px;
+  padding: 10px 0;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+  z-index: 140;
+}
+
+.profileDropdownHead {
+  padding: 0 12px 10px;
+}
+
+.profileIdentity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profileName {
+  font-size: 14px;
+  font-weight: 700;
+  color: #172b4d;
+}
+
+.profileEmail {
+  font-size: 12px;
+  color: #5e6c84;
+}
+
+.profileDropdownDivider {
+  height: 1px;
+  background: #e4e7ec;
+  margin: 6px 0;
+}
+
+.profileDropdownItem {
+  width: 100%;
+  border: none;
+  background: none;
+  text-align: left;
+  padding: 9px 12px;
+  color: #172b4d;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.profileDropdownItem:hover {
+  background: #f4f5f7;
+}
+
+.profileDropdownItem.danger {
+  color: #b42318;
+}
+
+.profileBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+}
+
+.accountModal {
+  width: min(560px, 94vw);
+}
+
+.accountDivider {
+  height: 1px;
+  background: #e4e7ec;
+  margin: 16px 0;
+}
+
+.sectionAction {
+  margin-top: 10px;
+}
+
+.accountMsg {
+  margin: 0 0 10px;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.accountMsg.error {
+  background: #fdecec;
+  color: #b42318;
+  border: 1px solid #f5c2c7;
+}
+
+.accountMsg.success {
+  background: #e7f8ef;
+  color: #006644;
+  border: 1px solid #bde5ce;
+}
+
+.passwordField {
+  position: relative;
+}
+
+.passwordField input {
+  padding-right: 42px;
+}
+
+.passwordToggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: #667085;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px;
+}
+
+.passwordToggle:hover {
+  color: #101828;
+}
+
+.passwordIcon {
+  width: 19px;
+  height: 19px;
+  display: block;
+}

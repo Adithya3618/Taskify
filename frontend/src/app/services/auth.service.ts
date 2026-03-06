@@ -69,6 +69,14 @@ export class AuthService {
     localStorage.setItem(this.sessionKey, JSON.stringify(user));
   }
 
+  updateCurrentUser(patch: Partial<AuthUser>): AuthUser | null {
+    const current = this.getCurrentUser();
+    if (!current) return null;
+    const updated: AuthUser = { ...current, ...patch };
+    this.setSession(updated);
+    return updated;
+  }
+
   isAuthenticated(): boolean {
     return !!this.getToken();
   }

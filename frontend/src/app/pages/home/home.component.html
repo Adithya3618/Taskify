@@ -31,6 +31,9 @@
           </div>
           <div class="profileDropdownDivider"></div>
           <a routerLink="/boards" class="profileDropdownItem" (click)="closeProfileMenu()">My boards</a>
+          <button type="button" class="profileDropdownItem" (click)="openAccountSettings()">
+            Account settings
+          </button>
           <button type="button" class="profileDropdownItem profileDropdownLogout" (click)="logout()">
             Log out
           </button>
@@ -139,6 +142,96 @@
       <p class="footerCopy">© {{ currentYear }} Taskify. Your project management tool.</p>
     </div>
   </footer>
+
+  <!-- ACCOUNT SETTINGS MODAL -->
+  <div *ngIf="showAccountModal" class="modalBackdrop" (click)="closeAccountModal()">
+    <div class="modal accountModal" (click)="$event.stopPropagation()">
+      <div class="modalHead">
+        <div>
+          <h3>Account settings</h3>
+          <p class="muted">Update email or password (UI only).</p>
+        </div>
+        <button class="iconBtn" type="button" (click)="closeAccountModal()">✕</button>
+      </div>
+
+      <div *ngIf="accountError" class="accountMsg error">{{ accountError }}</div>
+      <div *ngIf="accountSuccess" class="accountMsg success">{{ accountSuccess }}</div>
+
+      <div class="accountSection">
+        <h4>Change email</h4>
+        <label class="field">
+          <span>Current email</span>
+          <input [value]="userEmail" disabled />
+        </label>
+        <label class="field">
+          <span>New email</span>
+          <input [(ngModel)]="pendingEmail" type="email" placeholder="Enter new email" />
+        </label>
+        <button class="btn primary" type="button" (click)="saveEmailChange()">Save Email</button>
+      </div>
+
+      <div class="accountDivider"></div>
+
+      <div class="accountSection">
+        <h4>Change password</h4>
+        <label class="field">
+          <span>Current password</span>
+          <div class="passwordField">
+            <input [(ngModel)]="currentPassword" [type]="showCurrentPassword ? 'text' : 'password'" placeholder="Current password" />
+            <button type="button" class="passwordToggle" (click)="showCurrentPassword = !showCurrentPassword" [attr.aria-label]="showCurrentPassword ? 'Hide current password' : 'Show current password'">
+              <svg *ngIf="!showCurrentPassword" class="passwordIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M1.5 12s3.8-7 10.5-7 10.5 7 10.5 7-3.8 7-10.5 7S1.5 12 1.5 12Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"></circle>
+              </svg>
+              <svg *ngIf="showCurrentPassword" class="passwordIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M3 3l18 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+                <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+                <path d="M6.7 6.8C4 8.6 2.4 11 2.4 11s3.4 6.6 9.6 6.6c2.1 0 4-.5 5.5-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                <path d="M14.7 6.6c4.1.8 6.9 4.4 6.9 4.4s-.8 1.6-2.4 3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </button>
+          </div>
+        </label>
+        <label class="field">
+          <span>New password</span>
+          <div class="passwordField">
+            <input [(ngModel)]="newPassword" [type]="showNewPassword ? 'text' : 'password'" placeholder="Minimum 8 characters" />
+            <button type="button" class="passwordToggle" (click)="showNewPassword = !showNewPassword" [attr.aria-label]="showNewPassword ? 'Hide new password' : 'Show new password'">
+              <svg *ngIf="!showNewPassword" class="passwordIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M1.5 12s3.8-7 10.5-7 10.5 7 10.5 7-3.8 7-10.5 7S1.5 12 1.5 12Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"></circle>
+              </svg>
+              <svg *ngIf="showNewPassword" class="passwordIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M3 3l18 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+                <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+                <path d="M6.7 6.8C4 8.6 2.4 11 2.4 11s3.4 6.6 9.6 6.6c2.1 0 4-.5 5.5-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                <path d="M14.7 6.6c4.1.8 6.9 4.4 6.9 4.4s-.8 1.6-2.4 3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </button>
+          </div>
+        </label>
+        <label class="field">
+          <span>Confirm new password</span>
+          <div class="passwordField">
+            <input [(ngModel)]="confirmPassword" [type]="showConfirmPassword ? 'text' : 'password'" placeholder="Confirm new password" />
+            <button type="button" class="passwordToggle" (click)="showConfirmPassword = !showConfirmPassword" [attr.aria-label]="showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'">
+              <svg *ngIf="!showConfirmPassword" class="passwordIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M1.5 12s3.8-7 10.5-7 10.5 7 10.5 7-3.8 7-10.5 7S1.5 12 1.5 12Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"></circle>
+              </svg>
+              <svg *ngIf="showConfirmPassword" class="passwordIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M3 3l18 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+                <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+                <path d="M6.7 6.8C4 8.6 2.4 11 2.4 11s3.4 6.6 9.6 6.6c2.1 0 4-.5 5.5-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                <path d="M14.7 6.6c4.1.8 6.9 4.4 6.9 4.4s-.8 1.6-2.4 3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </button>
+          </div>
+        </label>
+        <button class="btn primary" type="button" (click)="savePasswordChange()">Save Password</button>
+      </div>
+    </div>
+  </div>
 
   <!-- CREATE MODAL -->
   <div *ngIf="showCreateModal" class="modalBackdrop" (click)="closeCreateModal()">

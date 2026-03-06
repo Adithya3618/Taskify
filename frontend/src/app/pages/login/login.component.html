@@ -26,6 +26,9 @@
           autocomplete="current-password"
         />
       </label>
+      <button type="button" class="forgotLink" (click)="openForgotPassword()">
+        Forgot password? Change password
+      </button>
       <p *ngIf="error" class="error">{{ error }}</p>
       <button type="submit" class="btn primary" [disabled]="loading">
         {{ loading ? 'Signing in...' : 'Log in' }}
@@ -36,5 +39,40 @@
       Don't have an account?
       <a routerLink="/signup">Sign up</a>
     </p>
+  </div>
+
+  <div *ngIf="showForgotModal" class="modalBackdrop" (click)="closeForgotPassword()">
+    <div class="modalCard" (click)="$event.stopPropagation()">
+      <div class="modalHead">
+        <h3>Forgot password</h3>
+        <button type="button" class="closeBtn" (click)="closeForgotPassword()">×</button>
+      </div>
+      <p class="modalSubtitle">Enter the email used to register and the code you received.</p>
+
+      <label class="field">
+        <span>Email</span>
+        <input type="email" [(ngModel)]="forgotEmail" placeholder="you@example.com" />
+      </label>
+      <div class="codeRow">
+        <button
+          type="button"
+          class="btn ghost codeBtn"
+          [disabled]="codeCooldown > 0"
+          (click)="sendOrResendCode()"
+        >
+          {{ codeButtonLabel }}
+        </button>
+      </div>
+
+      <label class="field">
+        <span>Code</span>
+        <input type="text" [(ngModel)]="forgotCode" placeholder="Enter verification code" />
+      </label>
+
+      <div class="modalActions">
+        <button type="button" class="btn ghost" (click)="closeForgotPassword()">Cancel</button>
+        <button type="button" class="btn primary" (click)="submitForgotPassword()">Continue</button>
+      </div>
+    </div>
   </div>
 </div>
