@@ -26,7 +26,9 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	// Initialize auth services
 	jwtSecret := services.GetEnvJWTSecret()
 	jwtService := services.NewJWTService(jwtSecret, 24) // 24 hour expiration
-	authService := services.NewAuthService(userRepo, jwtService)
+	otpService := services.NewOTPService()
+	emailService := services.NewEmailService()
+	authService := services.NewAuthService(userRepo, jwtService, otpService, emailService)
 	authController := controller.NewAuthController(authService)
 
 	// Initialize business services
@@ -51,6 +53,9 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	auth := api.PathPrefix("/auth").Subrouter()
 	auth.HandleFunc("/register", authController.Register).Methods("POST")
 	auth.HandleFunc("/login", authController.Login).Methods("POST")
+	auth.HandleFunc("/forgot-password", authController.ForgotPassword).Methods("POST")
+	auth.HandleFunc("/verify-otp", authController.VerifyOTP).Methods("POST")
+	auth.HandleFunc("/reset-password", authController.ResetPassword).Methods("POST")
 
 	// Protected routes - require JWT authentication
 	protected := api.PathPrefix("").Subrouter()

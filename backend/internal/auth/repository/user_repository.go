@@ -136,3 +136,25 @@ func (r *UserRepository) InitTable() error {
 
 	return nil
 }
+
+// UpdatePassword updates a user's password hash by email
+func (r *UserRepository) UpdatePassword(email, newPasswordHash string) error {
+	result, err := r.db.Exec(
+		"UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE email = ?",
+		newPasswordHash, email,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update password: %v", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %v", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
+}
