@@ -24,20 +24,12 @@ func NewEmailService() *EmailService {
 	if port == "" {
 		port = "587"
 	}
-	email := os.Getenv("SMTP_EMAIL")
-	if email == "" {
-		email = "taskify091@gmail.com"
-	}
-	password := os.Getenv("SMTP_PASSWORD")
-	if password == "" {
-		password = "zokc ajuy camq rwlp"
-	}
 
 	return &EmailService{
 		host:     host,
 		port:     port,
-		email:    email,
-		password: password,
+		email:    os.Getenv("SMTP_EMAIL"),
+		password: os.Getenv("SMTP_PASSWORD"),
 	}
 }
 
