@@ -36,6 +36,16 @@ export class HomeComponent {
   showProfileMenu = false;
   userDisplayName = '';
   userEmail = '';
+  showAccountModal = false;
+  pendingEmail = '';
+  currentPassword = '';
+  newPassword = '';
+  confirmPassword = '';
+  showCurrentPassword = false;
+  showNewPassword = false;
+  showConfirmPassword = false;
+  accountError = '';
+  accountSuccess = '';
   get userInitial(): string {
     return (this.userDisplayName || 'U').charAt(0).toUpperCase();
   }
@@ -141,6 +151,78 @@ export class HomeComponent {
 
   closeProfileMenu() {
     this.showProfileMenu = false;
+  }
+
+  openAccountSettings() {
+    this.closeProfileMenu();
+    this.showAccountModal = true;
+    this.pendingEmail = this.userEmail;
+    this.currentPassword = '';
+    this.newPassword = '';
+    this.confirmPassword = '';
+    this.showCurrentPassword = false;
+    this.showNewPassword = false;
+    this.showConfirmPassword = false;
+    this.accountError = '';
+    this.accountSuccess = '';
+  }
+
+  closeAccountModal() {
+    this.showAccountModal = false;
+    this.accountError = '';
+    this.accountSuccess = '';
+  }
+
+  saveEmailChange() {
+    this.accountError = '';
+    this.accountSuccess = '';
+
+    const oldEmail = this.userEmail.trim().toLowerCase();
+    const nextEmail = this.pendingEmail.trim().toLowerCase();
+
+    if (!nextEmail) {
+      this.accountError = 'Email is required.';
+      return;
+    }
+    if (!this.isValidEmail(nextEmail)) {
+      this.accountError = 'Please enter a valid email address.';
+      return;
+    }
+    if (nextEmail === oldEmail) {
+      this.accountError = 'New email must be different from current email.';
+      return;
+    }
+
+    this.migrateBoardOwnersEmail(oldEmail, nextEmail);
+    const updatedUser = this.authService.updateCurrentUser({ email: nextEmail });
+    this.userEmail = updatedUser?.email || nextEmail;
+    this.accountSuccess = 'Email updated in UI session.';
+  }
+
+  savePasswordChange() {
+    this.accountError = '';
+    this.accountSuccess = '';
+
+    if (!this.currentPassword.trim()) {
+      this.accountError = 'Current password is required.';
+      return;
+    }
+    if (this.newPassword.length < 8) {
+      this.accountError = 'New password must be at least 8 characters.';
+      return;
+    }
+    if (this.newPassword !== this.confirmPassword) {
+      this.accountError = 'New password and confirm password do not match.';
+      return;
+    }
+
+    this.currentPassword = '';
+    this.newPassword = '';
+    this.confirmPassword = '';
+    this.showCurrentPassword = false;
+    this.showNewPassword = false;
+    this.showConfirmPassword = false;
+    this.accountSuccess = 'Password change UI is ready. Backend endpoint can be connected later.';
   }
 
   logout() {
@@ -309,5 +391,19 @@ export class HomeComponent {
         this.closeDeleteModal();
       }
     });
+  }
+
+  private migrateBoardOwnersEmail(oldEmail: string, newEmail: string) {
+    if (!oldEmail || oldEmail === newEmail) return;
+    Object.keys(this.boardOwners).forEach((projectId) => {
+      if ((this.boardOwners[projectId] || '').trim().toLowerCase() === oldEmail) {
+        this.boardOwners[projectId] = newEmail;
+      }
+    });
+    this.saveBoardOwners();
+  }
+
+  private isValidEmail(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 }

@@ -22,6 +22,19 @@ export class BoardComponent implements OnInit {
   loading = true;
   private readonly boardOwnersKey = 'taskify.board.owners';
   private readonly META_SEP = '\n---\n';
+  userDisplayName = '';
+  userEmail = '';
+  showProfileMenu = false;
+  showAccountModal = false;
+  pendingEmail = '';
+  currentPassword = '';
+  newPassword = '';
+  confirmPassword = '';
+  showCurrentPassword = false;
+  showNewPassword = false;
+  showConfirmPassword = false;
+  accountError = '';
+  accountSuccess = '';
 
   // New item inputs
   newStageName = '';
@@ -55,6 +68,8 @@ export class BoardComponent implements OnInit {
       this.router.navigate(['/login']);
       return;
     }
+    this.userDisplayName = currentUser.name;
+    this.userEmail = currentUser.email;
 
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
@@ -153,6 +168,92 @@ export class BoardComponent implements OnInit {
 
   goBack() {
     this.router.navigate(['/boards']);
+  }
+
+  toggleProfileMenu() {
+    this.showProfileMenu = !this.showProfileMenu;
+  }
+
+  closeProfileMenu() {
+    this.showProfileMenu = false;
+  }
+
+  logout() {
+    this.closeProfileMenu();
+    this.authService.logout();
+    this.router.navigate(['/']);
+  }
+
+  openAccountSettings() {
+    this.closeProfileMenu();
+    this.showAccountModal = true;
+    this.pendingEmail = this.userEmail;
+    this.currentPassword = '';
+    this.newPassword = '';
+    this.confirmPassword = '';
+    this.showCurrentPassword = false;
+    this.showNewPassword = false;
+    this.showConfirmPassword = false;
+    this.accountError = '';
+    this.accountSuccess = '';
+  }
+
+  closeAccountModal() {
+    this.showAccountModal = false;
+    this.accountError = '';
+    this.accountSuccess = '';
+  }
+
+  saveEmailChange() {
+    this.accountError = '';
+    this.accountSuccess = '';
+
+    const oldEmail = this.userEmail.trim().toLowerCase();
+    const nextEmail = this.pendingEmail.trim().toLowerCase();
+
+    if (!nextEmail) {
+      this.accountError = 'Email is required.';
+      return;
+    }
+    if (!this.isValidEmail(nextEmail)) {
+      this.accountError = 'Please enter a valid email address.';
+      return;
+    }
+    if (nextEmail === oldEmail) {
+      this.accountError = 'New email must be different from current email.';
+      return;
+    }
+
+    this.migrateBoardOwnersEmail(oldEmail, nextEmail);
+    const updatedUser = this.authService.updateCurrentUser({ email: nextEmail });
+    this.userEmail = updatedUser?.email || nextEmail;
+    this.accountSuccess = 'Email updated in UI session.';
+  }
+
+  savePasswordChange() {
+    this.accountError = '';
+    this.accountSuccess = '';
+
+    if (!this.currentPassword.trim()) {
+      this.accountError = 'Current password is required.';
+      return;
+    }
+    if (this.newPassword.length < 8) {
+      this.accountError = 'New password must be at least 8 characters.';
+      return;
+    }
+    if (this.newPassword !== this.confirmPassword) {
+      this.accountError = 'New password and confirm password do not match.';
+      return;
+    }
+
+    this.currentPassword = '';
+    this.newPassword = '';
+    this.confirmPassword = '';
+    this.showCurrentPassword = false;
+    this.showNewPassword = false;
+    this.showConfirmPassword = false;
+    this.accountSuccess = 'Password change UI is ready. Backend endpoint can be connected later.';
   }
 
   createStage() {
@@ -391,5 +492,25 @@ export class BoardComponent implements OnInit {
     if (priority === 'medium') return 'priority-mid';
     if (priority === 'low') return 'priority-low';
     return 'priority-none';
+  }
+
+  private migrateBoardOwnersEmail(oldEmail: string, newEmail: string) {
+    if (!oldEmail || oldEmail === newEmail) return;
+    try {
+      const raw = localStorage.getItem(this.boardOwnersKey);
+      const owners = raw ? JSON.parse(raw) as Record<string, string> : {};
+      Object.keys(owners).forEach((projectId) => {
+        if ((owners[projectId] || '').trim().toLowerCase() === oldEmail) {
+          owners[projectId] = newEmail;
+        }
+      });
+      localStorage.setItem(this.boardOwnersKey, JSON.stringify(owners));
+    } catch {
+      // noop: keep UI responsive even if localStorage parse fails
+    }
+  }
+
+  private isValidEmail(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 }

@@ -23,15 +23,19 @@ var (
 
 // AuthService handles authentication business logic
 type AuthService struct {
-	userRepo   *repository.UserRepository
-	jwtService *JWTService
+	userRepo     *repository.UserRepository
+	jwtService   *JWTService
+	otpService   *OTPService
+	emailService *EmailService
 }
 
 // NewAuthService creates a new AuthService
-func NewAuthService(userRepo *repository.UserRepository, jwtService *JWTService) *AuthService {
+func NewAuthService(userRepo *repository.UserRepository, jwtService *JWTService, otpService *OTPService, emailService *EmailService) *AuthService {
 	return &AuthService{
-		userRepo:   userRepo,
-		jwtService: jwtService,
+		userRepo:     userRepo,
+		jwtService:   jwtService,
+		otpService:   otpService,
+		emailService: emailService,
 	}
 }
 
@@ -160,6 +164,72 @@ func (s *AuthService) GetUserByID(userID string) (*models.User, error) {
 		return nil, errors.New("user not found")
 	}
 	return user, nil
+}
+
+// ForgotPassword generates an OTP and sends it to the user's email
+func (s *AuthService) ForgotPassword(email string) error {
+	email = normalizeEmail(email)
+
+	// Check if user exists
+	user, err := s.userRepo.GetUserByEmail(email)
+	if err != nil {
+		return fmt.Errorf("failed to check user: %v", err)
+	}
+	if user == nil {
+		// Return nil to avoid email enumeration
+		return nil
+	}
+
+	// Generate OTP
+	otp, err := s.otpService.GenerateOTP(email)
+	if err != nil {
+		return fmt.Errorf("failed to generate OTP: %v", err)
+	}
+
+	// Send OTP via email
+	if err := s.emailService.SendOTP(email, otp); err != nil {
+		return fmt.Errorf("failed to send OTP email: %v", err)
+	}
+
+	return nil
+}
+
+// VerifyResetOTP verifies the OTP and returns a reset token
+func (s *AuthService) VerifyResetOTP(email, code string) (string, error) {
+	email = normalizeEmail(email)
+
+	resetToken, err := s.otpService.VerifyOTP(email, code)
+	if err != nil {
+		return "", err
+	}
+
+	return resetToken, nil
+}
+
+// ResetPassword resets the user's password using a valid reset token
+func (s *AuthService) ResetPassword(resetToken, newPassword string) error {
+	if len(newPassword) < 8 {
+		return ErrWeakPassword
+	}
+
+	// Validate reset token and get email
+	email, err := s.otpService.ValidateResetToken(resetToken)
+	if err != nil {
+		return err
+	}
+
+	// Hash new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %v", err)
+	}
+
+	// Update password in database
+	if err := s.userRepo.UpdatePassword(email, string(hashedPassword)); err != nil {
+		return fmt.Errorf("failed to update password: %v", err)
+	}
+
+	return nil
 }
 
 // validateRegisterInput validates the registration input

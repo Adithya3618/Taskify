@@ -3,6 +3,7 @@ package controller
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 
 	"backend/internal/auth/services"
@@ -82,6 +83,88 @@ func (c *AuthController) GetMe(w http.ResponseWriter, r *http.Request) {
 	c.writeJSON(w, http.StatusOK, user.ToResponse())
 }
 
+// ForgotPassword handles POST /api/auth/forgot-password
+func (c *AuthController) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		c.writeError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if req.Email == "" {
+		c.writeError(w, http.StatusBadRequest, "Email is required")
+		return
+	}
+
+	if err := c.authService.ForgotPassword(req.Email); err != nil {
+		log.Printf("ForgotPassword error: %v", err)
+		// Still return success to avoid email enumeration
+	}
+
+	c.writeJSON(w, http.StatusOK, map[string]string{
+		"message": "If an account exists with this email, a verification code has been sent.",
+	})
+}
+
+// VerifyOTP handles POST /api/auth/verify-otp
+func (c *AuthController) VerifyOTP(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email string `json:"email"`
+		Code  string `json:"code"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		c.writeError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if req.Email == "" || req.Code == "" {
+		c.writeError(w, http.StatusBadRequest, "Email and code are required")
+		return
+	}
+
+	resetToken, err := c.authService.VerifyResetOTP(req.Email, req.Code)
+	if err != nil {
+		c.writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	c.writeJSON(w, http.StatusOK, map[string]string{
+		"reset_token": resetToken,
+	})
+}
+
+// ResetPassword handles POST /api/auth/reset-password
+func (c *AuthController) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		ResetToken  string `json:"reset_token"`
+		NewPassword string `json:"new_password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		c.writeError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if req.ResetToken == "" || req.NewPassword == "" {
+		c.writeError(w, http.StatusBadRequest, "Reset token and new password are required")
+		return
+	}
+
+	if err := c.authService.ResetPassword(req.ResetToken, req.NewPassword); err != nil {
+		if errors.Is(err, services.ErrWeakPassword) {
+			c.writeError(w, http.StatusBadRequest, "Password must be at least 8 characters")
+			return
+		}
+		c.writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	c.writeJSON(w, http.StatusOK, map[string]string{
+		"message": "Password has been reset successfully.",
+	})
+}
+
 // handleAuthError maps authentication errors to HTTP status codes
 func (c *AuthController) handleAuthError(w http.ResponseWriter, err error) {
 	switch {
@@ -121,4 +204,7 @@ func (c *AuthController) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/register", c.Register).Methods("POST")
 	router.HandleFunc("/login", c.Login).Methods("POST")
 	router.HandleFunc("/me", c.GetMe).Methods("GET")
+	router.HandleFunc("/forgot-password", c.ForgotPassword).Methods("POST")
+	router.HandleFunc("/verify-otp", c.VerifyOTP).Methods("POST")
+	router.HandleFunc("/reset-password", c.ResetPassword).Methods("POST")
 }

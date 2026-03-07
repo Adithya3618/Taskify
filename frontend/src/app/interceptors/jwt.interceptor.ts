@@ -3,8 +3,8 @@ import { inject } from '@angular/core';
 import { AuthService } from '../services/auth.service';
 
 export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
-  // Skip adding token for auth endpoints (login/register)
-  if (req.url.includes('/auth/login') || req.url.includes('/auth/register')) {
+  // Skip token for auth endpoints (login/register/forgot/reset flows)
+  if (req.url.includes('/auth/')) {
     return next(req);
   }
 

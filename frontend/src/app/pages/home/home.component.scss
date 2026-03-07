@@ -511,6 +511,80 @@
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
 }
 
+.accountModal {
+  width: min(560px, calc(100vw - 24px));
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+.accountSection h4 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  color: #172b4d;
+}
+
+.accountDivider {
+  height: 1px;
+  background: #e0e4e8;
+  margin: 18px 0;
+}
+
+.accountMsg {
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.accountMsg.error {
+  background: #fdeceb;
+  color: #b42318;
+  border: 1px solid #f5c6c3;
+}
+
+.accountMsg.success {
+  background: #e7f8ef;
+  color: #006644;
+  border: 1px solid #bde5ce;
+}
+
+.accountSection .btn.primary {
+  margin-top: 4px;
+}
+
+.passwordField {
+  position: relative;
+}
+
+.passwordField input {
+  padding-right: 42px;
+}
+
+.passwordToggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: #5e6c84;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px;
+}
+
+.passwordToggle:hover {
+  color: #172b4d;
+}
+
+.passwordIcon {
+  width: 19px;
+  height: 19px;
+  display: block;
+}
+
 .modal input,
 .modal textarea {
   width: 100%;
