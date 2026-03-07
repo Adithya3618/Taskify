@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap, catchError, of } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 
 export interface AuthUser {
   id?: string;
@@ -12,6 +12,18 @@ export interface AuthUser {
 export interface LoginResponse {
   user: AuthUser;
   token: string;
+}
+
+export interface ForgotPasswordResponse {
+  message: string;
+}
+
+export interface VerifyOtpResponse {
+  reset_token: string;
+}
+
+export interface ResetPasswordResponse {
+  message: string;
 }
 
 @Injectable({
@@ -40,6 +52,21 @@ export class AuthService {
         this.setSession(response.user);
       })
     );
+  }
+
+  forgotPassword(email: string): Observable<ForgotPasswordResponse> {
+    return this.http.post<ForgotPasswordResponse>(`${this.apiUrl}/forgot-password`, { email });
+  }
+
+  verifyResetOtp(email: string, code: string): Observable<VerifyOtpResponse> {
+    return this.http.post<VerifyOtpResponse>(`${this.apiUrl}/verify-otp`, { email, code });
+  }
+
+  resetPassword(resetToken: string, newPassword: string): Observable<ResetPasswordResponse> {
+    return this.http.post<ResetPasswordResponse>(`${this.apiUrl}/reset-password`, {
+      reset_token: resetToken,
+      new_password: newPassword
+    });
   }
 
   logout(): void {

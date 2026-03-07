@@ -44,34 +44,84 @@
   <div *ngIf="showForgotModal" class="modalBackdrop" (click)="closeForgotPassword()">
     <div class="modalCard" (click)="$event.stopPropagation()">
       <div class="modalHead">
-        <h3>Forgot password</h3>
+        <h3>{{ forgotTitle }}</h3>
         <button type="button" class="closeBtn" (click)="closeForgotPassword()">×</button>
       </div>
-      <p class="modalSubtitle">Enter the email used to register and the code you received.</p>
+      <p class="modalSubtitle">{{ forgotSubtitle }}</p>
 
-      <label class="field">
-        <span>Email</span>
-        <input type="email" [(ngModel)]="forgotEmail" placeholder="you@example.com" />
-      </label>
-      <div class="codeRow">
-        <button
-          type="button"
-          class="btn ghost codeBtn"
-          [disabled]="codeCooldown > 0"
-          (click)="sendOrResendCode()"
-        >
-          {{ codeButtonLabel }}
-        </button>
-      </div>
+      <ng-container *ngIf="forgotStep !== 'success'">
+        <label class="field">
+          <span>Email</span>
+          <input
+            type="email"
+            [(ngModel)]="forgotEmail"
+            [disabled]="forgotLoading || forgotStep === 'reset'"
+            placeholder="you@example.com"
+          />
+        </label>
 
-      <label class="field">
-        <span>Code</span>
-        <input type="text" [(ngModel)]="forgotCode" placeholder="Enter verification code" />
-      </label>
+        <div *ngIf="forgotStep === 'request' || forgotStep === 'verify'" class="codeRow">
+          <button
+            type="button"
+            class="btn ghost codeBtn"
+            [disabled]="forgotLoading || codeCooldown > 0"
+            (click)="sendOrResendCode()"
+          >
+            {{ forgotLoading && !hasSentCode ? 'Sending...' : codeButtonLabel }}
+          </button>
+        </div>
+
+        <label *ngIf="forgotStep === 'verify'" class="field">
+          <span>Verification code</span>
+          <input
+            type="text"
+            [(ngModel)]="forgotCode"
+            maxlength="6"
+            placeholder="Enter verification code"
+          />
+        </label>
+
+        <ng-container *ngIf="forgotStep === 'reset'">
+          <label class="field">
+            <span>New password</span>
+            <input
+              type="password"
+              [(ngModel)]="forgotNewPassword"
+              autocomplete="new-password"
+              placeholder="At least 8 characters"
+            />
+          </label>
+          <label class="field">
+            <span>Confirm password</span>
+            <input
+              type="password"
+              [(ngModel)]="forgotConfirmPassword"
+              autocomplete="new-password"
+              placeholder="Re-enter password"
+            />
+          </label>
+        </ng-container>
+      </ng-container>
+
+      <p *ngIf="forgotError" class="error">{{ forgotError }}</p>
+      <p *ngIf="forgotInfo" class="status">{{ forgotInfo }}</p>
 
       <div class="modalActions">
-        <button type="button" class="btn ghost" (click)="closeForgotPassword()">Cancel</button>
-        <button type="button" class="btn primary" (click)="submitForgotPassword()">Continue</button>
+        <button
+          *ngIf="forgotStep === 'verify'"
+          type="button"
+          class="btn ghost"
+          (click)="backToRequestStep()"
+          [disabled]="forgotLoading"
+        >
+          Change email
+        </button>
+        <button type="button" class="btn ghost" (click)="closeForgotPassword()" [disabled]="forgotLoading">
+          {{ forgotStep === 'success' ? 'Close' : 'Cancel' }}
+        </button>
+        <button type="button" class="btn primary" [disabled]="forgotLoading" (click)="submitForgotPassword()">
+          {{ forgotContinueLabel }}
+        </button>
       </div>
     </div>
   </div>

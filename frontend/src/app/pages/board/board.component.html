@@ -197,7 +197,7 @@
       <div class="task-modal-header">
         <div>
           <h3>Account settings</h3>
-          <p>Update email or password (UI only).</p>
+          <p>Update your password.</p>
         </div>
         <button class="btn-close-modal" (click)="closeAccountModal()" title="Close">×</button>
       </div>
@@ -205,15 +205,6 @@
       <div class="task-modal-body">
         <p *ngIf="accountError" class="accountMsg error">{{ accountError }}</p>
         <p *ngIf="accountSuccess" class="accountMsg success">{{ accountSuccess }}</p>
-
-        <h4>Change email</h4>
-        <label>Current email</label>
-        <input [value]="userEmail" disabled />
-        <label>New email</label>
-        <input [(ngModel)]="pendingEmail" type="email" placeholder="Enter new email" />
-        <button class="btn-modal-primary sectionAction" (click)="saveEmailChange()">Save Email</button>
-
-        <div class="accountDivider"></div>
 
         <h4>Change password</h4>
         <label>Current password</label>

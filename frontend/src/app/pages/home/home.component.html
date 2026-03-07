@@ -149,28 +149,13 @@
       <div class="modalHead">
         <div>
           <h3>Account settings</h3>
-          <p class="muted">Update email or password (UI only).</p>
+          <p class="muted">Update your password.</p>
         </div>
         <button class="iconBtn" type="button" (click)="closeAccountModal()">✕</button>
       </div>
 
       <div *ngIf="accountError" class="accountMsg error">{{ accountError }}</div>
       <div *ngIf="accountSuccess" class="accountMsg success">{{ accountSuccess }}</div>
-
-      <div class="accountSection">
-        <h4>Change email</h4>
-        <label class="field">
-          <span>Current email</span>
-          <input [value]="userEmail" disabled />
-        </label>
-        <label class="field">
-          <span>New email</span>
-          <input [(ngModel)]="pendingEmail" type="email" placeholder="Enter new email" />
-        </label>
-        <button class="btn primary" type="button" (click)="saveEmailChange()">Save Email</button>
-      </div>
-
-      <div class="accountDivider"></div>
 
       <div class="accountSection">
         <h4>Change password</h4>
