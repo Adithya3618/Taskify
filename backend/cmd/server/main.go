@@ -10,6 +10,7 @@ import (
 	"backend/internal/routes"
 
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 )
 
 // Custom CORS middleware that allows all localhost origins
@@ -35,6 +36,11 @@ func enableCORS(next http.Handler) http.Handler {
 }
 
 func main() {
+	// Load .env file
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found or error loading it")
+	}
+
 	// Initialize database
 	db, err := database.NewDB()
 	if err != nil {
