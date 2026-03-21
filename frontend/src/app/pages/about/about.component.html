@@ -1,6 +1,40 @@
 <div class="page">
   <nav class="navbar">
-    <a routerLink="/" class="brand"><span class="logo">T</span><span>Taskify</span></a>
+    <a routerLink="/" class="brand">
+      <span class="logo">
+        <svg class="logoSvgFull" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="lgA" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%"   stop-color="#22D3EE"/>
+              <stop offset="55%"  stop-color="#818CF8"/>
+              <stop offset="100%" stop-color="#E879F9"/>
+            </linearGradient>
+            <clipPath id="tcA">
+              <path d="M10 8 H90 V30 H60 V92 H40 V30 H10 Z"/>
+            </clipPath>
+          </defs>
+          <g class="ptGroup">
+            <circle class="pt pt1"  cx="-6"  cy="10"  r="4"   fill="#22D3EE"/>
+            <circle class="pt pt2"  cx="106" cy="14"  r="3"   fill="#818CF8"/>
+            <circle class="pt pt3"  cx="104" cy="65"  r="3.5" fill="#E879F9"/>
+            <circle class="pt pt4"  cx="-4"  cy="80"  r="3"   fill="#22D3EE"/>
+            <circle class="pt pt5"  cx="50"  cy="-9"  r="2.5" fill="#818CF8"/>
+            <circle class="pt pt6"  cx="92"  cy="104" r="3"   fill="#E879F9"/>
+            <line   class="pt pt7"  x1="96"  y1="26" x2="110" y2="36" stroke="#22D3EE" stroke-width="3.5" stroke-linecap="round"/>
+            <line   class="pt pt8"  x1="-10" y1="40" x2="2"   y2="52" stroke="#818CF8" stroke-width="3"   stroke-linecap="round"/>
+            <circle class="pt pt9"  cx="18"  cy="110" r="2.5" fill="#818CF8"/>
+            <line   class="pt pt10" x1="76"  y1="108" x2="90" y2="120" stroke="#E879F9" stroke-width="2.5" stroke-linecap="round"/>
+          </g>
+          <g class="logoGroup">
+            <path d="M10 8 H90 V30 H60 V92 H40 V30 H10 Z" fill="url(#lgA)"/>
+            <line x1="14" y1="5"  x2="34" y2="96" stroke="rgba(255,255,255,0.18)" stroke-width="14" clip-path="url(#tcA)"/>
+            <line x1="48" y1="5"  x2="64" y2="33" stroke="rgba(255,255,255,0.25)" stroke-width="10" clip-path="url(#tcA)"/>
+            <path class="checkPath" d="M30 60 L46 78 L86 18" stroke="rgba(255,255,255,0.92)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </g>
+        </svg>
+      </span>
+      <span>askify</span>
+    </a>
     <div class="navTabs">
       <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="navTab">Home</a>
       <a routerLink="/boards" routerLinkActive="active" class="navTab">Boards</a>

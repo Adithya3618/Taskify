@@ -20,6 +20,7 @@
   box-shadow: 0 4px 20px rgba(0, 105, 165, 0.25), 0 1px 3px rgba(0, 0, 0, 0.08);
   flex-shrink: 0;
   position: relative;
+  animation: slideDown 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .navbar::after {
@@ -36,25 +37,25 @@
 .navbar .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0;
   text-decoration: none;
   color: #fff;
+  transition: opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.navbar .brand:hover {
+  opacity: 0.88;
 }
 
 .navbar .logo {
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.25);
-  backdrop-filter: blur(8px);
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
-  font-size: 17px;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: visible;
 }
 
 .brandName {
@@ -63,6 +64,7 @@
   letter-spacing: -0.02em;
   color: #fff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  margin-left: -4px;
 }
 
 .navTabs {
@@ -78,7 +80,8 @@
   border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
-  transition: background 0.2s, color 0.2s, transform 0.15s;
+  transition: background 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .navTab:hover {
@@ -129,9 +132,16 @@
   justify-content: center;
   font-weight: 700;
   font-size: 14px;
-  transition: background 0.2s, transform 0.15s;
+  transition: background 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   border: 2px solid rgba(255, 255, 255, 0.4);
   backdrop-filter: blur(6px);
+}
+
+.profileIcon:hover .profileAvatar {
+  background: rgba(255, 255, 255, 0.4);
+  border-color: rgba(255, 255, 255, 0.65);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.15);
 }
 
 .profileIcon:hover .profileAvatar {
@@ -330,7 +340,9 @@
   border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
+  will-change: transform;
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   text-align: left;
   border: none;
   padding: 0;
@@ -342,11 +354,22 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   overflow: visible;
   position: relative;
+  animation: cardEntrance 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Stagger the first 8 board cards */
+.grid .card:nth-child(1)  { animation-delay: 0.05s; }
+.grid .card:nth-child(2)  { animation-delay: 0.12s; }
+.grid .card:nth-child(3)  { animation-delay: 0.19s; }
+.grid .card:nth-child(4)  { animation-delay: 0.26s; }
+.grid .card:nth-child(5)  { animation-delay: 0.33s; }
+.grid .card:nth-child(6)  { animation-delay: 0.40s; }
+.grid .card:nth-child(7)  { animation-delay: 0.47s; }
+.grid .card:nth-child(8)  { animation-delay: 0.54s; }
+
 .card.boardCard:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
 }
 
 .cardColorBar {
@@ -465,6 +488,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  will-change: transform;
+  transition: background 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card.create .cardBody {
@@ -475,6 +503,16 @@
 .card.create:hover {
   background: #e4e8ec;
   border-color: #97a0af;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.card.create .plus {
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.card.create:hover .plus {
+  transform: rotate(90deg) scale(1.15);
 }
 
 .card.create .title {
@@ -500,6 +538,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  animation: fadeIn 0.2s ease both;
 }
 
 .modal {
@@ -509,6 +548,7 @@
   width: 400px;
   color: #172b4d;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  animation: scaleIn 0.28s cubic-bezier(0.34, 1.2, 0.64, 1) both;
 }
 
 .accountModal {

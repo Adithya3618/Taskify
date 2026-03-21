@@ -1,9 +1,8 @@
 .page {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 16% 22%, rgba(0, 121, 191, 0.14), transparent 33%),
-    radial-gradient(circle at 84% 70%, rgba(255, 159, 26, 0.12), transparent 30%),
-    linear-gradient(160deg, #e8f4fc 0%, #dde8f5 25%, #ebe5f8 50%, #e5f0fa 75%, #eee8f8 100%);
+  background: linear-gradient(-45deg, #e8f4fc, #dde8f5, #ebe5f8, #e5f0fa, #eef4ff);
+  background-size: 400% 400%;
+  animation: gradientShift 14s ease infinite;
   color: #172b4d;
   font-family: 'Plus Jakarta Sans', sans-serif;
 }
@@ -15,26 +14,37 @@
   padding: 12px 36px;
   background: linear-gradient(120deg, #0079bf 0%, #026aa7 40%, #005b96 100%);
   box-shadow: 0 4px 20px rgba(0, 69, 120, 0.2);
+  animation: slideDown 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0;
   color: #fff;
   text-decoration: none;
   font-weight: 800;
   font-size: 21px;
+  transition: opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.brand span:last-child {
+  margin-left: -4px;
+}
+
+.brand:hover {
+  opacity: 0.88;
 }
 
 .logo {
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.25);
+  background: transparent;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  overflow: visible;
 }
 
 .navTabs {
@@ -48,6 +58,8 @@
   padding: 8px 16px;
   border-radius: 10px;
   font-weight: 600;
+  transition: background 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .navTab.active,
@@ -69,6 +81,8 @@
   padding: 30px;
   box-shadow: 0 16px 36px rgba(15, 23, 42, 0.1);
   margin-bottom: 18px;
+  backdrop-filter: blur(8px);
+  animation: fadeInUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
 }
 
 .eyebrow {
@@ -134,6 +148,19 @@ h1 {
   border-radius: 16px;
   padding: 18px;
   box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+  will-change: transform;
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.groupCard:nth-child(1) { animation-delay: 0.25s; }
+.groupCard:nth-child(2) { animation-delay: 0.35s; }
+.groupCard:nth-child(3) { animation-delay: 0.45s; }
+
+.groupCard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
 }
 
 .groupCard h3 {
@@ -154,6 +181,15 @@ h1 {
   border-radius: 999px;
   font-size: 13px;
   font-weight: 600;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              background 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chip:hover {
+  transform: scale(1.05);
+  background: #eef3f8;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08);
 }
 
 .roadmap {
