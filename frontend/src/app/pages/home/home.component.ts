@@ -19,6 +19,9 @@ export class HomeComponent {
   loading = true;
   currentYear = new Date().getFullYear();
   apiError = false;
+  apiErrorTitle = '';
+  apiErrorBody = '';
+  showBackendRunHint = false;
   useDemoData = false;
   private readonly boardOwnersKey = 'taskify.board.owners';
   private boardOwners: Record<string, string> = {};
@@ -98,12 +101,16 @@ export class HomeComponent {
         this.projects = this.filterProjectsForCurrentUser(projects || []);
         this.loading = false;
         this.apiError = false;
+        this.apiErrorTitle = '';
+        this.apiErrorBody = '';
+        this.showBackendRunHint = false;
         this.useDemoData = false;
       },
       error: (err) => {
         console.error('Failed to load projects:', err);
         this.apiError = true;
         this.useDemoData = true;
+        this.setApiErrorState(err);
 
         // In private mode, keep boards scoped to the authenticated user.
         this.projects = [];
@@ -333,6 +340,9 @@ export class HomeComponent {
 
         // if demo mode was active, switch off now
         this.apiError = false;
+        this.apiErrorTitle = '';
+        this.apiErrorBody = '';
+        this.showBackendRunHint = false;
         this.useDemoData = false;
       },
       error: (err) => {
@@ -405,5 +415,35 @@ export class HomeComponent {
 
   private isValidEmail(email: string): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  private setApiErrorState(err: any) {
+    const status = Number(err?.status ?? 0);
+    const serverMessage = String(err?.error?.error || err?.message || '').trim();
+
+    if (status === 0) {
+      this.apiErrorTitle = 'Could not connect to backend';
+      this.apiErrorBody = 'The app could not reach the API server on localhost:8080.';
+      this.showBackendRunHint = true;
+      return;
+    }
+
+    if (status === 401 || status === 403) {
+      this.apiErrorTitle = 'Session expired or unauthorized';
+      this.apiErrorBody = 'Please sign in again to continue.';
+      this.showBackendRunHint = false;
+      return;
+    }
+
+    if (status >= 500) {
+      this.apiErrorTitle = 'Backend returned an error';
+      this.apiErrorBody = serverMessage || `Request failed with status ${status}.`;
+      this.showBackendRunHint = false;
+      return;
+    }
+
+    this.apiErrorTitle = 'Could not load boards';
+    this.apiErrorBody = serverMessage || `Request failed with status ${status}.`;
+    this.showBackendRunHint = false;
   }
 }

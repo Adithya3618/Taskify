@@ -63,10 +63,13 @@
 
     <!-- API Error -->
     <div *ngIf="apiError" class="alert">
-      <div class="alertTitle">Could not connect to backend</div>
+      <div class="alertTitle">{{ apiErrorTitle || 'Could not load boards' }}</div>
       <div class="alertBody">
-        Make sure Go server is running:
-        <code>cd backend && go run cmd/server/main.go</code>
+        {{ apiErrorBody || 'Something went wrong while loading data.' }}
+        <ng-container *ngIf="showBackendRunHint">
+          Make sure Go server is running:
+          <code>cd backend && go run cmd/server/main.go</code>
+        </ng-container>
       </div>
     </div>
 
