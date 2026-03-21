@@ -1,4 +1,13 @@
 <div class="page" (click)="onPageClick()">
+
+  <!-- Animated background orbs -->
+  <div class="bgOrbs" aria-hidden="true">
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+    <div class="orb orb3"></div>
+    <div class="orb orb4"></div>
+  </div>
+
   <!-- Navigation bar -->
   <nav class="navbar">
     <a routerLink="/" class="brand">
@@ -43,6 +52,16 @@
       <a routerLink="/about" routerLinkActive="active" class="navTab">About</a>
     </div>
     <div class="navActions">
+      <button class="themeToggle" type="button" (click)="themeService.toggle()"
+              [attr.aria-label]="themeService.isDark ? 'Switch to light mode' : 'Switch to dark mode'">
+        <svg *ngIf="themeService.isDark" class="themeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <svg *ngIf="!themeService.isDark" class="themeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
       <div class="profileWrap">
         <button
           class="profileIcon"
@@ -73,6 +92,13 @@
     </div>
   </nav>
   <div *ngIf="showProfileMenu" class="profileBackdrop" (click)="closeProfileMenu()"></div>
+
+  <!-- Hero greeting -->
+  <section class="hero">
+    <div class="heroBadge"><span class="badgeDot"></span>Workspace</div>
+    <h1>Welcome back,<br><span class="gradText">{{ userDisplayName }}.</span></h1>
+    <p class="heroSub">Your boards and tasks, ready when you are.</p>
+  </section>
 
   <section class="section">
     <div class="sectionHead">

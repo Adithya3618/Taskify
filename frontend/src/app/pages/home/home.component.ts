@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
 import { Project } from '../../models/project.model';
 import { AuthService } from '../../services/auth.service';
+import { ThemeService } from '../../services/theme.service';
 
 @Component({
   selector: 'app-home',
@@ -75,7 +76,8 @@ export class HomeComponent {
   constructor(
     private router: Router,
     private apiService: ApiService,
-    private authService: AuthService
+    private authService: AuthService,
+    public themeService: ThemeService
   ) {
     const currentUser = this.authService.getCurrentUser();
     if (!currentUser) {

@@ -5,6 +5,142 @@
   box-sizing: border-box;
 }
 
+/* ─── Theme: CSS custom properties ─── */
+
+/* Dark mode — default */
+:root {
+  --bg:                   #0c0e1a;
+  --orb-opacity:          0.14;
+
+  --nav-bg:               rgba(12, 14, 26, 0.72);
+  --nav-border:           rgba(255,255,255,0.08);
+  --nav-link:             rgba(255,255,255,0.65);
+  --nav-link-hover-bg:    rgba(255,255,255,0.10);
+  --nav-link-active-bg:   rgba(255,255,255,0.14);
+  --nav-link-active:      #fff;
+
+  --text-1:               #f1f5f9;
+  --text-2:               #e2e8f0;
+  --text-muted:           rgba(255,255,255,0.45);
+  --text-dim:             rgba(255,255,255,0.3);
+
+  --surface:              rgba(255,255,255,0.05);
+  --surface-hover:        rgba(255,255,255,0.09);
+  --border:               rgba(255,255,255,0.09);
+  --border-dashed:        rgba(255,255,255,0.14);
+
+  --card-bg:              rgba(255,255,255,0.04);
+  --card-bg-hover:        rgba(255,255,255,0.07);
+  --card-border:          rgba(255,255,255,0.09);
+  --card-shadow-hover:    0 16px 40px rgba(0,0,0,0.45);
+
+  --modal-bg:             rgba(16,20,38,0.97);
+  --modal-border:         rgba(255,255,255,0.10);
+  --modal-shadow:         0 28px 64px rgba(0,0,0,0.65);
+
+  --input-bg:             rgba(255,255,255,0.06);
+  --input-bg-focus:       rgba(255,255,255,0.09);
+  --input-border:         rgba(255,255,255,0.10);
+  --input-border-focus:   rgba(129,140,248,0.65);
+  --input-shadow-focus:   rgba(129,140,248,0.12);
+  --input-text:           #e2e8f0;
+  --input-placeholder:    rgba(255,255,255,0.22);
+  --date-scheme:          dark;
+
+  --dropdown-bg:          rgba(14,18,36,0.98);
+  --dropdown-hover:       rgba(255,255,255,0.08);
+  --dropdown-border:      rgba(255,255,255,0.10);
+  --dropdown-text:        rgba(255,255,255,0.75);
+
+  --badge-bg:             rgba(255,255,255,0.08);
+  --badge-text:           rgba(255,255,255,0.55);
+
+  --skeleton-a:           rgba(255,255,255,0.05);
+  --skeleton-b:           rgba(255,255,255,0.10);
+
+  --footer-bg:            rgba(0,0,0,0.28);
+  --footer-border:        rgba(255,255,255,0.06);
+  --footer-text:          rgba(255,255,255,0.22);
+  --footer-link:          rgba(255,255,255,0.38);
+  --footer-link-hover:    rgba(255,255,255,0.75);
+
+  --avatar-bg:            rgba(129,140,248,0.25);
+  --avatar-border:        rgba(129,140,248,0.45);
+  --avatar-text:          #c7d2fe;
+
+  --alert-bg:             rgba(239,68,68,0.08);
+  --alert-border:         rgba(239,68,68,0.2);
+  --alert-text:           rgba(255,255,255,0.55);
+  --alert-title:          #f87171;
+}
+
+/* Light mode override */
+[data-theme="light"] {
+  --bg:                   #eef2ff;
+  --orb-opacity:          0.10;
+
+  --nav-bg:               rgba(255,255,255,0.88);
+  --nav-border:           rgba(23,43,77,0.10);
+  --nav-link:             rgba(23,43,77,0.68);
+  --nav-link-hover-bg:    rgba(23,43,77,0.06);
+  --nav-link-active-bg:   rgba(23,43,77,0.10);
+  --nav-link-active:      #172b4d;
+
+  --text-1:               #172b4d;
+  --text-2:               #172b4d;
+  --text-muted:           #5e6c84;
+  --text-dim:             #97a0af;
+
+  --surface:              rgba(255,255,255,0.80);
+  --surface-hover:        rgba(255,255,255,0.97);
+  --border:               rgba(23,43,77,0.12);
+  --border-dashed:        rgba(23,43,77,0.20);
+
+  --card-bg:              rgba(255,255,255,0.85);
+  --card-bg-hover:        #fff;
+  --card-border:          rgba(23,43,77,0.10);
+  --card-shadow-hover:    0 12px 32px rgba(23,43,77,0.14);
+
+  --modal-bg:             #ffffff;
+  --modal-border:         rgba(23,43,77,0.10);
+  --modal-shadow:         0 20px 48px rgba(23,43,77,0.18);
+
+  --input-bg:             #f8fafc;
+  --input-bg-focus:       #ffffff;
+  --input-border:         #dfe1e6;
+  --input-border-focus:   #0079bf;
+  --input-shadow-focus:   rgba(0,121,191,0.12);
+  --input-text:           #172b4d;
+  --input-placeholder:    #97a0af;
+  --date-scheme:          light;
+
+  --dropdown-bg:          #ffffff;
+  --dropdown-hover:       #f4f5f7;
+  --dropdown-border:      #e0e4e8;
+  --dropdown-text:        #172b4d;
+
+  --badge-bg:             rgba(23,43,77,0.08);
+  --badge-text:           #5e6c84;
+
+  --skeleton-a:           #f0f2f5;
+  --skeleton-b:           #e4e8ec;
+
+  --footer-bg:            rgba(23,43,77,0.04);
+  --footer-border:        rgba(23,43,77,0.10);
+  --footer-text:          #97a0af;
+  --footer-link:          #5e6c84;
+  --footer-link-hover:    #172b4d;
+
+  --avatar-bg:            rgba(0,121,191,0.12);
+  --avatar-border:        rgba(0,121,191,0.35);
+  --avatar-text:          #026aa7;
+
+  --alert-bg:             rgba(239,68,68,0.06);
+  --alert-border:         rgba(239,68,68,0.15);
+  --alert-text:           #5e6c84;
+  --alert-title:          #dc2626;
+}
+
 html,
 body {
   height: 100%;
@@ -100,6 +236,41 @@ button {
   stroke-dasharray: 100;
   stroke-dashoffset: 100;
   animation: drawCheck 0.55s cubic-bezier(0.4, 0, 0.2, 1) 1.3s forwards;
+}
+
+/* ─── Background orb float animations ─── */
+@keyframes floatOrb1 {
+  0%, 100% { transform: translate(0, 0); }
+  33%       { transform: translate(32px, -44px); }
+  66%       { transform: translate(-22px, 18px); }
+}
+@keyframes floatOrb2 {
+  0%, 100% { transform: translate(0, 0); }
+  40%       { transform: translate(-42px, 28px); }
+  72%       { transform: translate(26px, -18px); }
+}
+@keyframes floatOrb3 {
+  0%, 100% { transform: translate(0, 0); }
+  30%       { transform: translate(22px, -32px); }
+  65%       { transform: translate(-28px, 12px); }
+}
+@keyframes floatOrb4 {
+  0%, 100% { transform: translate(0, 0); }
+  45%       { transform: translate(-16px, -24px); }
+  75%       { transform: translate(18px, 16px); }
+}
+
+/* Badge / status dot pulse */
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.45; transform: scale(1.45); }
+}
+
+/* Animated gradient text shimmer */
+@keyframes shimmerGrad {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 /* Particles: each moves toward the logo center (SVG 50,50 = ~19px,19px at 38px display) */

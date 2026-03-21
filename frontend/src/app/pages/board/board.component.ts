@@ -7,6 +7,7 @@ import { Project } from '../../models/project.model';
 import { Stage, CreateStageRequest } from '../../models/stage.model';
 import { Task, CreateTaskRequest } from '../../models/task.model';
 import { AuthService } from '../../services/auth.service';
+import { ThemeService } from '../../services/theme.service';
 
 @Component({
   selector: 'app-board',
@@ -45,6 +46,15 @@ export class BoardComponent implements OnInit {
   newTaskNotes: { [key: number]: string } = {};
   showTaskDetails: { [key: number]: boolean } = {};
 
+  // Filter state
+  showFilterPanel = false;
+  filterPriority = '';
+  filterDue = '';
+
+  // Share state
+  showShareModal = false;
+  shareLinkCopied = false;
+
   // Task detail view/edit modal state
   detailTask: Task | null = null;
   detailStageName = '';
@@ -58,7 +68,8 @@ export class BoardComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private apiService: ApiService,
-    private authService: AuthService
+    private authService: AuthService,
+    public themeService: ThemeService
   ) {}
 
   ngOnInit() {
@@ -400,6 +411,68 @@ export class BoardComponent implements OnInit {
     this.detailDue = parsed.due;
     this.detailPriority = parsed.priority;
     this.detailNotes = parsed.notes;
+  }
+
+  // ── Filter ───────────────────────────────────
+  toggleFilterPanel() {
+    this.showFilterPanel = !this.showFilterPanel;
+  }
+
+  clearFilters() {
+    this.filterPriority = '';
+    this.filterDue = '';
+  }
+
+  get hasActiveFilters(): boolean {
+    return !!(this.filterPriority || this.filterDue);
+  }
+
+  getFilteredTasks(stage: Stage): Task[] {
+    let tasks = stage.tasks || [];
+    if (this.filterPriority) {
+      tasks = tasks.filter(t => {
+        const p = this.getTaskPriority(t).toLowerCase();
+        return p === this.filterPriority.toLowerCase();
+      });
+    }
+    if (this.filterDue) {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      tasks = tasks.filter(t => {
+        const due = this.getTaskDue(t);
+        if (!due) return this.filterDue === 'none';
+        const dueDate = new Date(due); dueDate.setHours(0, 0, 0, 0);
+        if (this.filterDue === 'overdue') return dueDate < today;
+        if (this.filterDue === 'today')   return dueDate.getTime() === today.getTime();
+        if (this.filterDue === 'week') {
+          const week = new Date(today); week.setDate(today.getDate() + 7);
+          return dueDate >= today && dueDate <= week;
+        }
+        return true;
+      });
+    }
+    return tasks;
+  }
+
+  // ── Share ─────────────────────────────────────
+  openShareModal() {
+    this.showShareModal = true;
+    this.shareLinkCopied = false;
+  }
+
+  closeShareModal() {
+    this.showShareModal = false;
+    this.shareLinkCopied = false;
+  }
+
+  get boardUrl(): string {
+    return window.location.href;
+  }
+
+  copyShareLink() {
+    navigator.clipboard.writeText(this.boardUrl).then(() => {
+      this.shareLinkCopied = true;
+      setTimeout(() => { this.shareLinkCopied = false; }, 2500);
+    });
   }
 
   closeTaskDetail() {

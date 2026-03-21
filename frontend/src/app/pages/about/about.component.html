@@ -1,4 +1,14 @@
 <div class="page">
+
+  <!-- Animated background orbs -->
+  <div class="bgOrbs" aria-hidden="true">
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+    <div class="orb orb3"></div>
+    <div class="orb orb4"></div>
+  </div>
+
+  <!-- Navbar -->
   <nav class="navbar">
     <a routerLink="/" class="brand">
       <span class="logo">
@@ -41,57 +51,94 @@
       <a routerLink="/features" routerLinkActive="active" class="navTab">Features</a>
       <a routerLink="/about" routerLinkActive="active" class="navTab">About</a>
     </div>
+    <button class="themeToggle" type="button" (click)="themeService.toggle()"
+            [attr.aria-label]="themeService.isDark ? 'Switch to light mode' : 'Switch to dark mode'">
+      <svg *ngIf="themeService.isDark" class="themeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+      <svg *ngIf="!themeService.isDark" class="themeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
   </nav>
 
-  <main class="content">
-    <section class="hero">
-      <p class="eyebrow">About Taskify</p>
-      <h1>Built to turn project chaos into clear, trackable flow</h1>
-      <p class="lead">
-        Taskify is a Kanban workspace where teams can structure boards, split work into stages, and track progress without losing context.
-      </p>
-    </section>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="heroBadge"><span class="badgeDot"></span>Built with purpose</div>
+    <h1>Project chaos is<br><span class="gradText">not inevitable</span></h1>
+    <p class="heroSub">
+      Taskify is a Kanban workspace where teams structure boards, split work into
+      stages, and track progress without losing context — or their minds.
+    </p>
+  </section>
 
-    <section class="grid two">
-      <article class="card">
-        <h3>Why Taskify exists</h3>
-        <p>
-          Most teams lose momentum when tasks are scattered across chats and docs. Taskify keeps every board, stage, and task in one place so work is easy to follow.
-        </p>
-      </article>
-      <article class="card">
-        <h3>How it works today</h3>
-        <p>
-          The app is built with Angular on the frontend and API-backed project operations. If the backend is unavailable, Taskify still supports demo-safe behavior for uninterrupted UX.
-        </p>
-      </article>
-    </section>
+  <!-- Stats bar -->
+  <div class="statsBar">
+    <div class="statsInner">
+      <div class="statItem" *ngFor="let s of stats">
+        <span class="statVal">{{ s.value }}</span>
+        <span class="statLabel">{{ s.label }}</span>
+      </div>
+    </div>
+  </div>
 
-    <section class="timeline">
-      <h2>Experience Principles</h2>
-      <div class="steps">
-        <div class="step">
-          <span class="dot"></span>
-          <div>
-            <h4>Fast onboarding</h4>
-            <p>New users can sign up quickly and start creating boards immediately.</p>
-          </div>
-        </div>
-        <div class="step">
-          <span class="dot"></span>
-          <div>
-            <h4>Clear ownership</h4>
-            <p>Boards are scoped to the signed-in user for safer, private workflow management.</p>
-          </div>
-        </div>
-        <div class="step">
-          <span class="dot"></span>
-          <div>
-            <h4>Focused execution</h4>
-            <p>Kanban stages and task cards keep teams centered on next actions and delivery.</p>
-          </div>
+  <!-- Values -->
+  <section class="valuesSection">
+    <div class="content">
+      <p class="sectionLabel">What drives us</p>
+      <div class="valuesGrid">
+        <article class="valueCard" *ngFor="let v of values" [style.--accent]="v.color">
+          <span class="vIcon">{{ v.icon }}</span>
+          <h3>{{ v.title }}</h3>
+          <p>{{ v.desc }}</p>
+          <span class="vLine"></span>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tech stack -->
+  <section class="stackSection">
+    <div class="content">
+      <p class="sectionLabel">Built with</p>
+      <div class="stackRow">
+        <span class="stackPill" *ngFor="let tech of stack">{{ tech }}</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Principles -->
+  <section class="principlesSection">
+    <div class="principlesWrap">
+      <div class="principlesHeader">
+        <p class="sectionLabel">How we build</p>
+        <h2>Experience principles</h2>
+        <p class="principlesSub">Every decision we make comes back to one question: does this make it easier to get work done?</p>
+      </div>
+      <div class="principlesGrid">
+        <div class="principleCard" *ngFor="let p of principles; let i = index">
+          <span class="pNum">0{{ i + 1 }}</span>
+          <span class="pIcon">{{ p.icon }}</span>
+          <h4>{{ p.title }}</h4>
+          <p>{{ p.desc }}</p>
         </div>
       </div>
-    </section>
-  </main>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="ctaSection">
+    <div class="ctaCard">
+      <div class="ctaGlowBall ctaGlowBall1"></div>
+      <div class="ctaGlowBall ctaGlowBall2"></div>
+      <h2>See it for yourself</h2>
+      <p>Create a board in under a minute. No credit card. No catch.</p>
+      <div class="ctaRow">
+        <a routerLink="/signup" class="ctaPrimary">Start building free</a>
+        <a routerLink="/features" class="ctaGhost">Explore features →</a>
+      </div>
+    </div>
+  </section>
+
 </div>

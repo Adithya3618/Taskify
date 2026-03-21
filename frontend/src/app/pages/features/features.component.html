@@ -1,4 +1,14 @@
 <div class="page">
+
+  <!-- Animated background orbs -->
+  <div class="bgOrbs" aria-hidden="true">
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+    <div class="orb orb3"></div>
+    <div class="orb orb4"></div>
+  </div>
+
+  <!-- Navbar -->
   <nav class="navbar">
     <a routerLink="/" class="brand">
       <span class="logo">
@@ -41,46 +51,85 @@
       <a routerLink="/features" routerLinkActive="active" class="navTab">Features</a>
       <a routerLink="/about" routerLinkActive="active" class="navTab">About</a>
     </div>
+    <button class="themeToggle" type="button" (click)="themeService.toggle()"
+            [attr.aria-label]="themeService.isDark ? 'Switch to light mode' : 'Switch to dark mode'">
+      <svg *ngIf="themeService.isDark" class="themeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/>
+        <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+      <svg *ngIf="!themeService.isDark" class="themeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
   </nav>
 
-  <main class="content">
-    <section class="hero">
-      <p class="eyebrow">Features</p>
-      <h1>Everything you need to run focused project boards</h1>
-      <p class="sub">
-        Taskify combines clean board management, practical Kanban flow, and resilient UX to keep execution moving.
-      </p>
-      <div class="stats">
-        <div class="stat">
-          <span class="value">3</span>
-          <span class="label">Core Modules</span>
-        </div>
-        <div class="stat">
-          <span class="value">10+</span>
-          <span class="label">Active Capabilities</span>
-        </div>
-        <div class="stat">
-          <span class="value">100%</span>
-          <span class="label">Responsive UI</span>
-        </div>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="heroBadge"><span class="badgeDot"></span>Now in active development</div>
+    <h1>Everything your team<br><span class="gradText">needs to ship</span></h1>
+    <p class="heroSub">
+      Taskify brings board management, Kanban workflow, and real-time
+      collaboration into one clean, resilient workspace.
+    </p>
+    <div class="statsRow">
+      <div class="statPill" *ngFor="let s of stats">
+        <span class="statVal">{{ s.value }}</span>
+        <span class="statLabel">{{ s.label }}</span>
       </div>
-    </section>
-
-    <section class="groups">
-      <article class="groupCard" *ngFor="let group of featureGroups">
-        <h3>{{ group.title }}</h3>
-        <div class="chips">
-          <span class="chip" *ngFor="let feature of group.items">{{ feature }}</span>
-        </div>
-      </article>
-    </section>
-
-    <section class="roadmap">
-      <h2>Next Up</h2>
-      <div class="chips">
-        <span class="chip soft" *ngFor="let item of roadmap">{{ item }}</span>
-      </div>
-      <a routerLink="/signup" class="cta">Create your account to start now</a>
-    </section>
-  </main>
     </div>
+  </section>
+
+  <!-- Features grid -->
+  <section class="featuresSection">
+    <p class="sectionLabel">Core capabilities</p>
+    <div class="featureGrid">
+      <article
+        class="featureCard"
+        *ngFor="let f of features"
+        [style.--accent]="f.color"
+      >
+        <span class="fIcon">{{ f.icon }}</span>
+        <h3>{{ f.title }}</h3>
+        <p>{{ f.desc }}</p>
+        <span class="fAccent"></span>
+      </article>
+    </div>
+  </section>
+
+  <!-- Roadmap -->
+  <section class="roadmapSection">
+    <div class="roadmapWrap">
+      <div class="roadmapHeader">
+        <p class="sectionLabel">What's coming</p>
+        <h2>The road ahead</h2>
+        <p class="roadmapSub">Features shipping on a rolling release cycle — transparency guaranteed.</p>
+      </div>
+      <div class="roadmapGrid">
+        <div
+          class="roadmapItem"
+          *ngFor="let item of roadmap"
+          [attr.data-status]="item.status"
+        >
+          <span class="rIcon">{{ item.icon }}</span>
+          <span class="rTitle">{{ item.title }}</span>
+          <span class="rBadge">{{ item.status }}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="ctaSection">
+    <div class="ctaCard">
+      <div class="ctaGlowBall ctaGlowBall1"></div>
+      <div class="ctaGlowBall ctaGlowBall2"></div>
+      <h2>Ready to take control?</h2>
+      <p>Join teams already using Taskify to run focused, trackable projects.</p>
+      <div class="ctaRow">
+        <a routerLink="/signup" class="ctaPrimary">Get started — it's free</a>
+        <a routerLink="/boards" class="ctaGhost">View demo boards →</a>
+      </div>
+    </div>
+  </section>
+
+</div>
