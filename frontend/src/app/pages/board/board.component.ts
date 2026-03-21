@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { ApiService } from '../../services/api.service';
 import { Project } from '../../models/project.model';
 import { Stage, CreateStageRequest } from '../../models/stage.model';
@@ -16,7 +17,7 @@ import { ThemeService } from '../../services/theme.service';
   templateUrl: './board.component.html',
   styleUrls: ['./board.component.scss']
 })
-export class BoardComponent implements OnInit {
+export class BoardComponent implements OnInit, OnDestroy {
   projectId: number = 0;
   project: Project | null = null;
   stages: Stage[] = [];
@@ -46,6 +47,11 @@ export class BoardComponent implements OnInit {
   newTaskNotes: { [key: number]: string } = {};
   showTaskDetails: { [key: number]: boolean } = {};
 
+  // Board switcher
+  allBoards: Project[] = [];
+  showBoardSwitcher = false;
+  private routeSub?: Subscription;
+
   // Filter state
   showFilterPanel = false;
   filterPriority = '';
@@ -73,7 +79,6 @@ export class BoardComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    console.log('BoardComponent initialized');
     const currentUser = this.authService.getCurrentUser();
     if (!currentUser) {
       this.router.navigate(['/login']);
@@ -82,27 +87,53 @@ export class BoardComponent implements OnInit {
     this.userDisplayName = currentUser.name;
     this.userEmail = currentUser.email;
 
-    const id = this.route.snapshot.paramMap.get('id');
-    if (id) {
-      this.projectId = +id;
-      if (!this.canAccessBoard(this.projectId, currentUser.email)) {
-        this.router.navigate(['/boards']);
-        return;
+    this.loadAllBoards();
+
+    this.routeSub = this.route.params.subscribe(params => {
+      const id = params['id'];
+      if (id) {
+        this.projectId = +id;
+        if (!this.canAccessBoard(this.projectId, currentUser.email)) {
+          this.router.navigate(['/boards']);
+          return;
+        }
+        this.showBoardSwitcher = false;
+        this.loadProject();
+      } else {
+        this.router.navigate(['/']);
       }
-      console.log('Loading project ID:', this.projectId);
-      this.loadProject();
-    } else {
-      console.log('No project ID found, redirecting to home');
-      this.router.navigate(['/']);
-    }
+    });
 
     // Fallback timeout - show board even if API fails
     setTimeout(() => {
-      if (this.loading) {
-        console.log('Board load timeout - showing board anyway');
-        this.loading = false;
-      }
+      if (this.loading) this.loading = false;
     }, 5000);
+  }
+
+  ngOnDestroy() {
+    this.routeSub?.unsubscribe();
+  }
+
+  private loadAllBoards() {
+    this.apiService.getProjects().subscribe({
+      next: (projects) => {
+        const email = this.userEmail.trim().toLowerCase();
+        const raw = localStorage.getItem(this.boardOwnersKey);
+        const owners: Record<string, string> = raw ? JSON.parse(raw) : {};
+        this.allBoards = (projects || []).filter(p => owners[String(p.id)] === email);
+      },
+      error: () => { this.allBoards = []; }
+    });
+  }
+
+  toggleBoardSwitcher() {
+    this.showBoardSwitcher = !this.showBoardSwitcher;
+  }
+
+  switchBoard(id: number) {
+    if (id === this.projectId) { this.showBoardSwitcher = false; return; }
+    this.showBoardSwitcher = false;
+    this.router.navigate(['/board', id]);
   }
 
   private canAccessBoard(projectId: number, email: string): boolean {
@@ -441,6 +472,7 @@ export class BoardComponent implements OnInit {
         const due = this.getTaskDue(t);
         if (!due) return this.filterDue === 'none';
         const dueDate = new Date(due); dueDate.setHours(0, 0, 0, 0);
+        if (this.filterDue === 'none')    return false;
         if (this.filterDue === 'overdue') return dueDate < today;
         if (this.filterDue === 'today')   return dueDate.getTime() === today.getTime();
         if (this.filterDue === 'week') {

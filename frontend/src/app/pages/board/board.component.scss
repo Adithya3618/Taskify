@@ -24,6 +24,69 @@
 .board-title { margin: 0; font-size: 18px; font-weight: 700; color: #f1f5f9; letter-spacing: -0.02em; }
 .pill { font-size: 12px; color: rgba(255,255,255,0.7); padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); }
 
+/* ── Board switcher ── */
+.boardSwitcher { position: relative; }
+
+.boardSwitcherBtn {
+  display: flex; align-items: center; gap: 6px;
+  background: transparent; border: none; cursor: pointer;
+  padding: 6px 10px; border-radius: 8px;
+  transition: background 0.18s;
+  &:hover { background: rgba(255,255,255,0.1); }
+  &.open { background: rgba(255,255,255,0.12); }
+  .board-title { margin: 0; }
+}
+
+.switcherChevron {
+  width: 16px; height: 16px; color: rgba(255,255,255,0.6);
+  transition: transform 0.2s;
+  .open & { transform: rotate(180deg); }
+}
+
+.boardSwitcherDropdown {
+  position: absolute; left: 0; top: calc(100% + 8px);
+  min-width: 220px; max-height: 320px; overflow-y: auto;
+  background: rgba(14,18,36,0.97); backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 12px;
+  padding: 6px; box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+  z-index: 200;
+}
+
+.boardSwitcherHeader {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.07em;
+  color: rgba(255,255,255,0.35); text-transform: uppercase;
+  padding: 6px 10px 8px;
+}
+
+.boardSwitcherItem {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; border: none; background: none;
+  padding: 9px 10px; border-radius: 8px; cursor: pointer;
+  font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.8);
+  font-family: inherit; text-align: left;
+  transition: background 0.15s, color 0.15s;
+  &:hover { background: rgba(255,255,255,0.1); color: #fff; }
+  &.active { color: #fff; background: rgba(129,140,248,0.18); }
+}
+
+.boardSwitcherDot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, #22D3EE, #818CF8);
+}
+.boardSwitcherItem.active .boardSwitcherDot {
+  background: linear-gradient(135deg, #818CF8, #E879F9);
+}
+
+.boardSwitcherName { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.boardSwitcherCheck { width: 15px; height: 15px; color: #818CF8; flex-shrink: 0; }
+
+.boardSwitcherEmpty {
+  padding: 10px; font-size: 13px; color: rgba(255,255,255,0.3); text-align: center;
+}
+
+.boardSwitcherBackdrop { position: fixed; inset: 0; z-index: 199; }
+
 .btn-back, .btn-ghost {
   border: none; cursor: pointer; border-radius: 8px; padding: 8px 14px;
   font-weight: 600; font-size: 14px;

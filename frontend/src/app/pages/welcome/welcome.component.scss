@@ -42,7 +42,7 @@
 
 .brand {
   display: flex; align-items: center; gap: 0;
-  text-decoration: none; color: #fff;
+  text-decoration: none; color: var(--nav-link-active);
   transition: opacity 0.2s;
   &:hover { opacity: 0.85; }
 }
@@ -54,7 +54,7 @@
 
 .brandName {
   font-size: 21px; font-weight: 800;
-  letter-spacing: -0.02em; color: #fff; margin-left: -4px;
+  letter-spacing: -0.02em; color: var(--nav-link-active); margin-left: -4px;
 }
 
 .navTabs { display: flex; align-items: center; gap: 4px; }
@@ -84,10 +84,10 @@
   &:hover { background: rgba(255,255,255,0.22); }
 }
 
-[data-theme="light"] .navBtn {
-  background: var(--surface); color: var(--text-2);
-  border: 1px solid var(--border);
-  &:hover { background: var(--surface-hover); }
+:host-context([data-theme="light"]) .navBtn {
+  background: rgba(23,43,77,0.07); color: #172b4d;
+  border: 1px solid rgba(23,43,77,0.14);
+  &:hover { background: rgba(23,43,77,0.13); }
 }
 
 .btnPrimary {
@@ -141,7 +141,7 @@
   margin-bottom: 20px; letter-spacing: 0.04em;
 }
 
-[data-theme="light"] .heroBadge {
+:host-context([data-theme="light"]) .heroBadge {
   background: rgba(14,165,233,0.08);
   border-color: rgba(14,165,233,0.2);
   color: #0369a1;

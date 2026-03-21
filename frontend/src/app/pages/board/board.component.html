@@ -3,7 +3,36 @@
   <header class="board-topbar">
     <div class="left">
       <button class="btn-back" (click)="goBack()">← Back</button>
-      <h1 class="board-title">{{ project?.name || 'Board' }}</h1>
+
+      <!-- Board switcher -->
+      <div class="boardSwitcher">
+        <button class="boardSwitcherBtn" (click)="toggleBoardSwitcher()" [class.open]="showBoardSwitcher">
+          <span class="board-title">{{ project?.name || 'Board' }}</span>
+          <svg class="switcherChevron" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+
+        <div *ngIf="showBoardSwitcher" class="boardSwitcherDropdown">
+          <div class="boardSwitcherHeader">Switch board</div>
+          <button
+            *ngFor="let board of allBoards"
+            class="boardSwitcherItem"
+            [class.active]="board.id === projectId"
+            (click)="switchBoard(board.id)">
+            <span class="boardSwitcherDot"></span>
+            <span class="boardSwitcherName">{{ board.name }}</span>
+            <svg *ngIf="board.id === projectId" class="boardSwitcherCheck" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div *ngIf="allBoards.length === 0" class="boardSwitcherEmpty">No other boards</div>
+        </div>
+
+        <!-- click-outside backdrop -->
+        <div *ngIf="showBoardSwitcher" class="boardSwitcherBackdrop" (click)="showBoardSwitcher = false"></div>
+      </div>
+
       <span class="pill">Board</span>
     </div>
 
