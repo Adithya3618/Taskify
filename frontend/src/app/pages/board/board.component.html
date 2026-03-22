@@ -91,6 +91,15 @@
       <span class="filterLabel">Filter by</span>
 
       <div class="filterGroup">
+        <span class="filterGroupLabel">Completion</span>
+        <div class="filterChips">
+          <button class="filterChip" [class.active]="filterCompletion === ''" (click)="filterCompletion = ''">All</button>
+          <button class="filterChip chip-active" [class.active]="filterCompletion === 'active'" (click)="filterCompletion = 'active'">Active</button>
+          <button class="filterChip chip-done" [class.active]="filterCompletion === 'done'" (click)="filterCompletion = 'done'">Done</button>
+        </div>
+      </div>
+
+      <div class="filterGroup">
         <span class="filterGroupLabel">Priority</span>
         <div class="filterChips">
           <button class="filterChip" [class.active]="filterPriority === ''" (click)="filterPriority = ''">All</button>

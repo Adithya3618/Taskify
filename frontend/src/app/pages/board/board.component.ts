@@ -55,6 +55,8 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   // Filter state
   showFilterPanel = false;
+  /** '' = all, 'active' = not completed, 'done' = completed */
+  filterCompletion = '';
   filterPriority = '';
   filterDue = '';
 
@@ -457,16 +459,22 @@ export class BoardComponent implements OnInit, OnDestroy {
   }
 
   clearFilters() {
+    this.filterCompletion = '';
     this.filterPriority = '';
     this.filterDue = '';
   }
 
   get hasActiveFilters(): boolean {
-    return !!(this.filterPriority || this.filterDue);
+    return !!(this.filterCompletion || this.filterPriority || this.filterDue);
   }
 
   getFilteredTasks(stage: Stage): Task[] {
     let tasks = stage.tasks || [];
+    if (this.filterCompletion === 'active') {
+      tasks = tasks.filter((t) => !t.completed);
+    } else if (this.filterCompletion === 'done') {
+      tasks = tasks.filter((t) => !!t.completed);
+    }
     if (this.filterPriority) {
       tasks = tasks.filter(t => {
         const p = this.getTaskPriority(t).toLowerCase();
