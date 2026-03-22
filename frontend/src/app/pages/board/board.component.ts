@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -9,6 +9,7 @@ import { Stage, CreateStageRequest } from '../../models/stage.model';
 import { Task, CreateTaskRequest } from '../../models/task.model';
 import { AuthService } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
+import { TaskCompletionStorageService } from '../../services/task-completion-storage.service';
 
 @Component({
   selector: 'app-board',
@@ -54,12 +55,17 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   // Filter state
   showFilterPanel = false;
+  /** '' = all, 'active' = not completed, 'done' = completed */
+  filterCompletion = '';
   filterPriority = '';
   filterDue = '';
 
   // Share state
   showShareModal = false;
   shareLinkCopied = false;
+
+  /** Delete task confirmation (replaces window.confirm). */
+  deleteTaskPending: { stageId: number; taskId: number; taskTitle: string } | null = null;
 
   // Task detail view/edit modal state
   detailTask: Task | null = null;
@@ -69,13 +75,17 @@ export class BoardComponent implements OnInit, OnDestroy {
   detailDue = '';
   detailPriority = '';
   detailNotes = '';
+  /** Done flag — stored in browser only (TaskCompletionStorageService). */
+  detailCompleted = false;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private apiService: ApiService,
     private authService: AuthService,
-    public themeService: ThemeService
+    public themeService: ThemeService,
+    private taskCompletionStorage: TaskCompletionStorageService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -200,7 +210,7 @@ export class BoardComponent implements OnInit, OnDestroy {
   loadTasks(stage: Stage) {
     this.apiService.getTasks(this.projectId, stage.id).subscribe({
       next: (tasks) => {
-        stage.tasks = tasks;
+        stage.tasks = this.taskCompletionStorage.mergeTasks(this.projectId, tasks || []);
       },
       error: (err) => {
         console.error('Failed to load tasks for stage:', stage.id, err);
@@ -374,6 +384,7 @@ export class BoardComponent implements OnInit, OnDestroy {
             title,
             description,
             position,
+            completed: false,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           };
@@ -408,26 +419,64 @@ export class BoardComponent implements OnInit, OnDestroy {
     }
   }
 
-  deleteTask(stageId: number, taskId: number, event?: Event) {
-    if (event) event.stopPropagation();
-    if (confirm('Are you sure you want to delete this task?')) {
-      this.apiService.deleteTask(taskId).subscribe({
-        next: () => {
-          const stage = this.stages.find(s => s.id === stageId);
-          if (stage && stage.tasks) {
-            stage.tasks = stage.tasks.filter((t: Task) => t.id !== taskId);
-          }
-        },
-        error: (err) => {
-          console.error('Failed to delete task:', err);
-          // Demo fallback: remove locally if backend delete is unavailable
-          const stage = this.stages.find(s => s.id === stageId);
-          if (stage && stage.tasks) {
-            stage.tasks = stage.tasks.filter((t: Task) => t.id !== taskId);
-          }
+  requestDeleteTask(stageId: number, taskId: number, taskTitle: string, event: Event): void {
+    event.stopPropagation();
+    this.deleteTaskPending = { stageId, taskId, taskTitle };
+  }
+
+  cancelDeleteTask(): void {
+    this.deleteTaskPending = null;
+  }
+
+  confirmDeleteTask(): void {
+    if (!this.deleteTaskPending) return;
+    const { stageId, taskId } = this.deleteTaskPending;
+    this.deleteTaskPending = null;
+    this.performDeleteTask(stageId, taskId);
+  }
+
+  private performDeleteTask(stageId: number, taskId: number): void {
+    this.apiService.deleteTask(taskId).subscribe({
+      next: () => {
+        const stage = this.stages.find(s => s.id === stageId);
+        if (stage && stage.tasks) {
+          stage.tasks = stage.tasks.filter((t: Task) => t.id !== taskId);
         }
-      });
-    }
+        this.taskCompletionStorage.setCompleted(this.projectId, taskId, false);
+      },
+      error: (err) => {
+        console.error('Failed to delete task:', err);
+        const stage = this.stages.find(s => s.id === stageId);
+        if (stage && stage.tasks) {
+          stage.tasks = stage.tasks.filter((t: Task) => t.id !== taskId);
+        }
+        this.taskCompletionStorage.setCompleted(this.projectId, taskId, false);
+      }
+    });
+  }
+
+  /** Resolved completion (task field + localStorage). */
+  isTaskDone(task: Task): boolean {
+    return !!(task.completed ?? this.taskCompletionStorage.getCompleted(this.projectId, task.id));
+  }
+
+  getStageTotalCount(stage: Stage): number {
+    return stage.tasks?.length ?? 0;
+  }
+
+  getStageDoneCount(stage: Stage): number {
+    const tasks = stage.tasks || [];
+    return tasks.filter((t) => this.isTaskDone(t)).length;
+  }
+
+  trackByTaskId(_index: number, task: Task): number {
+    return task.id;
+  }
+
+  /** Open task modal — edit flow (same as clicking card body). */
+  editTask(task: Task, event: Event): void {
+    event.stopPropagation();
+    this.openTaskDetail(task);
   }
 
   openTaskDetail(task: Task, event?: Event) {
@@ -442,6 +491,8 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.detailDue = parsed.due;
     this.detailPriority = parsed.priority;
     this.detailNotes = parsed.notes;
+    this.detailCompleted =
+      task.completed ?? this.taskCompletionStorage.getCompleted(this.projectId, task.id);
   }
 
   // ── Filter ───────────────────────────────────
@@ -450,16 +501,22 @@ export class BoardComponent implements OnInit, OnDestroy {
   }
 
   clearFilters() {
+    this.filterCompletion = '';
     this.filterPriority = '';
     this.filterDue = '';
   }
 
   get hasActiveFilters(): boolean {
-    return !!(this.filterPriority || this.filterDue);
+    return !!(this.filterCompletion || this.filterPriority || this.filterDue);
   }
 
   getFilteredTasks(stage: Stage): Task[] {
     let tasks = stage.tasks || [];
+    if (this.filterCompletion === 'active') {
+      tasks = tasks.filter((t) => !this.isTaskDone(t));
+    } else if (this.filterCompletion === 'done') {
+      tasks = tasks.filter((t) => this.isTaskDone(t));
+    }
     if (this.filterPriority) {
       tasks = tasks.filter(t => {
         const p = this.getTaskPriority(t).toLowerCase();
@@ -523,6 +580,9 @@ export class BoardComponent implements OnInit, OnDestroy {
       this.detailNotes
     );
 
+    this.taskCompletionStorage.setCompleted(this.projectId, task.id, this.detailCompleted);
+    task.completed = this.detailCompleted;
+
     this.apiService.updateTask(task.id, {
       title: updatedTitle,
       description: updatedDescription,
@@ -541,6 +601,16 @@ export class BoardComponent implements OnInit, OnDestroy {
         this.closeTaskDetail();
       }
     });
+  }
+
+  /** Checkbox on task card — localStorage only. */
+  toggleTaskCompleted(_stageId: number, task: Task, event: Event): void {
+    event.stopPropagation();
+    const input = event.target as HTMLInputElement;
+    const next = input.checked;
+    this.taskCompletionStorage.setCompleted(this.projectId, task.id, next);
+    task.completed = next;
+    this.cdr.detectChanges();
   }
 
   private parseCardMeta(description: string): { desc: string; due: string; priority: string; notes: string } {

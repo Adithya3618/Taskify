@@ -91,6 +91,15 @@
       <span class="filterLabel">Filter by</span>
 
       <div class="filterGroup">
+        <span class="filterGroupLabel">Completion</span>
+        <div class="filterChips">
+          <button class="filterChip" [class.active]="filterCompletion === ''" (click)="filterCompletion = ''">All</button>
+          <button class="filterChip chip-active" [class.active]="filterCompletion === 'active'" (click)="filterCompletion = 'active'">Active</button>
+          <button class="filterChip chip-done" [class.active]="filterCompletion === 'done'" (click)="filterCompletion = 'done'">Done</button>
+        </div>
+      </div>
+
+      <div class="filterGroup">
         <span class="filterGroupLabel">Priority</span>
         <div class="filterChips">
           <button class="filterChip" [class.active]="filterPriority === ''" (click)="filterPriority = ''">All</button>
@@ -128,7 +137,12 @@
       <!-- Stage Columns -->
       <div class="column" *ngFor="let stage of stages">
         <div class="column-header">
-          <h3>{{ stage.name }}</h3>
+          <div class="column-header-main">
+            <h3>{{ stage.name }}</h3>
+            <span class="column-task-count" [attr.title]="'completed / total'">
+              {{ getStageDoneCount(stage) }}/{{ getStageTotalCount(stage) }}
+            </span>
+          </div>
           <button class="btn-delete" (click)="deleteStage(stage.id)" title="Delete stage">
             ×
           </button>
@@ -136,8 +150,22 @@
 
         <!-- Tasks -->
         <div class="tasks-list">
-          <div class="task-card" *ngFor="let task of getFilteredTasks(stage)" [ngClass]="getPriorityClass(task)" (click)="openTaskDetail(task, $event)">
-            <div class="task-content">
+          <div
+            class="task-card"
+            *ngFor="let task of getFilteredTasks(stage); trackBy: trackByTaskId"
+            [ngClass]="getPriorityClass(task)"
+            [class.task-completed]="isTaskDone(task)"
+          >
+            <label class="task-check" (click)="$event.stopPropagation()">
+              <input
+                class="board-checkbox"
+                type="checkbox"
+                [checked]="isTaskDone(task)"
+                (change)="toggleTaskCompleted(stage.id, task, $event)"
+                [attr.aria-label]="'Mark complete: ' + task.title"
+              />
+            </label>
+            <div class="task-content" (click)="openTaskDetail(task, $event)">
               <p class="task-title">{{ task.title }}</p>
               <p class="task-desc" *ngIf="getDisplayDescription(task)">{{ getDisplayDescription(task) }}</p>
               <div class="task-meta-row" *ngIf="getTaskPriority(task) || getTaskDue(task)">
@@ -149,9 +177,42 @@
                 </span>
               </div>
             </div>
-            <button class="btn-delete-task" (click)="deleteTask(stage.id, task.id, $event)" title="Delete task">
-              ×
-            </button>
+            <div class="task-card-actions">
+              <button
+                type="button"
+                class="btn-edit-task"
+                (click)="editTask(task, $event)"
+                title="Edit task"
+                [attr.aria-label]="'Edit: ' + task.title"
+              >
+                <svg class="btn-edit-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+              <button
+                type="button"
+                class="btn-delete-task"
+                (click)="requestDeleteTask(stage.id, task.id, task.title, $event)"
+                title="Delete task"
+                [attr.aria-label]="'Delete: ' + task.title"
+              >
+                <svg class="btn-trash-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
           
           <p *ngIf="!getFilteredTasks(stage).length" class="no-tasks">
@@ -231,6 +292,25 @@
     </div>
   </div>
 
+  <!-- Delete task confirmation -->
+  <div class="task-modal-backdrop" *ngIf="deleteTaskPending" (click)="cancelDeleteTask()">
+    <div class="task-modal delete-confirm-modal" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="deleteTaskTitle">
+      <div class="task-modal-header">
+        <div>
+          <h3 id="deleteTaskTitle">Delete task?</h3>
+          <p class="delete-confirm-sub">This can’t be undone.</p>
+        </div>
+      </div>
+      <div class="task-modal-body">
+        <p class="delete-confirm-task-name">{{ deleteTaskPending!.taskTitle }}</p>
+      </div>
+      <div class="task-modal-footer delete-confirm-footer">
+        <button type="button" class="btn-modal-ghost" (click)="cancelDeleteTask()">Cancel</button>
+        <button type="button" class="btn-modal-danger" (click)="confirmDeleteTask()">Delete</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Task Detail Modal -->
   <div class="task-modal-backdrop" *ngIf="detailTask" (click)="closeTaskDetail()">
     <div class="task-modal" (click)="$event.stopPropagation()">
@@ -243,6 +323,11 @@
       </div>
 
       <div class="task-modal-body">
+        <label class="task-modal-done-row">
+          <input class="board-checkbox" type="checkbox" [(ngModel)]="detailCompleted" />
+          <span>Mark as completed</span>
+        </label>
+
         <label>Title</label>
         <input type="text" [(ngModel)]="detailTitle" />
 

@@ -47,6 +47,12 @@ export class CardComponent {
     this.deleteCard.emit(this.card().id);
   }
 
+  onToggleCompleted(event: Event): void {
+    event.stopPropagation();
+    const checked = (event.target as HTMLInputElement).checked;
+    this.boardService.toggleCardCompleted(this.card().id, checked);
+  }
+
   openDetail(): void {
     this.boardService.openCardDetail(this.card().id);
   }
