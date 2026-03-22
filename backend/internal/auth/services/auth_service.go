@@ -1,9 +1,11 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	"backend/internal/auth/models"
@@ -23,19 +25,33 @@ var (
 
 // AuthService handles authentication business logic
 type AuthService struct {
-	userRepo     *repository.UserRepository
-	jwtService   *JWTService
-	otpService   *OTPService
-	emailService *EmailService
+	userRepo          *repository.UserRepository
+	identityRepo      *repository.AuthIdentityRepository
+	jwtService        *JWTService
+	otpService        *OTPService
+	emailService      *EmailService
+	googleService     *GoogleAuthService
+	oauthStateService *OAuthStateService
 }
 
 // NewAuthService creates a new AuthService
-func NewAuthService(userRepo *repository.UserRepository, jwtService *JWTService, otpService *OTPService, emailService *EmailService) *AuthService {
+func NewAuthService(
+	userRepo *repository.UserRepository,
+	identityRepo *repository.AuthIdentityRepository,
+	jwtService *JWTService,
+	otpService *OTPService,
+	emailService *EmailService,
+	googleService *GoogleAuthService,
+	oauthStateService *OAuthStateService,
+) *AuthService {
 	return &AuthService{
-		userRepo:     userRepo,
-		jwtService:   jwtService,
-		otpService:   otpService,
-		emailService: emailService,
+		userRepo:          userRepo,
+		identityRepo:      identityRepo,
+		jwtService:        jwtService,
+		otpService:        otpService,
+		emailService:      emailService,
+		googleService:     googleService,
+		oauthStateService: oauthStateService,
 	}
 }
 
@@ -232,6 +248,129 @@ func (s *AuthService) ResetPassword(resetToken, newPassword string) error {
 	return nil
 }
 
+// GetGoogleAuthURL creates the Google OAuth login URL and stores a CSRF state token.
+func (s *AuthService) GetGoogleAuthURL() (string, error) {
+	if s.googleService == nil || s.oauthStateService == nil || !s.googleService.IsConfigured() {
+		return "", ErrGoogleNotConfigured
+	}
+
+	state, err := s.oauthStateService.Generate()
+	if err != nil {
+		return "", fmt.Errorf("failed to generate oauth state: %v", err)
+	}
+
+	return s.googleService.BuildAuthURL(state)
+}
+
+// GoogleLoginWithIDToken authenticates a user from a Google ID token.
+func (s *AuthService) GoogleLoginWithIDToken(ctx context.Context, idToken string) (*AuthResponse, error) {
+	if s.googleService == nil {
+		return nil, ErrGoogleNotConfigured
+	}
+
+	identity, err := s.googleService.VerifyIDToken(ctx, idToken)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.completeGoogleSignIn(identity, "")
+}
+
+// GoogleLoginWithCode authenticates a user from a Google OAuth code callback.
+func (s *AuthService) GoogleLoginWithCode(ctx context.Context, state, code string) (*AuthResponse, error) {
+	if s.googleService == nil || s.oauthStateService == nil {
+		return nil, ErrGoogleNotConfigured
+	}
+
+	if err := s.oauthStateService.Consume(state); err != nil {
+		return nil, err
+	}
+
+	tokens, err := s.googleService.ExchangeCode(ctx, code)
+	if err != nil {
+		return nil, err
+	}
+
+	var identity *GoogleIdentityPayload
+	if tokens.IDToken != "" {
+		identity, err = s.googleService.VerifyIDToken(ctx, tokens.IDToken)
+	} else {
+		identity, err = s.googleService.FetchUserInfo(ctx, tokens.AccessToken)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return s.completeGoogleSignIn(identity, tokens.RefreshToken)
+}
+
+func (s *AuthService) completeGoogleSignIn(identity *GoogleIdentityPayload, refreshToken string) (*AuthResponse, error) {
+	if identity == nil || !identity.EmailVerified || identity.Subject == "" {
+		return nil, ErrInvalidGoogleToken
+	}
+
+	email := normalizeEmail(identity.Email)
+
+	existingIdentity, err := s.identityRepo.GetByProviderUserID("google", identity.Subject)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get google auth identity: %v", err)
+	}
+
+	var user *models.User
+	if existingIdentity != nil {
+		user, err = s.userRepo.GetUserByID(existingIdentity.UserID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get linked user: %v", err)
+		}
+		if user == nil {
+			return nil, fmt.Errorf("linked user not found")
+		}
+	} else {
+		user, err = s.userRepo.GetUserByEmail(email)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get user by email: %v", err)
+		}
+
+		if user == nil {
+			now := time.Now()
+			user = &models.User{
+				ID:           uuid.New().String(),
+				Name:         firstNonEmpty(strings.TrimSpace(identity.Name), deriveNameFromEmail(email)),
+				Email:        email,
+				PasswordHash: "",
+				Role:         models.RoleUser,
+				IsActive:     true,
+				CreatedAt:    now,
+				UpdatedAt:    now,
+			}
+			if err := s.userRepo.CreateUser(user); err != nil {
+				return nil, fmt.Errorf("failed to create google user: %v", err)
+			}
+		}
+	}
+
+	if !user.IsActive {
+		if err := s.userRepo.SetUserActive(user.ID, true); err != nil {
+			return nil, fmt.Errorf("failed to reactivate user: %v", err)
+		}
+		user.IsActive = true
+	}
+
+	if err := s.identityRepo.UpsertGoogleIdentity(user.ID, identity.Subject, email, identity.PictureURL, refreshToken); err != nil {
+		return nil, fmt.Errorf("failed to store google auth identity: %v", err)
+	}
+
+	token, err := s.jwtService.GenerateToken(user.ID, user.Email)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate token: %v", err)
+	}
+
+	return &AuthResponse{
+		User:  user.ToResponse(),
+		Token: token,
+	}, nil
+}
+
 // validateRegisterInput validates the registration input
 func (s *AuthService) validateRegisterInput(req RegisterRequest) error {
 	if req.Name == "" {
@@ -257,5 +396,22 @@ func isValidEmail(email string) bool {
 
 // normalizeEmail converts email to lowercase and trims whitespace
 func normalizeEmail(email string) string {
-	return regexp.MustCompile(`\s+`).ReplaceAllString(email, "")
+	return strings.ToLower(regexp.MustCompile(`\s+`).ReplaceAllString(email, ""))
+}
+
+func deriveNameFromEmail(email string) string {
+	parts := strings.SplitN(email, "@", 2)
+	if len(parts) == 0 || parts[0] == "" {
+		return "Google User"
+	}
+	return parts[0]
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
 }
