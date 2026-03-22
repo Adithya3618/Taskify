@@ -321,13 +321,14 @@ input.board-checkbox[type='checkbox'] {
   transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 
   &:hover {
-    border-color: #86efac;
+    border-color: #6b9b7a;
   }
 
+  /* Forest green */
   &:checked {
-    background-color: #22c55e;
-    border-color: #16a34a;
-    box-shadow: 0 1px 3px rgba(22, 163, 74, 0.35);
+    background-color: #1b5e3f;
+    border-color: #14532d;
+    box-shadow: 0 1px 4px rgba(20, 83, 45, 0.45);
     /* White checkmark (Material-style path) */
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffffff' d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z'/%3E%3C/svg%3E");
     background-size: 14px 14px;
@@ -335,7 +336,7 @@ input.board-checkbox[type='checkbox'] {
   }
 
   &:focus-visible {
-    outline: 2px solid #22c55e;
+    outline: 2px solid #1b5e3f;
     outline-offset: 2px;
   }
 }
@@ -365,7 +366,8 @@ input.board-checkbox[type='checkbox'] {
     border-color: #86efac;
   }
   &:checked {
-    background-color: #22c55e;
+    background-color: #1b5e3f;
+    border-color: #14532d;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffffff' d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z'/%3E%3C/svg%3E");
   }
 }
