@@ -7,7 +7,7 @@ describe('Welcome Page', () => {
   });
 
   it('should load the welcome page and display the brand name', () => {
-    cy.get('.brandName').should('be.visible').and('contain.text', 'Taskify');
+    cy.get('.brandName').should('be.visible').and('contain.text', 'askify');
   });
 
   it('should show the Login and Sign up buttons in the navbar', () => {
