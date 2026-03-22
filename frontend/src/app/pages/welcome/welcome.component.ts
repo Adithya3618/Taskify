@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { ThemeService } from '../../services/theme.service';
 
 @Component({
   selector: 'app-welcome',
@@ -11,4 +12,5 @@ import { RouterModule } from '@angular/router';
 })
 export class WelcomeComponent {
   currentYear = new Date().getFullYear();
+  constructor(public themeService: ThemeService) {}
 }

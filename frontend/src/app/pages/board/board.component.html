@@ -3,13 +3,66 @@
   <header class="board-topbar">
     <div class="left">
       <button class="btn-back" (click)="goBack()">← Back</button>
-      <h1 class="board-title">{{ project?.name || 'Board' }}</h1>
+
+      <!-- Board switcher -->
+      <div class="boardSwitcher">
+        <button class="boardSwitcherBtn" (click)="toggleBoardSwitcher()" [class.open]="showBoardSwitcher">
+          <span class="board-title">{{ project?.name || 'Board' }}</span>
+          <svg class="switcherChevron" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+
+        <div *ngIf="showBoardSwitcher" class="boardSwitcherDropdown">
+          <div class="boardSwitcherHeader">Switch board</div>
+          <button
+            *ngFor="let board of allBoards"
+            class="boardSwitcherItem"
+            [class.active]="board.id === projectId"
+            (click)="switchBoard(board.id)">
+            <span class="boardSwitcherDot"></span>
+            <span class="boardSwitcherName">{{ board.name }}</span>
+            <svg *ngIf="board.id === projectId" class="boardSwitcherCheck" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div *ngIf="allBoards.length === 0" class="boardSwitcherEmpty">No other boards</div>
+        </div>
+
+        <!-- click-outside backdrop -->
+        <div *ngIf="showBoardSwitcher" class="boardSwitcherBackdrop" (click)="showBoardSwitcher = false"></div>
+      </div>
+
       <span class="pill">Board</span>
     </div>
 
     <div class="right">
-      <button class="btn-ghost">Filter</button>
-      <button class="btn-primary">Share</button>
+      <button class="themeToggle" type="button" (click)="themeService.toggle()"
+              [attr.aria-label]="themeService.isDark ? 'Switch to light mode' : 'Switch to dark mode'">
+        <svg *ngIf="themeService.isDark" class="themeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <svg *ngIf="!themeService.isDark" class="themeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button class="btn-ghost" [class.btn-ghost-active]="hasActiveFilters" (click)="toggleFilterPanel()">
+        <svg class="topbarIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M3 6h18M7 12h10M11 18h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        Filter
+        <span *ngIf="hasActiveFilters" class="filterBadge"></span>
+      </button>
+      <button class="btn-primary" (click)="openShareModal()">
+        <svg class="topbarIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="1.8"/>
+          <circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+          <circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        Share
+      </button>
       <div class="profileWrap">
         <button class="profileIcon" type="button" (click)="toggleProfileMenu()" aria-label="Profile">
           <span>{{ (userDisplayName || 'U').charAt(0).toUpperCase() }}</span>
@@ -32,10 +85,41 @@
   </header>
   <div *ngIf="showProfileMenu" class="profileBackdrop" (click)="closeProfileMenu()"></div>
 
+  <!-- Filter Panel -->
+  <div class="filterPanel" *ngIf="showFilterPanel">
+    <div class="filterPanelInner">
+      <span class="filterLabel">Filter by</span>
+
+      <div class="filterGroup">
+        <span class="filterGroupLabel">Priority</span>
+        <div class="filterChips">
+          <button class="filterChip" [class.active]="filterPriority === ''" (click)="filterPriority = ''">All</button>
+          <button class="filterChip chip-low"      [class.active]="filterPriority === 'Low'"      (click)="filterPriority = 'Low'">Low</button>
+          <button class="filterChip chip-mid"      [class.active]="filterPriority === 'Medium'"   (click)="filterPriority = 'Medium'">Medium</button>
+          <button class="filterChip chip-high"     [class.active]="filterPriority === 'High'"     (click)="filterPriority = 'High'">High</button>
+          <button class="filterChip chip-critical" [class.active]="filterPriority === 'Critical'" (click)="filterPriority = 'Critical'">Critical</button>
+        </div>
+      </div>
+
+      <div class="filterGroup">
+        <span class="filterGroupLabel">Due date</span>
+        <div class="filterChips">
+          <button class="filterChip" [class.active]="filterDue === ''"        (click)="filterDue = ''">Any</button>
+          <button class="filterChip" [class.active]="filterDue === 'overdue'" (click)="filterDue = 'overdue'">Overdue</button>
+          <button class="filterChip" [class.active]="filterDue === 'today'"   (click)="filterDue = 'today'">Today</button>
+          <button class="filterChip" [class.active]="filterDue === 'week'"    (click)="filterDue = 'week'">This week</button>
+          <button class="filterChip" [class.active]="filterDue === 'none'"    (click)="filterDue = 'none'">No date</button>
+        </div>
+      </div>
+
+      <button class="filterClear" *ngIf="hasActiveFilters" (click)="clearFilters()">Clear filters</button>
+    </div>
+  </div>
+
   <!-- Loading State -->
   <div class="loading" *ngIf="loading">
+    <div class="loadingSpinner"></div>
     <p>Loading board...</p>
-    <p class="debug-hint">Check browser console (F12) for debug messages</p>
   </div>
 
   <!-- Board Content -->
@@ -52,7 +136,7 @@
 
         <!-- Tasks -->
         <div class="tasks-list">
-          <div class="task-card" *ngFor="let task of stage.tasks" [ngClass]="getPriorityClass(task)" (click)="openTaskDetail(task, $event)">
+          <div class="task-card" *ngFor="let task of getFilteredTasks(stage)" [ngClass]="getPriorityClass(task)" (click)="openTaskDetail(task, $event)">
             <div class="task-content">
               <p class="task-title">{{ task.title }}</p>
               <p class="task-desc" *ngIf="getDisplayDescription(task)">{{ getDisplayDescription(task) }}</p>
@@ -70,7 +154,9 @@
             </button>
           </div>
           
-          <p *ngIf="!stage.tasks?.length" class="no-tasks">No tasks yet</p>
+          <p *ngIf="!getFilteredTasks(stage).length" class="no-tasks">
+            {{ (stage.tasks?.length && hasActiveFilters) ? 'No tasks match the filter' : 'No tasks yet' }}
+          </p>
         </div>
 
         <!-- Add Task -->
@@ -187,6 +273,38 @@
       <div class="task-modal-footer">
         <button class="btn-modal-ghost" (click)="closeTaskDetail()">Cancel</button>
         <button class="btn-modal-primary" (click)="saveTaskDetail()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Share Modal -->
+  <div *ngIf="showShareModal" class="task-modal-backdrop" (click)="closeShareModal()">
+    <div class="task-modal shareModal" (click)="$event.stopPropagation()">
+      <div class="task-modal-header">
+        <div>
+          <h3>Share board</h3>
+          <p>Anyone with this link can view the board.</p>
+        </div>
+        <button class="btn-close-modal" (click)="closeShareModal()" title="Close">×</button>
+      </div>
+      <div class="task-modal-body">
+        <label>Board link</label>
+        <div class="shareLinkRow">
+          <input type="text" [value]="boardUrl" readonly class="shareLinkInput" />
+          <button class="btn-copy" (click)="copyShareLink()" [class.copied]="shareLinkCopied">
+            <svg *ngIf="!shareLinkCopied" viewBox="0 0 24 24" fill="none" class="copyIcon" aria-hidden="true">
+              <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <svg *ngIf="shareLinkCopied" viewBox="0 0 24 24" fill="none" class="copyIcon" aria-hidden="true">
+              <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            {{ shareLinkCopied ? 'Copied!' : 'Copy' }}
+          </button>
+        </div>
+      </div>
+      <div class="task-modal-footer">
+        <button class="btn-modal-ghost" (click)="closeShareModal()">Done</button>
       </div>
     </div>
   </div>

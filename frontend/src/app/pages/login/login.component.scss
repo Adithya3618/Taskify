@@ -4,24 +4,56 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: #f4f5f7;
+  background: var(--bg);
   font-family: 'Plus Jakarta Sans', sans-serif;
+  position: relative;
 }
 
+// ── Theme toggle (fixed, top-right) ───────────
+.themeToggle {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  width: 38px; height: 38px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  transition: background 0.22s, border-color 0.22s, transform 0.18s;
+}
+
+.themeToggle:hover {
+  background: var(--surface-hover);
+  transform: scale(1.08);
+}
+
+.themeIcon {
+  width: 18px; height: 18px;
+  display: block;
+}
+
+// ── Card ──────────────────────────────────────
 .card {
   width: 100%;
   max-width: 400px;
-  background: #fff;
-  border-radius: 12px;
+  background: var(--card-bg);
+  border-radius: 16px;
   padding: 32px;
-  color: #172b4d;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e0e4e8;
+  color: var(--text-1);
+  box-shadow: var(--modal-shadow);
+  border: 1px solid var(--card-border);
+  backdrop-filter: blur(12px);
+  animation: cardEntrance 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .backLink {
   display: inline-block;
-  color: #5e6c84;
+  color: var(--text-muted);
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
@@ -29,22 +61,19 @@
 }
 
 .backLink:hover {
-  color: #0079bf;
+  color: #818CF8;
   text-decoration: underline;
 }
 
 .logo {
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #0079bf, #026aa7);
+  width: 56px;
+  height: 56px;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
-  font-size: 24px;
-  color: #fff;
   margin-bottom: 16px;
+  overflow: visible;
 }
 
 h1 {
@@ -52,13 +81,13 @@ h1 {
   font-size: 24px;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: #172b4d;
+  color: var(--text-1);
 }
 
 .subtitle {
   margin: 0 0 24px 0;
   font-size: 14px;
-  color: #5e6c84;
+  color: var(--text-muted);
 }
 
 .form {
@@ -76,51 +105,103 @@ h1 {
 .field span {
   font-size: 13px;
   font-weight: 600;
-  color: #172b4d;
+  color: var(--text-1);
 }
 
 .field input {
   padding: 10px 12px;
   border-radius: 8px;
-  border: 1px solid #dfe1e6;
-  background: #fafbfc;
-  color: #172b4d;
+  border: 1.5px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--input-text);
   font-size: 15px;
+  font-family: inherit;
+  color-scheme: var(--date-scheme);
+  transition: border-color 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              background 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .field input::placeholder {
-  color: #97a0af;
+  color: var(--input-placeholder);
 }
 
 .field input:focus {
   outline: none;
-  border-color: #0079bf;
-  background: #fff;
+  border-color: var(--input-border-focus);
+  background: var(--input-bg-focus);
+  box-shadow: 0 0 0 4px var(--input-shadow-focus);
+}
+
+.field input:hover:not(:focus) {
+  border-color: var(--input-border-focus);
+}
+
+.passwordWrap {
+  position: relative;
+}
+
+.passwordWrap input {
+  width: 100%;
+  padding-right: 42px;
+}
+
+.eyeBtn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: var(--input-placeholder);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.18s;
+}
+
+.eyeBtn:hover {
+  color: var(--text-1);
+}
+
+.eyeIcon {
+  width: 19px;
+  height: 19px;
+  display: block;
 }
 
 .error {
   margin: 0;
   font-size: 13px;
-  color: #eb5a46;
+  color: #f87171;
 }
+
+[data-theme="light"] .error { color: #dc2626; }
 
 .status {
   margin: 10px 0 0;
   font-size: 13px;
-  color: #026aa7;
+  color: #818CF8;
 }
+
+[data-theme="light"] .status { color: #026aa7; }
 
 .forgotLink {
   align-self: flex-end;
   margin-top: -10px;
   border: none;
   background: transparent;
-  color: #026aa7;
+  color: #818CF8;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   padding: 0;
+  font-family: inherit;
 }
+
+[data-theme="light"] .forgotLink { color: #026aa7; }
 
 .forgotLink:hover {
   text-decoration: underline;
@@ -144,49 +225,66 @@ h1 {
 }
 
 .btn.primary {
-  background: #0079bf;
+  background: linear-gradient(135deg, #818CF8, #6366f1);
   color: #fff;
+  box-shadow: 0 3px 10px rgba(129, 140, 248, 0.28);
+  will-change: transform;
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              background 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn.primary:hover:not(:disabled) {
-  background: #026aa7;
+  background: linear-gradient(135deg, #6366f1, #4f52d4);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(129, 140, 248, 0.36);
+}
+
+.btn.primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(129, 140, 248, 0.2);
 }
 
 .footerText {
   margin: 24px 0 0 0;
   font-size: 14px;
-  color: #5e6c84;
+  color: var(--text-muted);
   text-align: center;
 }
 
 .footerText a {
-  color: #0079bf;
+  color: #818CF8;
   font-weight: 600;
   text-decoration: none;
 }
+
+[data-theme="light"] .footerText a { color: #0079bf; }
 
 .footerText a:hover {
   text-decoration: underline;
 }
 
+// ── Forgot password modal ─────────────────────
 .modalBackdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.42);
+  background: rgba(0, 0, 0, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
   z-index: 120;
+  animation: fadeIn 0.2s ease both;
 }
 
 .modalCard {
   width: min(440px, 100%);
-  background: #fff;
-  border-radius: 12px;
+  background: var(--modal-bg);
+  border-radius: 14px;
   padding: 18px;
-  border: 1px solid #e0e4e8;
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.24);
+  border: 1px solid var(--modal-border);
+  box-shadow: var(--modal-shadow);
+  animation: scaleIn 0.28s cubic-bezier(0.34, 1.2, 0.64, 1) both;
 }
 
 .modalHead {
@@ -198,29 +296,29 @@ h1 {
 .modalHead h3 {
   margin: 0;
   font-size: 20px;
-  color: #172b4d;
+  color: var(--text-1);
 }
 
 .modalSubtitle {
   margin: 6px 0 14px 0;
   font-size: 13px;
-  color: #5e6c84;
+  color: var(--text-muted);
 }
 
 .closeBtn {
   border: none;
-  background: #eef1f4;
+  background: var(--surface);
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  color: #5e6c84;
+  color: var(--text-muted);
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
 }
 
 .closeBtn:hover {
-  background: #e4e8ec;
+  background: var(--surface-hover);
 }
 
 .modalActions {
@@ -231,8 +329,13 @@ h1 {
 }
 
 .btn.ghost {
-  background: #eef2f6;
-  color: #344054;
+  background: var(--surface);
+  color: var(--text-1);
+  border: 1px solid var(--border);
+}
+
+.btn.ghost:hover {
+  background: var(--surface-hover);
 }
 
 .codeRow {

@@ -3,6 +3,7 @@ import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
+import { ThemeService } from '../../services/theme.service';
 
 type ForgotStep = 'request' | 'verify' | 'reset' | 'success';
 
@@ -19,6 +20,9 @@ export class LoginComponent implements OnDestroy {
   password = '';
   loading = false;
   error = '';
+  showPassword = false;
+  showForgotNewPassword = false;
+  showForgotConfirmPassword = false;
 
   showForgotModal = false;
   forgotEmail = '';
@@ -37,7 +41,8 @@ export class LoginComponent implements OnDestroy {
 
   constructor(
     private router: Router,
-    private authService: AuthService
+    private authService: AuthService,
+    public themeService: ThemeService
   ) {}
 
   openForgotPassword() {

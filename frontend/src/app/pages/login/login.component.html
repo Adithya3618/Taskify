@@ -1,7 +1,48 @@
 <div class="page">
+  <button class="themeToggle" type="button" (click)="themeService.toggle()"
+          [attr.aria-label]="themeService.isDark ? 'Switch to light mode' : 'Switch to dark mode'">
+    <svg *ngIf="themeService.isDark" class="themeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/>
+      <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    </svg>
+    <svg *ngIf="!themeService.isDark" class="themeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
   <div class="card">
     <a routerLink="/" class="backLink">← Back to home</a>
-    <div class="logo">T</div>
+    <div class="logo">
+      <svg class="logoSvgFull" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="lgL" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%"   stop-color="#22D3EE"/>
+            <stop offset="55%"  stop-color="#818CF8"/>
+            <stop offset="100%" stop-color="#E879F9"/>
+          </linearGradient>
+          <clipPath id="tcL">
+            <path d="M10 8 H90 V30 H60 V92 H40 V30 H10 Z"/>
+          </clipPath>
+        </defs>
+        <g class="ptGroup">
+          <circle class="pt pt1"  cx="-6"  cy="10"  r="4"   fill="#22D3EE"/>
+          <circle class="pt pt2"  cx="106" cy="14"  r="3"   fill="#818CF8"/>
+          <circle class="pt pt3"  cx="104" cy="65"  r="3.5" fill="#E879F9"/>
+          <circle class="pt pt4"  cx="-4"  cy="80"  r="3"   fill="#22D3EE"/>
+          <circle class="pt pt5"  cx="50"  cy="-9"  r="2.5" fill="#818CF8"/>
+          <circle class="pt pt6"  cx="92"  cy="104" r="3"   fill="#E879F9"/>
+          <line   class="pt pt7"  x1="96"  y1="26" x2="110" y2="36" stroke="#22D3EE" stroke-width="3.5" stroke-linecap="round"/>
+          <line   class="pt pt8"  x1="-10" y1="40" x2="2"   y2="52" stroke="#818CF8" stroke-width="3"   stroke-linecap="round"/>
+          <circle class="pt pt9"  cx="18"  cy="110" r="2.5" fill="#818CF8"/>
+          <line   class="pt pt10" x1="76"  y1="108" x2="90" y2="120" stroke="#E879F9" stroke-width="2.5" stroke-linecap="round"/>
+        </g>
+        <g class="logoGroup">
+          <path d="M10 8 H90 V30 H60 V92 H40 V30 H10 Z" fill="url(#lgL)"/>
+          <line x1="14" y1="5"  x2="34" y2="96" stroke="rgba(255,255,255,0.18)" stroke-width="14" clip-path="url(#tcL)"/>
+          <line x1="48" y1="5"  x2="64" y2="33" stroke="rgba(255,255,255,0.25)" stroke-width="10" clip-path="url(#tcL)"/>
+          <path class="checkPath" d="M30 60 L46 78 L86 18" stroke="rgba(255,255,255,0.92)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </g>
+      </svg>
+    </div>
     <h1>Log in to Taskify</h1>
     <p class="subtitle">Enter your credentials to continue.</p>
 
@@ -18,13 +59,27 @@
       </label>
       <label class="field">
         <span>Password</span>
-        <input
-          type="password"
-          [(ngModel)]="password"
-          name="password"
-          placeholder="••••••••"
-          autocomplete="current-password"
-        />
+        <div class="passwordWrap">
+          <input
+            [type]="showPassword ? 'text' : 'password'"
+            [(ngModel)]="password"
+            name="password"
+            placeholder="••••••••"
+            autocomplete="current-password"
+          />
+          <button type="button" class="eyeBtn" (click)="showPassword = !showPassword" [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'">
+            <svg *ngIf="!showPassword" class="eyeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M1.5 12s3.8-7 10.5-7 10.5 7 10.5 7-3.8 7-10.5 7S1.5 12 1.5 12Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+            </svg>
+            <svg *ngIf="showPassword" class="eyeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M3 3l18 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <path d="M6.7 6.8C4 8.6 2.4 11 2.4 11s3.4 6.6 9.6 6.6c2.1 0 4-.5 5.5-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M14.7 6.6c4.1.8 6.9 4.4 6.9 4.4s-.8 1.6-2.4 3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
       </label>
       <button type="button" class="forgotLink" (click)="openForgotPassword()">
         Forgot password? Change password
@@ -84,21 +139,49 @@
         <ng-container *ngIf="forgotStep === 'reset'">
           <label class="field">
             <span>New password</span>
-            <input
-              type="password"
-              [(ngModel)]="forgotNewPassword"
-              autocomplete="new-password"
-              placeholder="At least 8 characters"
-            />
+            <div class="passwordWrap">
+              <input
+                [type]="showForgotNewPassword ? 'text' : 'password'"
+                [(ngModel)]="forgotNewPassword"
+                autocomplete="new-password"
+                placeholder="At least 8 characters"
+              />
+              <button type="button" class="eyeBtn" (click)="showForgotNewPassword = !showForgotNewPassword" [attr.aria-label]="showForgotNewPassword ? 'Hide password' : 'Show password'">
+                <svg *ngIf="!showForgotNewPassword" class="eyeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M1.5 12s3.8-7 10.5-7 10.5 7 10.5 7-3.8 7-10.5 7S1.5 12 1.5 12Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+                </svg>
+                <svg *ngIf="showForgotNewPassword" class="eyeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M3 3l18 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                  <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                  <path d="M6.7 6.8C4 8.6 2.4 11 2.4 11s3.4 6.6 9.6 6.6c2.1 0 4-.5 5.5-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M14.7 6.6c4.1.8 6.9 4.4 6.9 4.4s-.8 1.6-2.4 3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
           </label>
           <label class="field">
             <span>Confirm password</span>
-            <input
-              type="password"
-              [(ngModel)]="forgotConfirmPassword"
-              autocomplete="new-password"
-              placeholder="Re-enter password"
-            />
+            <div class="passwordWrap">
+              <input
+                [type]="showForgotConfirmPassword ? 'text' : 'password'"
+                [(ngModel)]="forgotConfirmPassword"
+                autocomplete="new-password"
+                placeholder="Re-enter password"
+              />
+              <button type="button" class="eyeBtn" (click)="showForgotConfirmPassword = !showForgotConfirmPassword" [attr.aria-label]="showForgotConfirmPassword ? 'Hide password' : 'Show password'">
+                <svg *ngIf="!showForgotConfirmPassword" class="eyeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M1.5 12s3.8-7 10.5-7 10.5 7 10.5 7-3.8 7-10.5 7S1.5 12 1.5 12Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+                </svg>
+                <svg *ngIf="showForgotConfirmPassword" class="eyeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M3 3l18 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                  <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                  <path d="M6.7 6.8C4 8.6 2.4 11 2.4 11s3.4 6.6 9.6 6.6c2.1 0 4-.5 5.5-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M14.7 6.6c4.1.8 6.9 4.4 6.9 4.4s-.8 1.6-2.4 3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
           </label>
         </ng-container>
       </ng-container>
