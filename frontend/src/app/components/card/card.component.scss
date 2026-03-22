@@ -22,11 +22,24 @@
     flex-shrink: 0;
     padding-top: 2px;
     cursor: pointer;
+    opacity: 1;
+    transition: opacity 0.18s ease;
     input[type='checkbox'] {
       width: 16px;
       height: 16px;
       cursor: pointer;
       accent-color: #5e6c84;
+    }
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .card-checkbox {
+      opacity: 0;
+    }
+    &:hover .card-checkbox,
+    &:focus-within .card-checkbox,
+    &.card-done .card-checkbox {
+      opacity: 1;
     }
   }
 
