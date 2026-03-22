@@ -135,7 +135,27 @@
   <div class="board-content" *ngIf="!loading">
     <div class="columns-container">
       <!-- Stage Columns -->
-      <div class="column" *ngFor="let stage of stages">
+      <div
+        class="column"
+        *ngFor="let stage of stages"
+        [class.column--collapsed]="isColumnCollapsed(stage.id)"
+      >
+        <!-- Collapsed: narrow vertical strip (click to expand) -->
+        <button
+          type="button"
+          class="column-collapsed-strip"
+          *ngIf="isColumnCollapsed(stage.id)"
+          (click)="toggleColumnCollapsed(stage.id)"
+          [attr.title]="'Expand: ' + stage.name"
+        >
+          <svg class="column-strip-chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="column-collapsed-title">{{ stage.name }}</span>
+          <span class="column-collapsed-count">{{ getStageDoneCount(stage) }}/{{ getStageTotalCount(stage) }}</span>
+        </button>
+
+        <ng-container *ngIf="!isColumnCollapsed(stage.id)">
         <div class="column-header">
           <div class="column-header-main">
             <h3>{{ stage.name }}</h3>
@@ -143,9 +163,22 @@
               {{ getStageDoneCount(stage) }}/{{ getStageTotalCount(stage) }}
             </span>
           </div>
-          <button class="btn-delete" (click)="deleteStage(stage.id)" title="Delete stage">
-            ×
-          </button>
+          <div class="column-header-actions">
+            <button
+              type="button"
+              class="btn-collapse-column"
+              (click)="toggleColumnCollapsed(stage.id, $event)"
+              title="Collapse list"
+              aria-label="Collapse list"
+            >
+              <svg class="btn-collapse-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <button class="btn-delete" (click)="deleteStage(stage.id)" title="Delete stage">
+              ×
+            </button>
+          </div>
         </div>
 
         <!-- Tasks -->
@@ -270,6 +303,7 @@
             Add
           </button>
         </div>
+        </ng-container>
       </div>
 
       <!-- Add Stage Column -->

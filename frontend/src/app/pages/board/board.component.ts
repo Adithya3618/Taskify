@@ -53,6 +53,9 @@ export class BoardComponent implements OnInit, OnDestroy {
   showBoardSwitcher = false;
   private routeSub?: Subscription;
 
+  /** Collapsed stage columns (narrow vertical strip with vertical title). Persisted per project in sessionStorage. */
+  collapsedStages: Record<number, boolean> = {};
+
   // Filter state
   showFilterPanel = false;
   /** '' = all, 'active' = not completed, 'done' = completed */
@@ -187,6 +190,7 @@ export class BoardComponent implements OnInit, OnDestroy {
       next: (stages) => {
         console.log('Stages loaded:', stages);
         this.stages = stages || [];
+        this.loadCollapsedColumnState();
         // Load tasks for each stage
         if (this.stages.length > 0) {
           this.stages.forEach(stage => this.loadTasks(stage));
@@ -202,6 +206,7 @@ export class BoardComponent implements OnInit, OnDestroy {
           { id: 2, project_id: this.projectId, name: 'In Progress', position: 1, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), tasks: [] },
           { id: 3, project_id: this.projectId, name: 'Done', position: 2, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), tasks: [] }
         ];
+        this.loadCollapsedColumnState();
         this.loading = false;
       }
     });
@@ -404,15 +409,61 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.showTaskDetails[stageId] = !this.showTaskDetails[stageId];
   }
 
+  private collapsedColumnsStorageKey(): string {
+    return `taskify.board.collapsedColumns.v1.${this.projectId}`;
+  }
+
+  private loadCollapsedColumnState(): void {
+    this.collapsedStages = {};
+    try {
+      const raw = sessionStorage.getItem(this.collapsedColumnsStorageKey());
+      if (!raw) return;
+      const ids = JSON.parse(raw) as number[];
+      if (!Array.isArray(ids)) return;
+      ids.forEach((id) => {
+        if (typeof id === 'number' && !Number.isNaN(id)) {
+          this.collapsedStages[id] = true;
+        }
+      });
+    } catch {
+      /* ignore */
+    }
+  }
+
+  private saveCollapsedColumnState(): void {
+    try {
+      const ids = Object.keys(this.collapsedStages)
+        .map(Number)
+        .filter((id) => this.collapsedStages[id]);
+      sessionStorage.setItem(this.collapsedColumnsStorageKey(), JSON.stringify(ids));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  isColumnCollapsed(stageId: number): boolean {
+    return !!this.collapsedStages[stageId];
+  }
+
+  toggleColumnCollapsed(stageId: number, event?: Event): void {
+    event?.stopPropagation();
+    this.collapsedStages[stageId] = !this.collapsedStages[stageId];
+    this.saveCollapsedColumnState();
+  }
+
   deleteStage(stageId: number) {
     if (confirm('Are you sure you want to delete this stage and all its tasks?')) {
       this.apiService.deleteStage(stageId).subscribe({
         next: () => {
+          delete this.collapsedStages[stageId];
+          this.saveCollapsedColumnState();
           this.stages = this.stages.filter(s => s.id !== stageId);
         },
         error: (err) => {
           console.error('Failed to delete stage:', err);
           // Demo fallback: remove locally if backend delete is unavailable
+          delete this.collapsedStages[stageId];
+          this.saveCollapsedColumnState();
           this.stages = this.stages.filter(s => s.id !== stageId);
         }
       });
