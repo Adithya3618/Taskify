@@ -1,9 +1,8 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "types": ["cypress"],
-    "lib": ["ES2022", "dom"],
-    "outDir": "../dist/out-tsc"
+    "types": ["cypress"]
   },
-  "include": ["**/*.ts"]
+  "include": ["e2e/**/*.ts"],
+  "exclude": []
 }
