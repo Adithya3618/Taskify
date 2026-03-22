@@ -2,6 +2,7 @@ package testcases
 
 import (
 	"regexp"
+	"strings"
 	"testing"
 
 	"backend/internal/auth/services"
@@ -117,5 +118,5 @@ func isValidEmail(email string) bool {
 
 // normalizeEmail converts email to lowercase and trims whitespace (copy for testing)
 func normalizeEmail(email string) string {
-	return regexp.MustCompile(`\s+`).ReplaceAllString(email, "")
+	return strings.ToLower(regexp.MustCompile(`\s+`).ReplaceAllString(email, ""))
 }
