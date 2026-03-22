@@ -63,6 +63,59 @@ func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 	c.writeJSON(w, http.StatusOK, resp)
 }
 
+// GoogleLoginWithIDToken handles POST /api/auth/google/id-token
+func (c *AuthController) GoogleLoginWithIDToken(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		IDToken string `json:"id_token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		c.writeError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if req.IDToken == "" {
+		c.writeError(w, http.StatusBadRequest, "id_token is required")
+		return
+	}
+
+	resp, err := c.authService.GoogleLoginWithIDToken(r.Context(), req.IDToken)
+	if err != nil {
+		c.handleAuthError(w, err)
+		return
+	}
+
+	c.writeJSON(w, http.StatusOK, resp)
+}
+
+// GoogleLoginRedirect handles GET /api/auth/google/login
+func (c *AuthController) GoogleLoginRedirect(w http.ResponseWriter, r *http.Request) {
+	url, err := c.authService.GetGoogleAuthURL()
+	if err != nil {
+		c.handleAuthError(w, err)
+		return
+	}
+
+	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+}
+
+// GoogleCallback handles GET /api/auth/google/callback
+func (c *AuthController) GoogleCallback(w http.ResponseWriter, r *http.Request) {
+	state := r.URL.Query().Get("state")
+	code := r.URL.Query().Get("code")
+	if state == "" || code == "" {
+		c.writeError(w, http.StatusBadRequest, "state and code are required")
+		return
+	}
+
+	resp, err := c.authService.GoogleLoginWithCode(r.Context(), state, code)
+	if err != nil {
+		c.handleAuthError(w, err)
+		return
+	}
+
+	c.writeJSON(w, http.StatusOK, resp)
+}
+
 // GetMe handles GET /api/auth/me
 func (c *AuthController) GetMe(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context (set by JWT middleware)
@@ -178,6 +231,18 @@ func (c *AuthController) handleAuthError(w http.ResponseWriter, err error) {
 		c.writeError(w, http.StatusBadRequest, "Invalid email format")
 	case errors.Is(err, services.ErrUserInactive):
 		c.writeError(w, http.StatusForbidden, "User account is inactive")
+	case errors.Is(err, services.ErrGoogleNotConfigured):
+		c.writeError(w, http.StatusServiceUnavailable, "Google auth is not configured")
+	case errors.Is(err, services.ErrInvalidGoogleToken):
+		c.writeError(w, http.StatusUnauthorized, "Invalid Google token")
+	case errors.Is(err, services.ErrGoogleEmailNotVerified):
+		c.writeError(w, http.StatusUnauthorized, "Google email is not verified")
+	case errors.Is(err, services.ErrInvalidOAuthState):
+		c.writeError(w, http.StatusBadRequest, "Invalid OAuth state")
+	case errors.Is(err, services.ErrGoogleCodeExchange):
+		c.writeError(w, http.StatusBadGateway, "Failed to exchange Google auth code")
+	case errors.Is(err, services.ErrGoogleProfileFetch):
+		c.writeError(w, http.StatusBadGateway, "Failed to fetch Google profile")
 	default:
 		c.writeError(w, http.StatusInternalServerError, "An error occurred")
 	}
@@ -203,6 +268,9 @@ func (c *AuthController) writeError(w http.ResponseWriter, status int, message s
 func (c *AuthController) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/register", c.Register).Methods("POST")
 	router.HandleFunc("/login", c.Login).Methods("POST")
+	router.HandleFunc("/google/id-token", c.GoogleLoginWithIDToken).Methods("POST")
+	router.HandleFunc("/google/login", c.GoogleLoginRedirect).Methods("GET")
+	router.HandleFunc("/google/callback", c.GoogleCallback).Methods("GET")
 	router.HandleFunc("/me", c.GetMe).Methods("GET")
 	router.HandleFunc("/forgot-password", c.ForgotPassword).Methods("POST")
 	router.HandleFunc("/verify-otp", c.VerifyOTP).Methods("POST")

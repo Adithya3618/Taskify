@@ -3,6 +3,7 @@ package routes
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"backend/internal/auth/controller"
 	"backend/internal/auth/middleware"
@@ -22,13 +23,19 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	if err := userRepo.InitTable(); err != nil {
 		log.Printf("Warning: failed to initialize users table: %v", err)
 	}
+	identityRepo := repository.NewAuthIdentityRepository(db.DB)
+	if err := identityRepo.InitTable(); err != nil {
+		log.Printf("Warning: failed to initialize auth identities table: %v", err)
+	}
 
 	// Initialize auth services
 	jwtSecret := services.GetEnvJWTSecret()
 	jwtService := services.NewJWTService(jwtSecret, 24) // 24 hour expiration
 	otpService := services.NewOTPService()
 	emailService := services.NewEmailService()
-	authService := services.NewAuthService(userRepo, jwtService, otpService, emailService)
+	googleService := services.NewGoogleAuthService()
+	oauthStateService := services.NewOAuthStateService(10 * time.Minute)
+	authService := services.NewAuthService(userRepo, identityRepo, jwtService, otpService, emailService, googleService, oauthStateService)
 	authController := controller.NewAuthController(authService)
 
 	// Initialize business services
@@ -53,6 +60,9 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	auth := api.PathPrefix("/auth").Subrouter()
 	auth.HandleFunc("/register", authController.Register).Methods("POST")
 	auth.HandleFunc("/login", authController.Login).Methods("POST")
+	auth.HandleFunc("/google/id-token", authController.GoogleLoginWithIDToken).Methods("POST")
+	auth.HandleFunc("/google/login", authController.GoogleLoginRedirect).Methods("GET")
+	auth.HandleFunc("/google/callback", authController.GoogleCallback).Methods("GET")
 	auth.HandleFunc("/forgot-password", authController.ForgotPassword).Methods("POST")
 	auth.HandleFunc("/verify-otp", authController.VerifyOTP).Methods("POST")
 	auth.HandleFunc("/reset-password", authController.ResetPassword).Methods("POST")
