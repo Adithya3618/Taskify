@@ -166,3 +166,147 @@ npm run cy:run
 | should show error when passwords do not match |
 | should navigate to login page via the log in link |
 | should have a back to home link |
+
+---
+
+## Backend Unit Tests (Go) — ~95 tests
+
+All backend tests are located in `backend/internal/testcases/` and can be run with:
+```bash
+cd backend
+go test -v ./internal/testcases/...
+```
+
+### `jwt_service_test.go` — 8 tests
+| Test | Function under test |
+|------|---------------------|
+| valid token generation | `GenerateToken()` |
+| empty user ID | `GenerateToken()` |
+| empty email | `GenerateToken()` |
+| valid token validation | `ValidateToken()` |
+| invalid token format | `ValidateToken()` |
+| empty token | `ValidateToken()` |
+| token with wrong secret | `ValidateToken()` |
+| malformed token | `ValidateToken()` |
+
+### `otp_service_test.go` — 6 tests
+| Test | Function under test |
+|------|---------------------|
+| generates 6-digit OTP | `GenerateOTP()` |
+| generates unique OTPs | `GenerateOTP()` |
+| valid OTP verification | `VerifyOTP()` |
+| invalid OTP code | `VerifyOTP()` |
+| non-existent email | `VerifyOTP()` |
+| valid reset token | `ValidateResetToken()` |
+
+### `auth_service_test.go` — 12 tests
+| Test | Function under test |
+|------|---------------------|
+| valid email formats | `isValidEmail()` |
+| invalid email formats | `isValidEmail()` |
+| email normalization | `normalizeEmail()` |
+| valid registration | validation |
+| empty name | validation |
+| empty email | validation |
+| invalid email format | validation |
+| password too short | validation |
+| RegisterRequest structure | struct |
+| LoginRequest structure | struct |
+| AuthResponse structure | struct |
+| AuthService errors | error definitions |
+
+### `auth_controller_test.go` — 11 tests
+| Test | Function under test |
+|------|---------------------|
+| returns 400 for invalid JSON (Register) | `Register()` |
+| returns 400 for invalid JSON (Login) | `Login()` |
+| returns 401 when no user ID in context (GetMe) | `GetMe()` |
+| returns 400 for invalid JSON (ForgotPassword) | `ForgotPassword()` |
+| returns 400 for empty email | `ForgotPassword()` |
+| returns 400 for invalid JSON (VerifyOTP) | `VerifyOTP()` |
+| returns 400 for missing fields | `VerifyOTP()` |
+| returns 400 for invalid JSON (ResetPassword) | `ResetPassword()` |
+| returns 400 for missing fields | `ResetPassword()` |
+| creates new controller | `NewAuthController()` |
+| AuthService errors | error definitions |
+
+### `middleware_test.go` — 10 tests
+| Test | Function under test |
+|------|---------------------|
+| returns user ID from context | `GetUserID()` |
+| returns empty string when not set | `GetUserID()` |
+| returns empty string for wrong type | `GetUserID()` |
+| returns user email from context | `GetUserEmail()` |
+| returns empty string when not set | `GetUserEmail()` |
+| allows request with valid token | `JWTAuthMiddleware()` |
+| rejects request without Authorization header | `JWTAuthMiddleware()` |
+| rejects request with invalid token | `JWTAuthMiddleware()` |
+| rejects request with wrong secret | `JWTAuthMiddleware()` |
+| writes error response | `writeError()` |
+
+### `models_test.go` — 13 tests
+| Test | Function under test |
+|------|---------------------|
+| User.ToResponse() | user conversion |
+| RoleUser constant | constants |
+| RoleAdmin constant | constants |
+| Project structure | struct |
+| Stage structure | struct |
+| Task structure | struct |
+| Message structure | struct |
+| zero Project | zero values |
+| zero Stage | zero values |
+| zero Task | zero values |
+| zero Message | zero values |
+| UserResponse fields | struct |
+| All User fields | struct |
+
+### `controllers_test.go` — 14 tests
+| Test | Function under test |
+|------|---------------------|
+| CreateProject returns 401 without user | authorization |
+| CreateProject returns 400 for invalid JSON | validation |
+| GetAllProjects returns 401 without user | authorization |
+| CreateStage returns 401 without user | authorization |
+| GetStagesByProject returns 401 without user | authorization |
+| GetStage returns 401 without user | authorization |
+| CreateTask returns 401 without user | authorization |
+| GetTasksByStage returns 401 without user | authorization |
+| GetTask returns 401 without user | authorization |
+| CreateMessage returns 401 without user | authorization |
+| GetMessagesByProject returns 401 without user | authorization |
+| DeleteMessage returns 401 without user | authorization |
+| GetUserID helper returns user ID | helper |
+| GetUserID helper returns empty without context | helper |
+
+### `services_test.go` — 4 tests
+| Test | Function under test |
+|------|---------------------|
+| NewProjectService returns non-nil | constructor |
+| NewStageService returns non-nil | constructor |
+| NewTaskService returns non-nil | constructor |
+| NewMessageService returns non-nil | constructor |
+
+### `user_repository_test.go` — 11 tests
+| Test | Function under test |
+|------|---------------------|
+| NewUserRepository returns non-nil | constructor |
+| CreateUser inserts user | `CreateUser()` |
+| GetUserByEmail returns nil for non-existent | `GetUserByEmail()` |
+| GetUserByEmail returns user for existing | `GetUserByEmail()` |
+| GetUserByID returns nil for non-existent | `GetUserByID()` |
+| GetUserByID returns user for existing | `GetUserByID()` |
+| EmailExists returns false for non-existent | `EmailExists()` |
+| EmailExists returns true for existing | `EmailExists()` |
+| UpdatePassword succeeds | `UpdatePassword()` |
+| UpdatePassword fails for non-existent email | `UpdatePassword()` |
+
+### `database_test.go` — 6 tests
+| Test | Function under test |
+|------|---------------------|
+| sql.Open creates connection | database |
+| db.Ping succeeds | database |
+| exec creates table | SQL |
+| exec inserts row | SQL |
+| query selects row | SQL |
+| transaction support | transaction |
