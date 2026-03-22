@@ -136,7 +136,21 @@
 
         <!-- Tasks -->
         <div class="tasks-list">
-          <div class="task-card" *ngFor="let task of getFilteredTasks(stage)" [ngClass]="getPriorityClass(task)" (click)="openTaskDetail(task, $event)">
+          <div
+            class="task-card"
+            *ngFor="let task of getFilteredTasks(stage)"
+            [ngClass]="getPriorityClass(task)"
+            [class.task-completed]="task.completed"
+            (click)="openTaskDetail(task, $event)"
+          >
+            <label class="task-check" (click)="$event.stopPropagation()">
+              <input
+                type="checkbox"
+                [checked]="!!task.completed"
+                (change)="toggleTaskCompleted(stage.id, task, $event)"
+                [attr.aria-label]="'Mark complete: ' + task.title"
+              />
+            </label>
             <div class="task-content">
               <p class="task-title">{{ task.title }}</p>
               <p class="task-desc" *ngIf="getDisplayDescription(task)">{{ getDisplayDescription(task) }}</p>
@@ -243,6 +257,11 @@
       </div>
 
       <div class="task-modal-body">
+        <label class="task-modal-done-row">
+          <input type="checkbox" [(ngModel)]="detailCompleted" />
+          <span>Mark as completed</span>
+        </label>
+
         <label>Title</label>
         <input type="text" [(ngModel)]="detailTitle" />
 

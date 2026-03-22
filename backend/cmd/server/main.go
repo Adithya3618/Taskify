@@ -36,9 +36,11 @@ func enableCORS(next http.Handler) http.Handler {
 }
 
 func main() {
-	// Load .env file
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found or error loading it")
+	// Load .env: repo root (../.env when running from backend/) or backend/.env
+	if err := godotenv.Load("../.env"); err != nil {
+		if err2 := godotenv.Load(".env"); err2 != nil {
+			log.Println("No .env file found (optional): use ../.env or backend/.env for JWT/SMTP")
+		}
 	}
 
 	// Initialize database
