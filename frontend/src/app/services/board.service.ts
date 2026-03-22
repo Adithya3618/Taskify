@@ -8,10 +8,12 @@ import { Label } from '../models/label.model';
 import { Attachment } from '../models/attachment.model';
 import { ApiService } from './api.service';
 import { Stage } from '../models/stage.model';
+import { TaskCompletionStorageService } from './task-completion-storage.service';
 
 @Injectable({ providedIn: 'root' })
 export class BoardService {
   private apiService = inject(ApiService);
+  private completionStorage = inject(TaskCompletionStorageService);
   
   private boardsSignal = signal<Board[]>([]);
   private listsSignal = signal<List[]>([]);
@@ -103,6 +105,7 @@ private loadTasksForStages(projectId: number,stageIds: number[]): void {
             description: t.description,
             listId: String(stageId),
             order: t.position,
+            completed: this.completionStorage.getCompleted(projectId, t.id),
             comments: [],
             checklist: [],
             labels: [],
@@ -193,6 +196,7 @@ private loadTasksForStages(projectId: number,stageIds: number[]): void {
         description: task.description,
         listId,
         order: task.position,
+        completed: this.completionStorage.getCompleted(projectId, task.id),
         comments: [],
         checklist: [],
         labels: [],
@@ -210,6 +214,18 @@ private loadTasksForStages(projectId: number,stageIds: number[]): void {
     this.cardsSignal.update((cards) =>
       cards.map((c) => (c.id === cardId ? { ...c, ...updates } : c))
     );
+  }
+
+  /** Toggle task done state (localStorage only; no backend API). */
+  toggleCardCompleted(cardId: string, completed: boolean): void {
+    const card = this.getCard(cardId);
+    if (!card) return;
+    const list = this.listsSignal().find((l) => l.id === card.listId);
+    const projectId = list ? parseInt(list.boardId, 10) : NaN;
+    const taskId = parseInt(cardId, 10);
+    if (isNaN(projectId) || isNaN(taskId)) return;
+    this.completionStorage.setCompleted(projectId, taskId, completed);
+    this.updateCard(cardId, { completed });
   }
 
   updateList(listId: string, updates: Partial<List>): void {

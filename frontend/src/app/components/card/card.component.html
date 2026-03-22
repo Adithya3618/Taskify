@@ -1,5 +1,13 @@
-<div class="card" cdkDrag [cdkDragData]="card()">
+<div class="card" [class.card-done]="card().completed" cdkDrag [cdkDragData]="card()">
   <div class="card-content" *ngIf="!editMode">
+    <label class="card-checkbox" (click)="$event.stopPropagation()">
+      <input
+        type="checkbox"
+        [checked]="!!card().completed"
+        (change)="onToggleCompleted($event)"
+        [attr.aria-label]="'Mark complete: ' + card().title"
+      />
+    </label>
     <div class="card-main" (click)="openDetail()">
       @if (card().labels?.length) {
         <div class="card-labels">

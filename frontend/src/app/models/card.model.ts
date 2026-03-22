@@ -7,6 +7,8 @@ export interface Card {
   id: string;
   title: string;
   description?: string;
+  /** Client-only; synced with TaskCompletionStorageService. */
+  completed?: boolean;
   listId: string;
   order: number;
   color?: string;

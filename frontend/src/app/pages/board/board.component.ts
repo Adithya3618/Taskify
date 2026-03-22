@@ -9,6 +9,7 @@ import { Stage, CreateStageRequest } from '../../models/stage.model';
 import { Task, CreateTaskRequest } from '../../models/task.model';
 import { AuthService } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
+import { TaskCompletionStorageService } from '../../services/task-completion-storage.service';
 
 @Component({
   selector: 'app-board',
@@ -69,13 +70,16 @@ export class BoardComponent implements OnInit, OnDestroy {
   detailDue = '';
   detailPriority = '';
   detailNotes = '';
+  /** Done flag — stored in browser only (TaskCompletionStorageService). */
+  detailCompleted = false;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private apiService: ApiService,
     private authService: AuthService,
-    public themeService: ThemeService
+    public themeService: ThemeService,
+    private taskCompletionStorage: TaskCompletionStorageService
   ) {}
 
   ngOnInit() {
@@ -200,7 +204,7 @@ export class BoardComponent implements OnInit, OnDestroy {
   loadTasks(stage: Stage) {
     this.apiService.getTasks(this.projectId, stage.id).subscribe({
       next: (tasks) => {
-        stage.tasks = tasks;
+        stage.tasks = this.taskCompletionStorage.mergeTasks(this.projectId, tasks || []);
       },
       error: (err) => {
         console.error('Failed to load tasks for stage:', stage.id, err);
@@ -374,6 +378,7 @@ export class BoardComponent implements OnInit, OnDestroy {
             title,
             description,
             position,
+            completed: false,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           };
@@ -442,6 +447,8 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.detailDue = parsed.due;
     this.detailPriority = parsed.priority;
     this.detailNotes = parsed.notes;
+    this.detailCompleted =
+      task.completed ?? this.taskCompletionStorage.getCompleted(this.projectId, task.id);
   }
 
   // ── Filter ───────────────────────────────────
@@ -523,6 +530,9 @@ export class BoardComponent implements OnInit, OnDestroy {
       this.detailNotes
     );
 
+    this.taskCompletionStorage.setCompleted(this.projectId, task.id, this.detailCompleted);
+    task.completed = this.detailCompleted;
+
     this.apiService.updateTask(task.id, {
       title: updatedTitle,
       description: updatedDescription,
@@ -541,6 +551,15 @@ export class BoardComponent implements OnInit, OnDestroy {
         this.closeTaskDetail();
       }
     });
+  }
+
+  /** Checkbox on task card — localStorage only. */
+  toggleTaskCompleted(_stageId: number, task: Task, event: Event): void {
+    event.stopPropagation();
+    const input = event.target as HTMLInputElement;
+    const next = input.checked;
+    this.taskCompletionStorage.setCompleted(this.projectId, task.id, next);
+    task.completed = next;
   }
 
   private parseCardMeta(description: string): { desc: string; due: string; priority: string; notes: string } {
