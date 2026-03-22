@@ -178,11 +178,25 @@
     cursor: pointer;
     display: flex;
     align-items: flex-start;
+    /* Visible on hover / focus / completed (touch: always visible below) */
+    opacity: 1;
+    transition: opacity 0.18s ease;
     input[type='checkbox'] {
       width: 18px;
       height: 18px;
       cursor: pointer;
       accent-color: #5e6c84;
+    }
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .task-check {
+      opacity: 0;
+    }
+    &:hover .task-check,
+    &:focus-within .task-check,
+    &.task-completed .task-check {
+      opacity: 1;
     }
   }
 
