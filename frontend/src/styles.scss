@@ -296,3 +296,76 @@ button {
 @keyframes pt8Move  { 0%{opacity:0;transform:translate(0,0);}  18%{opacity:1;} 100%{opacity:0;transform:translate(21px,2px);} }
 @keyframes pt9Move  { 0%{opacity:0;transform:translate(0,0);}  18%{opacity:1;} 100%{opacity:0;transform:translate(12px,-23px);} }
 @keyframes pt10Move { 0%{opacity:0;transform:translate(0,0);}  18%{opacity:1;} 100%{opacity:0;transform:translate(-13px,-24px);} }
+
+/* Round green checkbox + white tick (board tasks, Kanban cards, modals)
+   Note: ::after on <input type="checkbox"> is not reliable cross-browser — use SVG background for the tick. */
+input.board-checkbox[type='checkbox'] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  background-color: #fff;
+  background-image: none;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 12px 12px;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+
+  &:hover {
+    border-color: #86efac;
+  }
+
+  &:checked {
+    background-color: #22c55e;
+    border-color: #16a34a;
+    box-shadow: 0 1px 3px rgba(22, 163, 74, 0.35);
+    /* White checkmark (Material-style path) */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffffff' d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z'/%3E%3C/svg%3E");
+    background-size: 14px 14px;
+    animation: boardCheckboxPop 0.28s ease both;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #22c55e;
+    outline-offset: 2px;
+  }
+}
+
+@keyframes boardCheckboxPop {
+  0% {
+    transform: scale(0.92);
+  }
+  60% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  input.board-checkbox[type='checkbox']:checked {
+    animation: none;
+  }
+}
+
+[data-theme='dark'] input.board-checkbox[type='checkbox'] {
+  background-color: rgba(255, 255, 255, 0.95);
+  border-color: #94a3b8;
+  &:hover {
+    border-color: #86efac;
+  }
+  &:checked {
+    background-color: #22c55e;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffffff' d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z'/%3E%3C/svg%3E");
+  }
+}

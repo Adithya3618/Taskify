@@ -2,6 +2,7 @@
   <div class="card-content" *ngIf="!editMode">
     <label class="card-checkbox" (click)="$event.stopPropagation()">
       <input
+        class="board-checkbox"
         type="checkbox"
         [checked]="!!card().completed"
         (change)="onToggleCompleted($event)"
