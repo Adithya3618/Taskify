@@ -1,9 +1,10 @@
 .card {
   background: #fff;
   border-radius: 8px;
-  box-shadow: 0 1px 0 rgba(9, 30, 66, 0.25);
+  border: 1px solid rgba(9, 30, 66, 0.08);
+  box-shadow: 0 1px 3px rgba(9, 30, 66, 0.08);
   padding: 8px 12px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   cursor: grab;
   min-height: 36px;
 
@@ -24,12 +25,6 @@
     cursor: pointer;
     opacity: 1;
     transition: opacity 0.18s ease;
-    input[type='checkbox'] {
-      width: 16px;
-      height: 16px;
-      cursor: pointer;
-      accent-color: #5e6c84;
-    }
   }
 
   @media (hover: hover) and (pointer: fine) {

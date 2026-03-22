@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -64,6 +64,9 @@ export class BoardComponent implements OnInit, OnDestroy {
   showShareModal = false;
   shareLinkCopied = false;
 
+  /** Delete task confirmation (replaces window.confirm). */
+  deleteTaskPending: { stageId: number; taskId: number; taskTitle: string } | null = null;
+
   // Task detail view/edit modal state
   detailTask: Task | null = null;
   detailStageName = '';
@@ -81,7 +84,8 @@ export class BoardComponent implements OnInit, OnDestroy {
     private apiService: ApiService,
     private authService: AuthService,
     public themeService: ThemeService,
-    private taskCompletionStorage: TaskCompletionStorageService
+    private taskCompletionStorage: TaskCompletionStorageService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -415,26 +419,64 @@ export class BoardComponent implements OnInit, OnDestroy {
     }
   }
 
-  deleteTask(stageId: number, taskId: number, event?: Event) {
-    if (event) event.stopPropagation();
-    if (confirm('Are you sure you want to delete this task?')) {
-      this.apiService.deleteTask(taskId).subscribe({
-        next: () => {
-          const stage = this.stages.find(s => s.id === stageId);
-          if (stage && stage.tasks) {
-            stage.tasks = stage.tasks.filter((t: Task) => t.id !== taskId);
-          }
-        },
-        error: (err) => {
-          console.error('Failed to delete task:', err);
-          // Demo fallback: remove locally if backend delete is unavailable
-          const stage = this.stages.find(s => s.id === stageId);
-          if (stage && stage.tasks) {
-            stage.tasks = stage.tasks.filter((t: Task) => t.id !== taskId);
-          }
+  requestDeleteTask(stageId: number, taskId: number, taskTitle: string, event: Event): void {
+    event.stopPropagation();
+    this.deleteTaskPending = { stageId, taskId, taskTitle };
+  }
+
+  cancelDeleteTask(): void {
+    this.deleteTaskPending = null;
+  }
+
+  confirmDeleteTask(): void {
+    if (!this.deleteTaskPending) return;
+    const { stageId, taskId } = this.deleteTaskPending;
+    this.deleteTaskPending = null;
+    this.performDeleteTask(stageId, taskId);
+  }
+
+  private performDeleteTask(stageId: number, taskId: number): void {
+    this.apiService.deleteTask(taskId).subscribe({
+      next: () => {
+        const stage = this.stages.find(s => s.id === stageId);
+        if (stage && stage.tasks) {
+          stage.tasks = stage.tasks.filter((t: Task) => t.id !== taskId);
         }
-      });
-    }
+        this.taskCompletionStorage.setCompleted(this.projectId, taskId, false);
+      },
+      error: (err) => {
+        console.error('Failed to delete task:', err);
+        const stage = this.stages.find(s => s.id === stageId);
+        if (stage && stage.tasks) {
+          stage.tasks = stage.tasks.filter((t: Task) => t.id !== taskId);
+        }
+        this.taskCompletionStorage.setCompleted(this.projectId, taskId, false);
+      }
+    });
+  }
+
+  /** Resolved completion (task field + localStorage). */
+  isTaskDone(task: Task): boolean {
+    return !!(task.completed ?? this.taskCompletionStorage.getCompleted(this.projectId, task.id));
+  }
+
+  getStageTotalCount(stage: Stage): number {
+    return stage.tasks?.length ?? 0;
+  }
+
+  getStageDoneCount(stage: Stage): number {
+    const tasks = stage.tasks || [];
+    return tasks.filter((t) => this.isTaskDone(t)).length;
+  }
+
+  trackByTaskId(_index: number, task: Task): number {
+    return task.id;
+  }
+
+  /** Open task modal — edit flow (same as clicking card body). */
+  editTask(task: Task, event: Event): void {
+    event.stopPropagation();
+    this.openTaskDetail(task);
   }
 
   openTaskDetail(task: Task, event?: Event) {
@@ -471,9 +513,9 @@ export class BoardComponent implements OnInit, OnDestroy {
   getFilteredTasks(stage: Stage): Task[] {
     let tasks = stage.tasks || [];
     if (this.filterCompletion === 'active') {
-      tasks = tasks.filter((t) => !t.completed);
+      tasks = tasks.filter((t) => !this.isTaskDone(t));
     } else if (this.filterCompletion === 'done') {
-      tasks = tasks.filter((t) => !!t.completed);
+      tasks = tasks.filter((t) => this.isTaskDone(t));
     }
     if (this.filterPriority) {
       tasks = tasks.filter(t => {
@@ -568,6 +610,7 @@ export class BoardComponent implements OnInit, OnDestroy {
     const next = input.checked;
     this.taskCompletionStorage.setCompleted(this.projectId, task.id, next);
     task.completed = next;
+    this.cdr.detectChanges();
   }
 
   private parseCardMeta(description: string): { desc: string; due: string; priority: string; notes: string } {
