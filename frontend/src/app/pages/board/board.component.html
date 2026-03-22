@@ -201,12 +201,9 @@
             <div class="task-content" (click)="openTaskDetail(task, $event)">
               <p class="task-title">{{ task.title }}</p>
               <p class="task-desc" *ngIf="getDisplayDescription(task)">{{ getDisplayDescription(task) }}</p>
-              <div class="task-meta-row" *ngIf="getTaskPriority(task) || getTaskDue(task)">
-                <span class="meta-pill priority-pill" [ngClass]="getPriorityClass(task)" *ngIf="getTaskPriority(task)">
+              <div class="task-meta-row" *ngIf="getTaskPriority(task)">
+                <span class="meta-pill priority-pill" [ngClass]="getPriorityClass(task)">
                   {{ getTaskPriority(task) }}
-                </span>
-                <span class="meta-pill due-pill" *ngIf="getTaskDue(task)">
-                  Due {{ getTaskDue(task) }}
                 </span>
               </div>
             </div>
