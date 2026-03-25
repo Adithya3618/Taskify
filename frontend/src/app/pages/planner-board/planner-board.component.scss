@@ -1,8 +1,12 @@
 .planner-page {
-  min-height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   font-family: 'Plus Jakarta Sans', sans-serif;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .trello-bg {
@@ -353,36 +357,86 @@
 }
 
 .planner-main {
-  flex: 1;
-  padding: 16px 20px 28px;
+  flex: 1 1 0;
+  min-height: 0;
+  padding: 8px 14px 12px;
   max-width: 1680px;
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .planner-layout {
   display: grid;
-  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
-  gap: 24px;
-  align-items: start;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.planner-layout--viewport {
+  height: 100%;
+  max-height: 100%;
 }
 
 @media (max-width: 1024px) {
+  .planner-page {
+    height: auto;
+    max-height: none;
+    overflow-y: auto;
+  }
+  .planner-main {
+    overflow: visible;
+    flex: none;
+  }
   .planner-layout {
     grid-template-columns: 1fr;
+    min-height: auto;
   }
 }
 
 /* ── Left: month (high visibility) ── */
 .planner-month-aside {
-  padding: 20px 22px 22px;
-  border-radius: 16px;
+  padding: 10px 12px 12px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.16);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 0;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.planner-aside-top {
+  flex-shrink: 0;
+}
+
+.planner-aside-sections {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) rgba(255, 255, 255, 0.06);
+}
+
+[data-theme='light'] .planner-aside-sections {
+  border-top-color: #e2e8f0;
 }
 
 [data-theme='light'] .planner-month-aside {
@@ -392,7 +446,7 @@
 }
 
 .planner-kicker {
-  margin: 0 0 12px 0;
+  margin: 0 0 8px 0;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -407,13 +461,13 @@
 .planner-month-hero {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  margin-bottom: 18px;
+  gap: 0;
+  margin-bottom: 10px;
 }
 
 .planner-month-name {
   display: block;
-  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-size: clamp(1.35rem, 2.4vw, 1.85rem);
   font-weight: 800;
   line-height: 1.05;
   letter-spacing: -0.03em;
@@ -423,7 +477,7 @@
 
 .planner-year {
   display: block;
-  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-size: clamp(1.05rem, 1.8vw, 1.4rem);
   font-weight: 700;
   letter-spacing: -0.02em;
   color: rgba(255, 255, 255, 0.55);
@@ -441,15 +495,15 @@
 .planner-month-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
 }
 
 /* Glass mini calendar (same month as main grid) */
 .planner-mini-calendar {
-  margin-top: 4px;
-  padding: 12px 12px 14px;
+  margin-top: 0;
+  padding: 8px 8px 10px;
 }
 
 .planner-mini-calendar-header {
@@ -513,8 +567,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  min-height: 32px;
-  padding: 4px 2px 6px;
+  min-height: 26px;
+  padding: 2px 2px 4px;
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -572,9 +626,9 @@
 }
 
 .planner-month-hint {
-  margin: 14px 0 0 0;
-  font-size: 12px;
-  line-height: 1.5;
+  margin: 8px 0 0 0;
+  font-size: 10px;
+  line-height: 1.4;
   color: rgba(255, 255, 255, 0.45);
 }
 
@@ -582,54 +636,100 @@
   color: #64748b;
 }
 
-/* Scheduled — tasks with a due date (left column) */
-.planner-scheduled-panel {
-  margin-top: 22px;
-  padding-top: 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
+/* Collapsible — Scheduled / No due date */
+.planner-collapsible {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
-[data-theme='light'] .planner-scheduled-panel {
-  border-top-color: #e2e8f0;
+[data-theme='light'] .planner-collapsible {
+  border-color: #e2e8f0;
+  background: #f8fafc;
 }
 
-.planner-scheduled-title {
-  margin: 0 0 4px 0;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.55);
+.planner-collapsible-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  color: rgba(255, 255, 255, 0.92);
+  transition: background 0.15s;
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
 }
 
-.planner-scheduled-count {
-  margin: 0 0 12px 0;
+[data-theme='light'] .planner-collapsible-trigger {
+  color: #0f172a;
+  &:hover {
+    background: #f1f5f9;
+  }
+}
+
+.planner-collapsible-title {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.38);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
-[data-theme='light'] .planner-scheduled-title {
-  color: #475467;
+.planner-collapsible-meta {
+  flex: 1;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.45);
+  min-width: 0;
 }
 
-[data-theme='light'] .planner-scheduled-count {
-  color: #94a3b8;
+[data-theme='light'] .planner-collapsible-meta {
+  color: #64748b;
+}
+
+.planner-collapsible-chevron {
+  width: 16px;
+  height: 16px;
+  color: rgba(255, 255, 255, 0.5);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+  &.open {
+    transform: rotate(180deg);
+  }
+}
+
+[data-theme='light'] .planner-collapsible-chevron {
+  color: #64748b;
+}
+
+.planner-collapsible-body {
+  padding: 0 8px 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='light'] .planner-collapsible-body {
+  border-top-color: #e2e8f0;
 }
 
 .planner-scheduled-list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 6px 0 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  max-height: min(36vh, 320px);
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.25) rgba(255, 255, 255, 0.06);
+  gap: 8px;
+  max-height: none;
 }
 
-.planner-scheduled-item {
+.planner-scheduled-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -648,8 +748,8 @@
 }
 
 .planner-scheduled-empty {
-  margin: 0;
-  font-size: 12px;
+  margin: 6px 0 0;
+  font-size: 11px;
   line-height: 1.45;
   color: rgba(255, 255, 255, 0.35);
 }
@@ -658,51 +758,42 @@
   color: #94a3b8;
 }
 
-/* No due date — left column */
-.planner-no-due-panel {
-  margin-top: 22px;
-  padding-top: 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-[data-theme='light'] .planner-no-due-panel {
-  border-top-color: #e2e8f0;
-}
-
-.planner-no-due-title {
-  margin: 0 0 4px 0;
-  font-size: 13px;
+.planner-more-btn {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(129, 140, 248, 0.45);
+  background: rgba(129, 140, 248, 0.12);
+  color: #c7d2fe;
+  font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.03em;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  &:hover {
+    background: rgba(129, 140, 248, 0.22);
+  }
 }
 
-.planner-no-due-count {
-  margin: 0 0 12px 0;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.38);
-}
-
-[data-theme='light'] .planner-no-due-title {
-  color: #475467;
-}
-
-[data-theme='light'] .planner-no-due-count {
-  color: #94a3b8;
+[data-theme='light'] .planner-more-btn {
+  border-color: #bae6fd;
+  background: #e0f2fe;
+  color: #0369a1;
+  &:hover {
+    background: #bae6fd;
+  }
 }
 
 .planner-no-due-list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 6px 0 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: min(42vh, 360px);
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.25) rgba(255, 255, 255, 0.06);
+  max-height: none;
 }
 
 .planner-no-due-empty {
@@ -719,6 +810,10 @@
 /* ── Right: glass calendar board ── */
 .planner-calendar-column {
   min-width: 0;
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .planner-calendar--glass {
@@ -741,10 +836,21 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
+.planner-calendar--fill {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 10px 12px 12px;
+  border-radius: 14px;
+}
+
 .planner-calendar-header {
-  margin-bottom: 14px;
-  padding-bottom: 12px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
 }
 
 [data-theme='light'] .planner-calendar-header {
@@ -818,18 +924,19 @@
 .planner-weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-  margin-bottom: 8px;
+  gap: 3px;
+  margin-bottom: 6px;
+  flex-shrink: 0;
 }
 
 .planner-weekday {
   text-align: center;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: rgba(255, 255, 255, 0.45);
-  padding: 6px 4px;
+  padding: 4px 2px;
 }
 
 [data-theme='light'] .planner-weekday {
@@ -842,21 +949,34 @@
   gap: 4px;
 }
 
+.planner-grid--equal {
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: repeat(6, minmax(0, 1fr));
+  gap: 3px;
+}
+
 .planner-week {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  gap: 3px;
+  min-height: 0;
+}
+
+.planner-grid--equal .planner-week {
+  min-height: 0;
 }
 
 .planner-day {
-  min-height: 104px;
-  border-radius: 8px;
+  min-height: 0;
+  border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(0, 0, 0, 0.15);
-  padding: 6px 6px 8px;
+  padding: 4px 4px 5px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   overflow: hidden;
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s;
@@ -886,10 +1006,11 @@
 }
 
 .planner-day-num {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.75);
   flex-shrink: 0;
+  line-height: 1.1;
 }
 
 [data-theme='light'] .planner-day-num {
@@ -899,10 +1020,40 @@
 .planner-day-tasks {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  overflow-y: auto;
-  max-height: 96px;
+  gap: 3px;
+  flex: 1 1 0;
   min-height: 0;
+  overflow: hidden;
+}
+
+.planner-day-more {
+  flex-shrink: 0;
+  align-self: stretch;
+  margin-top: 1px;
+  padding: 3px 4px;
+  border-radius: 5px;
+  border: 1px dashed rgba(129, 140, 248, 0.45);
+  background: rgba(129, 140, 248, 0.08);
+  color: #c7d2fe;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  font-family: inherit;
+  cursor: pointer;
+  line-height: 1.2;
+  transition: background 0.12s;
+  &:hover {
+    background: rgba(129, 140, 248, 0.18);
+  }
+}
+
+[data-theme='light'] .planner-day-more {
+  border-color: #7dd3fc;
+  background: #e0f2fe;
+  color: #0369a1;
+  &:hover {
+    background: #bae6fd;
+  }
 }
 
 /* Task row — board-style checkbox rail + priority (calendar + sidebar) */

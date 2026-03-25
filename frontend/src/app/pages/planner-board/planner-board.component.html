@@ -74,9 +74,10 @@
   </div>
 
   <main class="planner-main" *ngIf="!loading">
-    <div class="planner-layout">
+    <div class="planner-layout planner-layout--viewport">
       <!-- Left: month navigation (always visible, high contrast) -->
       <aside class="planner-month-aside" aria-label="Month navigation">
+        <div class="planner-aside-top">
         <p class="planner-kicker">Planner</p>
 
         <div class="planner-month-hero">
@@ -117,101 +118,32 @@
         </section>
 
         <p class="planner-month-hint">
-          The large calendar shows this month in detail. Tap a day to add a task; muted days jump to that month.
+          Main calendar: tap a day to add a task; muted days switch months.
         </p>
+        </div>
 
-        <section class="planner-scheduled-panel" aria-label="Tasks with a due date">
-          <h2 class="planner-scheduled-title">Scheduled</h2>
-          <p class="planner-scheduled-count">{{ scheduledSorted.length }} with a due date</p>
-          <ul class="planner-scheduled-list">
-            <li *ngFor="let row of scheduledSorted" class="planner-scheduled-item">
-              <span class="planner-scheduled-date">{{ formatDueLabel(row.dateKey) }}</span>
-              <div
-                class="planner-task-chip planner-task-chip--sidebar"
-                [ngClass]="getPriorityClass(row.task)"
-                [class.planner-task-chip--done]="isTaskDone(row.task)"
-              >
-                <label class="planner-task-check" (click)="$event.stopPropagation()">
-                  <input
-                    class="board-checkbox"
-                    type="checkbox"
-                    [checked]="isTaskDone(row.task)"
-                    (change)="toggleTaskCompleted(row.task, $event)"
-                    [attr.aria-label]="'Mark complete: ' + row.task.title"
-                  />
-                </label>
-                <button type="button" class="planner-task-chip-body" (click)="openTaskDetail(row.task, $event)">
-                  <span class="planner-task-title">{{ row.task.title }}</span>
-                  <span class="planner-task-meta" *ngIf="getTaskPriority(row.task)">
-                    <span class="meta-pill priority-pill" [ngClass]="getPriorityClass(row.task)">{{
-                      getTaskPriority(row.task)
-                    }}</span>
-                  </span>
-                  <span class="planner-task-stage">{{ row.task.stageName }}</span>
-                </button>
-              </div>
-            </li>
-          </ul>
-          <p *ngIf="scheduledSorted.length === 0" class="planner-scheduled-empty">No due dates yet — set them on tasks or add from the calendar.</p>
-        </section>
-
-        <section class="planner-no-due-panel" aria-label="Tasks without a due date">
-          <h2 class="planner-no-due-title">No due date</h2>
-          <p class="planner-no-due-count">{{ unscheduled.length }} task(s)</p>
-          <ul class="planner-no-due-list">
-            <li *ngFor="let task of unscheduled">
-              <div
-                class="planner-task-chip planner-task-chip--sidebar"
-                [ngClass]="getPriorityClass(task)"
-                [class.planner-task-chip--done]="isTaskDone(task)"
-              >
-                <label class="planner-task-check" (click)="$event.stopPropagation()">
-                  <input
-                    class="board-checkbox"
-                    type="checkbox"
-                    [checked]="isTaskDone(task)"
-                    (change)="toggleTaskCompleted(task, $event)"
-                    [attr.aria-label]="'Mark complete: ' + task.title"
-                  />
-                </label>
-                <button type="button" class="planner-task-chip-body" (click)="openTaskDetail(task, $event)">
-                  <span class="planner-task-title">{{ task.title }}</span>
-                  <span class="planner-task-meta" *ngIf="getTaskPriority(task)">
-                    <span class="meta-pill priority-pill" [ngClass]="getPriorityClass(task)">{{ getTaskPriority(task) }}</span>
-                  </span>
-                  <span class="planner-task-stage">{{ task.stageName }}</span>
-                </button>
-              </div>
-            </li>
-          </ul>
-          <p *ngIf="unscheduled.length === 0" class="planner-no-due-empty">Nothing here — add due dates on tasks or create them from the board.</p>
-        </section>
-      </aside>
-
-      <!-- Right: glass calendar -->
-      <div class="planner-calendar-column">
-        <section class="planner-calendar planner-calendar--glass" aria-label="Month calendar">
-          <div class="planner-calendar-header">
-            <h2 class="planner-calendar-heading">This month</h2>
-            <span class="planner-calendar-sub">{{ monthLabel() }}</span>
-          </div>
-          <div class="planner-weekdays">
-            <span *ngFor="let w of weekdayLabels" class="planner-weekday">{{ w }}</span>
-          </div>
-          <div class="planner-grid">
-            <div *ngFor="let week of calendarWeeks" class="planner-week">
-              <div
-                *ngFor="let day of week"
-                class="planner-day"
-                [class.planner-day--muted]="!isCurrentMonth(day)"
-                [class.planner-day--today]="isToday(day)"
-                (click)="onDayCellClick(day, $event)"
-              >
-                <div class="planner-day-num">{{ day.getDate() }}</div>
-                <div class="planner-day-tasks">
+        <div class="planner-aside-sections">
+        <section class="planner-collapsible" aria-label="Tasks with a due date">
+          <button
+            type="button"
+            class="planner-collapsible-trigger"
+            (click)="toggleScheduledOpen()"
+            [attr.aria-expanded]="scheduledOpen"
+            id="planner-scheduled-toggle"
+          >
+            <span class="planner-collapsible-title">Scheduled</span>
+            <span class="planner-collapsible-meta">{{ scheduledGroups.length }} day(s) · {{ tasksByDateSize }} task(s)</span>
+            <svg class="planner-collapsible-chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true" [class.open]="scheduledOpen">
+              <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div class="planner-collapsible-body" *ngIf="scheduledOpen" role="region" aria-labelledby="planner-scheduled-toggle">
+            <ul class="planner-scheduled-list">
+              <li *ngFor="let g of scheduledGroups" class="planner-scheduled-group">
+                <span class="planner-scheduled-date">{{ formatDueLabel(g.dateKey) }}</span>
+                <ng-container *ngFor="let task of visibleScheduledTasks(g)">
                   <div
-                    class="planner-task-chip"
-                    *ngFor="let task of tasksForDay(day)"
+                    class="planner-task-chip planner-task-chip--sidebar"
                     [ngClass]="getPriorityClass(task)"
                     [class.planner-task-chip--done]="isTaskDone(task)"
                   >
@@ -232,6 +164,120 @@
                       <span class="planner-task-stage">{{ task.stageName }}</span>
                     </button>
                   </div>
+                </ng-container>
+                <button
+                  *ngIf="g.tasks.length > 1"
+                  type="button"
+                  class="planner-more-btn"
+                  (click)="toggleScheduledGroupExpand(g.dateKey, $event)"
+                >
+                  {{ scheduledGroupExpandLabel(g) }}
+                </button>
+              </li>
+            </ul>
+            <p *ngIf="scheduledGroups.length === 0" class="planner-scheduled-empty">No due dates yet — set them on tasks or add from the calendar.</p>
+          </div>
+        </section>
+
+        <section class="planner-collapsible planner-collapsible--nodue" aria-label="Tasks without a due date">
+          <button
+            type="button"
+            class="planner-collapsible-trigger"
+            (click)="toggleNoDueOpen()"
+            [attr.aria-expanded]="noDueOpen"
+            id="planner-nodue-toggle"
+          >
+            <span class="planner-collapsible-title">No due date</span>
+            <span class="planner-collapsible-meta">{{ unscheduled.length }} task(s)</span>
+            <svg class="planner-collapsible-chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true" [class.open]="noDueOpen">
+              <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div class="planner-collapsible-body" *ngIf="noDueOpen" role="region" aria-labelledby="planner-nodue-toggle">
+            <ul class="planner-no-due-list">
+              <li *ngFor="let task of unscheduled">
+                <div
+                  class="planner-task-chip planner-task-chip--sidebar"
+                  [ngClass]="getPriorityClass(task)"
+                  [class.planner-task-chip--done]="isTaskDone(task)"
+                >
+                  <label class="planner-task-check" (click)="$event.stopPropagation()">
+                    <input
+                      class="board-checkbox"
+                      type="checkbox"
+                      [checked]="isTaskDone(task)"
+                      (change)="toggleTaskCompleted(task, $event)"
+                      [attr.aria-label]="'Mark complete: ' + task.title"
+                    />
+                  </label>
+                  <button type="button" class="planner-task-chip-body" (click)="openTaskDetail(task, $event)">
+                    <span class="planner-task-title">{{ task.title }}</span>
+                    <span class="planner-task-meta" *ngIf="getTaskPriority(task)">
+                      <span class="meta-pill priority-pill" [ngClass]="getPriorityClass(task)">{{ getTaskPriority(task) }}</span>
+                    </span>
+                    <span class="planner-task-stage">{{ task.stageName }}</span>
+                  </button>
+                </div>
+              </li>
+            </ul>
+            <p *ngIf="unscheduled.length === 0" class="planner-no-due-empty">Nothing here — add due dates on tasks or create them from the board.</p>
+          </div>
+        </section>
+        </div>
+      </aside>
+
+      <!-- Right: glass calendar -->
+      <div class="planner-calendar-column">
+        <section class="planner-calendar planner-calendar--glass planner-calendar--fill" aria-label="Month calendar">
+          <div class="planner-calendar-header">
+            <h2 class="planner-calendar-heading">This month</h2>
+            <span class="planner-calendar-sub">{{ monthLabel() }}</span>
+          </div>
+          <div class="planner-weekdays">
+            <span *ngFor="let w of weekdayLabels" class="planner-weekday">{{ w }}</span>
+          </div>
+          <div class="planner-grid planner-grid--equal">
+            <div *ngFor="let week of calendarWeeks" class="planner-week">
+              <div
+                *ngFor="let day of week"
+                class="planner-day"
+                [class.planner-day--muted]="!isCurrentMonth(day)"
+                [class.planner-day--today]="isToday(day)"
+                (click)="onDayCellClick(day, $event)"
+              >
+                <div class="planner-day-num">{{ day.getDate() }}</div>
+                <div class="planner-day-tasks">
+                  <div
+                    class="planner-task-chip"
+                    *ngFor="let task of tasksForCalendarCell(day)"
+                    [ngClass]="getPriorityClass(task)"
+                    [class.planner-task-chip--done]="isTaskDone(task)"
+                  >
+                    <label class="planner-task-check" (click)="$event.stopPropagation()">
+                      <input
+                        class="board-checkbox"
+                        type="checkbox"
+                        [checked]="isTaskDone(task)"
+                        (change)="toggleTaskCompleted(task, $event)"
+                        [attr.aria-label]="'Mark complete: ' + task.title"
+                      />
+                    </label>
+                    <button type="button" class="planner-task-chip-body" (click)="openTaskDetail(task, $event)">
+                      <span class="planner-task-title">{{ task.title }}</span>
+                      <span class="planner-task-meta" *ngIf="getTaskPriority(task)">
+                        <span class="meta-pill priority-pill" [ngClass]="getPriorityClass(task)">{{ getTaskPriority(task) }}</span>
+                      </span>
+                      <span class="planner-task-stage">{{ task.stageName }}</span>
+                    </button>
+                  </div>
+                  <button
+                    *ngIf="tasksForDay(day).length > 1"
+                    type="button"
+                    class="planner-day-more"
+                    (click)="toggleCalendarDayExpand(day, $event)"
+                  >
+                    {{ calendarDayToggleLabel(day) }}
+                  </button>
                 </div>
               </div>
             </div>
