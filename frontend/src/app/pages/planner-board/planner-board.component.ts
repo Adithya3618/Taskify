@@ -48,8 +48,15 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
   tasksByDate = new Map<string, TaskWithStage[]>();
   unscheduled: TaskWithStage[] = [];
 
-  /** All tasks with a due date, sorted by date then title (for sidebar list). */
-  scheduledSorted: { task: TaskWithStage; dateKey: string }[] = [];
+  /** Collapsible sidebar sections (closed by default — fits viewport). */
+  scheduledOpen = false;
+  noDueOpen = false;
+
+  /** Per-date: show all scheduled tasks vs first-only + “+N more”. */
+  scheduledDateExpanded: Record<string, boolean> = {};
+
+  /** Per calendar cell date key: show all tasks vs first + “+N more”. */
+  calendarDateExpanded: Record<string, boolean> = {};
 
   /** Add task (same fields as board column form) */
   showAddTaskModal = false;
@@ -224,7 +231,6 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
   private applyTaskBuckets(): void {
     this.tasksByDate.clear();
     this.unscheduled = [];
-    this.scheduledSorted = [];
 
     for (const t of this.allTasks) {
       const due = parseCardMeta(t.description || '').due;
@@ -236,16 +242,99 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
       const list = this.tasksByDate.get(key) ?? [];
       list.push(t);
       this.tasksByDate.set(key, list);
-      this.scheduledSorted.push({ task: t, dateKey: key });
     }
 
-    for (const [, list] of this.tasksByDate) {
-      list.sort((a, b) => a.title.localeCompare(b.title));
+    for (const [k, list] of this.tasksByDate) {
+      this.tasksByDate.set(k, this.sortTasksByPriority(list));
     }
-    this.unscheduled.sort((a, b) => a.title.localeCompare(b.title));
-    this.scheduledSorted.sort((a, b) => {
-      const byDate = a.dateKey.localeCompare(b.dateKey);
-      return byDate !== 0 ? byDate : a.task.title.localeCompare(b.task.title);
+    this.unscheduled = this.sortTasksByPriority(this.unscheduled);
+  }
+
+  /** Groups for sidebar: one entry per due date, tasks highest priority first. */
+  get scheduledGroups(): { dateKey: string; tasks: TaskWithStage[] }[] {
+    const keys = [...this.tasksByDate.keys()].sort();
+    return keys.map((dateKey) => ({
+      dateKey,
+      tasks: [...(this.tasksByDate.get(dateKey) ?? [])],
+    }));
+  }
+
+  /** Total count of tasks that have a due date (all days). */
+  get tasksByDateSize(): number {
+    let n = 0;
+    for (const [, list] of this.tasksByDate) {
+      n += list.length;
+    }
+    return n;
+  }
+
+  toggleScheduledOpen(): void {
+    this.scheduledOpen = !this.scheduledOpen;
+  }
+
+  toggleNoDueOpen(): void {
+    this.noDueOpen = !this.noDueOpen;
+  }
+
+  toggleScheduledGroupExpand(dateKey: string, event: Event): void {
+    event.stopPropagation();
+    this.scheduledDateExpanded = {
+      ...this.scheduledDateExpanded,
+      [dateKey]: !this.scheduledDateExpanded[dateKey],
+    };
+    this.cdr.markForCheck();
+  }
+
+  scheduledGroupExpandLabel(g: { dateKey: string; tasks: TaskWithStage[] }): string {
+    if (g.tasks.length <= 1) return '';
+    return this.scheduledDateExpanded[g.dateKey] ? 'Show less' : `+${g.tasks.length - 1} more`;
+  }
+
+  visibleScheduledTasks(g: { dateKey: string; tasks: TaskWithStage[] }): TaskWithStage[] {
+    if (g.tasks.length <= 1) return g.tasks;
+    if (this.scheduledDateExpanded[g.dateKey]) return g.tasks;
+    return g.tasks.slice(0, 1);
+  }
+
+  toggleCalendarDayExpand(day: Date, event: Event): void {
+    event.stopPropagation();
+    const key = this.dateKey(day);
+    this.calendarDateExpanded = {
+      ...this.calendarDateExpanded,
+      [key]: !this.calendarDateExpanded[key],
+    };
+    this.cdr.markForCheck();
+  }
+
+  calendarDayToggleLabel(day: Date): string {
+    const all = this.tasksForDay(day);
+    if (all.length <= 1) return '';
+    const key = this.dateKey(day);
+    return this.calendarDateExpanded[key] ? 'Show less' : `+${all.length - 1} more`;
+  }
+
+  tasksForCalendarCell(day: Date): TaskWithStage[] {
+    const all = this.tasksForDay(day);
+    if (all.length <= 1) return all;
+    const key = this.dateKey(day);
+    if (this.calendarDateExpanded[key]) return all;
+    return all.slice(0, 1);
+  }
+
+  /** Higher number = higher priority (Critical … none). */
+  private priorityRank(task: Task): number {
+    const p = this.getTaskPriority(task).toLowerCase();
+    if (p === 'critical') return 5;
+    if (p === 'high' || p === 'highest') return 4;
+    if (p === 'medium' || p === 'mid') return 3;
+    if (p === 'low' || p === 'lowest') return 2;
+    return 1;
+  }
+
+  private sortTasksByPriority(tasks: TaskWithStage[]): TaskWithStage[] {
+    return [...tasks].sort((a, b) => {
+      const pr = this.priorityRank(b) - this.priorityRank(a);
+      return pr !== 0 ? pr : a.title.localeCompare(b.title);
     });
   }
 
@@ -299,7 +388,8 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
    * Task chips stop propagation so they open the detail modal instead.
    */
   onDayCellClick(day: Date, event: MouseEvent): void {
-    if ((event.target as HTMLElement).closest('.planner-task-chip')) {
+    const el = event.target as HTMLElement;
+    if (el.closest('.planner-task-chip') || el.closest('.planner-day-more')) {
       return;
     }
     if (!this.isCurrentMonth(day)) {
