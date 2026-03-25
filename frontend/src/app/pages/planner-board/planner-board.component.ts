@@ -48,9 +48,8 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
   tasksByDate = new Map<string, TaskWithStage[]>();
   unscheduled: TaskWithStage[] = [];
 
-  /** Jump to month/year */
-  showMonthYearPicker = false;
-  monthYearDraft = '';
+  /** All tasks with a due date, sorted by date then title (for sidebar list). */
+  scheduledSorted: { task: TaskWithStage; dateKey: string }[] = [];
 
   /** Add task (same fields as board column form) */
   showAddTaskModal = false;
@@ -225,6 +224,7 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
   private applyTaskBuckets(): void {
     this.tasksByDate.clear();
     this.unscheduled = [];
+    this.scheduledSorted = [];
 
     for (const t of this.allTasks) {
       const due = parseCardMeta(t.description || '').due;
@@ -236,12 +236,17 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
       const list = this.tasksByDate.get(key) ?? [];
       list.push(t);
       this.tasksByDate.set(key, list);
+      this.scheduledSorted.push({ task: t, dateKey: key });
     }
 
     for (const [, list] of this.tasksByDate) {
       list.sort((a, b) => a.title.localeCompare(b.title));
     }
     this.unscheduled.sort((a, b) => a.title.localeCompare(b.title));
+    this.scheduledSorted.sort((a, b) => {
+      const byDate = a.dateKey.localeCompare(b.dateKey);
+      return byDate !== 0 ? byDate : a.task.title.localeCompare(b.task.title);
+    });
   }
 
   private buildMonthWeeks(anchor: Date): Date[][] {
@@ -281,31 +286,6 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
   goToday(): void {
     this.viewMonth = new Date();
     this.calendarWeeks = this.buildMonthWeeks(this.viewMonth);
-  }
-
-  /** Show native month picker dialog */
-  openMonthYearPicker(): void {
-    const y = this.viewMonth.getFullYear();
-    const m = String(this.viewMonth.getMonth() + 1).padStart(2, '0');
-    this.monthYearDraft = `${y}-${m}`;
-    this.showMonthYearPicker = true;
-  }
-
-  closeMonthYearPicker(): void {
-    this.showMonthYearPicker = false;
-  }
-
-  applyMonthYear(): void {
-    const m = this.monthYearDraft?.match(/^(\d{4})-(\d{2})$/);
-    if (m) {
-      const y = +m[1];
-      const mo = +m[2] - 1;
-      if (!Number.isNaN(y) && mo >= 0 && mo <= 11) {
-        this.viewMonth = new Date(y, mo, 1);
-        this.calendarWeeks = this.buildMonthWeeks(this.viewMonth);
-      }
-    }
-    this.showMonthYearPicker = false;
   }
 
   /** Clicking a day outside the visible month jumps to that month (Trello-style). */
@@ -437,6 +417,15 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
     return this.viewMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
   }
 
+  /** Short label for sidebar scheduled list (e.g. "Mar 22, 2025"). */
+  formatDueLabel(dateKey: string): string {
+    const [y, m, d] = dateKey.split('-').map(Number);
+    if (!y || !m || !d) return dateKey;
+    const dt = new Date(y, m - 1, d);
+    if (Number.isNaN(dt.getTime())) return dateKey;
+    return dt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
   weekdayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   dateKey(d: Date): string {
@@ -461,6 +450,12 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
 
   tasksForDay(d: Date): TaskWithStage[] {
     return this.tasksByDate.get(this.dateKey(d)) ?? [];
+  }
+
+  miniDayAriaLabel(day: Date): string {
+    const n = this.tasksForDay(day).length;
+    const when = day.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+    return n ? `${when}, ${n} task${n === 1 ? '' : 's'}` : `${when}, no tasks`;
   }
 
   isTaskDone(task: Task): boolean {

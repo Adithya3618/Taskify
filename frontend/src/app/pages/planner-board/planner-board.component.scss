@@ -446,41 +446,129 @@
   margin-bottom: 14px;
 }
 
-.planner-change-month {
-  width: 100%;
+/* Glass mini calendar (same month as main grid) */
+.planner-mini-calendar {
+  margin-top: 4px;
+  padding: 12px 12px 14px;
+}
+
+.planner-mini-calendar-header {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.planner-mini-calendar-title {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+[data-theme='light'] .planner-mini-calendar-header {
+  border-bottom-color: #e2e8f0;
+}
+
+[data-theme='light'] .planner-mini-calendar-title {
+  color: #64748b;
+}
+
+.planner-mini-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.planner-mini-weekday {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+[data-theme='light'] .planner-mini-weekday {
+  color: #94a3b8;
+}
+
+.planner-mini-grid {
   display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.planner-mini-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.planner-mini-day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 13px;
-  font-weight: 700;
-  font-family: inherit;
+  justify-content: flex-start;
+  min-height: 32px;
+  padding: 4px 2px 6px;
+  border: none;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  font-family: inherit;
+  background: rgba(0, 0, 0, 0.12);
+  color: rgba(255, 255, 255, 0.88);
+  transition: background 0.12s, box-shadow 0.12s;
   &:hover {
-    background: rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.12);
+  }
+  &:focus-visible {
+    outline: 2px solid rgba(129, 140, 248, 0.85);
+    outline-offset: 1px;
   }
 }
 
-.planner-change-month-icon {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  opacity: 0.85;
+.planner-mini-day-num {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.1;
 }
 
-[data-theme='light'] .planner-change-month {
-  background: #f8fafc;
-  border-color: #e2e8f0;
+.planner-mini-day-dot {
+  width: 5px;
+  height: 5px;
+  margin-top: 3px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #38bdf8, #818cf8);
+  flex-shrink: 0;
+}
+
+.planner-mini-day--muted {
+  opacity: 0.42;
+  &:hover {
+    opacity: 0.65;
+  }
+}
+
+.planner-mini-day--today {
+  box-shadow: 0 0 0 1px rgba(129, 140, 248, 0.65);
+  background: rgba(129, 140, 248, 0.18);
+}
+
+[data-theme='light'] .planner-mini-day {
+  background: #f1f5f9;
   color: #334155;
   &:hover {
-    background: #f1f5f9;
+    background: #e2e8f0;
   }
+}
+
+[data-theme='light'] .planner-mini-day--today {
+  box-shadow: 0 0 0 1px #38bdf8;
+  background: #e0f2fe;
 }
 
 .planner-month-hint {
@@ -492,6 +580,82 @@
 
 [data-theme='light'] .planner-month-hint {
   color: #64748b;
+}
+
+/* Scheduled — tasks with a due date (left column) */
+.planner-scheduled-panel {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+[data-theme='light'] .planner-scheduled-panel {
+  border-top-color: #e2e8f0;
+}
+
+.planner-scheduled-title {
+  margin: 0 0 4px 0;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.planner-scheduled-count {
+  margin: 0 0 12px 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+[data-theme='light'] .planner-scheduled-title {
+  color: #475467;
+}
+
+[data-theme='light'] .planner-scheduled-count {
+  color: #94a3b8;
+}
+
+.planner-scheduled-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: min(36vh, 320px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) rgba(255, 255, 255, 0.06);
+}
+
+.planner-scheduled-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.planner-scheduled-date {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+[data-theme='light'] .planner-scheduled-date {
+  color: #64748b;
+}
+
+.planner-scheduled-empty {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+[data-theme='light'] .planner-scheduled-empty {
+  color: #94a3b8;
 }
 
 /* No due date — left column */
@@ -939,10 +1103,6 @@
   box-shadow: var(--modal-shadow);
   color: var(--text-2);
   animation: plannerScaleIn 0.28s cubic-bezier(0.34, 1.2, 0.64, 1) both;
-}
-
-.month-picker-modal {
-  width: min(400px, 100%);
 }
 
 .task-modal-header {
