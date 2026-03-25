@@ -423,16 +423,13 @@
 .planner-aside-sections {
   flex: 1 1 0;
   min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.25) rgba(255, 255, 255, 0.06);
 }
 
 [data-theme='light'] .planner-aside-sections {
@@ -443,61 +440,6 @@
   background: rgba(255, 255, 255, 0.85);
   border-color: rgba(255, 255, 255, 0.95);
   box-shadow: 0 8px 40px rgba(15, 23, 42, 0.08);
-}
-
-.planner-kicker {
-  margin: 0 0 8px 0;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.45);
-}
-
-[data-theme='light'] .planner-kicker {
-  color: #64748b;
-}
-
-.planner-month-hero {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  margin-bottom: 10px;
-}
-
-.planner-month-name {
-  display: block;
-  font-size: clamp(1.35rem, 2.4vw, 1.85rem);
-  font-weight: 800;
-  line-height: 1.05;
-  letter-spacing: -0.03em;
-  color: #f8fafc;
-  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.25);
-}
-
-.planner-year {
-  display: block;
-  font-size: clamp(1.05rem, 1.8vw, 1.4rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: rgba(255, 255, 255, 0.55);
-}
-
-[data-theme='light'] .planner-month-name {
-  color: #0f172a;
-  text-shadow: none;
-}
-
-[data-theme='light'] .planner-year {
-  color: #64748b;
-}
-
-.planner-month-controls {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
 }
 
 /* Glass mini calendar (same month as main grid) */
@@ -512,21 +454,42 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.planner-mini-calendar-title {
+.planner-mini-calendar-title-btn {
   display: block;
+  width: 100%;
+  margin: 0;
+  padding: 4px 6px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.85);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+  &:hover {
+    background: rgba(255, 255, 255, 0.14);
+  }
+  &:focus-visible {
+    outline: 2px solid rgba(129, 140, 248, 0.85);
+    outline-offset: 2px;
+  }
+}
+
+[data-theme='light'] .planner-mini-calendar-title-btn {
+  background: #f1f5f9;
+  color: #475467;
+  &:hover {
+    background: #e2e8f0;
+  }
 }
 
 [data-theme='light'] .planner-mini-calendar-header {
   border-bottom-color: #e2e8f0;
-}
-
-[data-theme='light'] .planner-mini-calendar-title {
-  color: #64748b;
 }
 
 .planner-mini-weekdays {
@@ -623,17 +586,6 @@
 [data-theme='light'] .planner-mini-day--today {
   box-shadow: 0 0 0 1px #38bdf8;
   background: #e0f2fe;
-}
-
-.planner-month-hint {
-  margin: 8px 0 0 0;
-  font-size: 10px;
-  line-height: 1.4;
-  color: rgba(255, 255, 255, 0.45);
-}
-
-[data-theme='light'] .planner-month-hint {
-  color: #64748b;
 }
 
 /* Collapsible — Scheduled / No due date */
@@ -853,12 +805,40 @@
   flex-shrink: 0;
 }
 
+.planner-calendar-header--toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: nowrap;
+  width: 100%;
+}
+
+.planner-calendar-header-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
 [data-theme='light'] .planner-calendar-header {
   border-bottom-color: #e2e8f0;
 }
 
+@media (max-width: 560px) {
+  .planner-calendar-header--toolbar {
+    flex-wrap: wrap;
+  }
+  .planner-calendar-header-nav {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-end;
+  }
+}
+
 .planner-calendar-heading {
-  margin: 0 0 4px 0;
+  margin: 0;
   font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -866,14 +846,47 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
-.planner-calendar-sub {
-  font-size: 15px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.88);
+.planner-calendar-monthyear-btn {
+  margin: 0;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.95);
+  font-size: clamp(1rem, 1.8vw, 1.2rem);
+  font-weight: 800;
+  font-family: inherit;
+  letter-spacing: -0.02em;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+  flex: 1 1 auto;
+  min-width: 0;
+  &:hover {
+    background: rgba(255, 255, 255, 0.14);
+  }
+  &:focus-visible {
+    outline: 2px solid rgba(129, 140, 248, 0.85);
+    outline-offset: 2px;
+  }
 }
 
 [data-theme='light'] .planner-calendar-heading {
   color: #64748b;
+}
+
+[data-theme='light'] .planner-calendar-monthyear-btn {
+  background: #f1f5f9;
+  color: #0f172a;
+  &:hover {
+    background: #e2e8f0;
+  }
+}
+
+.planner-calendar-sub {
+  font-size: 15px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.88);
 }
 
 [data-theme='light'] .planner-calendar-sub {
@@ -949,12 +962,27 @@
   gap: 4px;
 }
 
-.planner-grid--equal {
+.planner-calendar-grid-scroll {
   flex: 1 1 0;
   min-height: 0;
-  display: grid;
-  grid-template-rows: repeat(6, minmax(0, 1fr));
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) rgba(255, 255, 255, 0.06);
+  padding-right: 2px;
+}
+
+[data-theme='light'] .planner-calendar-grid-scroll {
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.planner-grid--scroll {
+  display: flex;
+  flex-direction: column;
   gap: 3px;
+  min-height: min-content;
 }
 
 .planner-week {
@@ -964,12 +992,8 @@
   min-height: 0;
 }
 
-.planner-grid--equal .planner-week {
-  min-height: 0;
-}
-
 .planner-day {
-  min-height: 0;
+  min-height: 72px;
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(0, 0, 0, 0.15);
@@ -1254,6 +1278,10 @@
   box-shadow: var(--modal-shadow);
   color: var(--text-2);
   animation: plannerScaleIn 0.28s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+.month-picker-modal {
+  width: min(400px, 100%);
 }
 
 .task-modal-header {

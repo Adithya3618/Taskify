@@ -58,6 +58,10 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
   /** Per calendar cell date key: show all tasks vs first + “+N more”. */
   calendarDateExpanded: Record<string, boolean> = {};
 
+  /** Jump to month/year (from calendar header) */
+  showMonthYearPicker = false;
+  monthYearDraft = '';
+
   /** Add task (same fields as board column form) */
   showAddTaskModal = false;
   addTaskStageId = 0;
@@ -375,6 +379,30 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
   goToday(): void {
     this.viewMonth = new Date();
     this.calendarWeeks = this.buildMonthWeeks(this.viewMonth);
+  }
+
+  openMonthYearPicker(): void {
+    const y = this.viewMonth.getFullYear();
+    const m = String(this.viewMonth.getMonth() + 1).padStart(2, '0');
+    this.monthYearDraft = `${y}-${m}`;
+    this.showMonthYearPicker = true;
+  }
+
+  closeMonthYearPicker(): void {
+    this.showMonthYearPicker = false;
+  }
+
+  applyMonthYear(): void {
+    const m = this.monthYearDraft?.match(/^(\d{4})-(\d{2})$/);
+    if (m) {
+      const y = +m[1];
+      const mo = +m[2] - 1;
+      if (!Number.isNaN(y) && mo >= 0 && mo <= 11) {
+        this.viewMonth = new Date(y, mo, 1);
+        this.calendarWeeks = this.buildMonthWeeks(this.viewMonth);
+      }
+    }
+    this.showMonthYearPicker = false;
   }
 
   /** Clicking a day outside the visible month jumps to that month (Trello-style). */
