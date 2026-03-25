@@ -43,6 +43,14 @@ export const routes: Routes = [
       import('./pages/signup/signup.component').then((m) => m.SignupComponent),
   },
 
+  // Board — calendar / planner (must be registered before `board/:id` so the segment `planner` is not parsed as an id)
+  {
+    path: 'board/:id/planner',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/planner-board/planner-board.component').then((m) => m.PlannerBoardComponent),
+  },
+
   // Kanban board view
   {
     path: 'board/:id',
