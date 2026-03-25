@@ -1,8 +1,6 @@
-# Sprint 2 — Frontend Development
+# Sprint 2 — Taskify Project
 
-**Branch:** `sreeja/frontendDev`
-
----
+## Frontend Development
 
 ## Work Completed
 
@@ -17,6 +15,7 @@
   - `login.component.scss`
   - `signup.component.scss`
   - `board.component.scss`
+  - `planner-board.component.scss`
   - `home.component.scss`
 
 ### 2. Board Filter Panel
@@ -42,6 +41,21 @@
 - Fixed invisible Login button text in the welcome page navbar in light mode (was white text on white background)
 - Fixed brand name and logo link colour in light mode
 - Used `:host-context([data-theme="light"])` for Angular-encapsulated component overrides where `[data-theme="light"] .selector` was not being applied reliably
+
+### 6. Planner (calendar) view
+- **Route:** `/board/:id/planner` (registered *before* `/board/:id` so `planner` is not parsed as a numeric id); protected by `authGuard`
+- **Board ↔ Planner navigation:** Kanban and Planner share the same top bar; **Board** / **Planner** tabs switch views without a full reload (`routerLink` + `routerLinkActive`)
+- **Monthly calendar:** 6×7 grid (weeks start Sunday), main header navigation (‹ / **Today** / ›), mini calendar with prev/next month, optional **month/year picker** dialog (draft `YYYY-MM`, apply updates `viewMonth`)
+- **Task buckets:** tasks with a **due date** appear on the calendar and in a collapsible **Scheduled** list (grouped by date); tasks **without** a due date appear in a collapsible **No due date** list with optional **filter by stage** (Kanban column)
+- **Dense UI:** when several tasks share a date, the UI shows one task plus **“+N tasks”** / **Show less** for both calendar cells and scheduled groups (`calendarDateExpanded`, `scheduledDateExpanded`)
+- **Interactions:** click an empty day in the current month to **add a task** (modal, same stage/title/description/due/priority/notes pattern as the board); click an **other-month** cell to jump the visible month; **task detail** modal for view/edit; **completed** checkbox state is read/written through **`TaskCompletionStorageService`** (same client-side persistence as Kanban)
+- **Access control:** only boards listed in `localStorage` under `taskify.board.owners` for the current user can be opened; otherwise redirect to `/boards`
+- **Shared metadata:** due date, priority, and notes are stored in the task **description** meta block via `utils/task-card-meta.ts` (`parseCardMeta`, `buildCardDescription`, `parseDueToDateKey`) — consistent with **`BoardComponent`**
+
+### 7. Client-side task completion (browser persistence)
+- **`TaskCompletionStorageService`** stores per-task completion in **`localStorage`** (keyed by project + task id); the REST API does not model completion, so this keeps Kanban and Planner in sync for “done” state
+- Kanban **`BoardComponent`** merges stored completion into tasks, exposes **Active / Done / All** completion filters, and persists changes when the user toggles completion on a card or in the task modal
+- Covered end-to-end in **`cypress/e2e/board.cy.ts`** (checkbox styling, **Active** / **Done** filters, survival after reload)
 
 ---
 
@@ -69,7 +83,7 @@ npm run cy:run
 
 ---
 
-## Unit Tests (Karma / Jasmine) — 45 total
+## Unit Tests (Karma / Jasmine) — 75 total
 
 ### `ThemeService` — 8 tests
 | Test | Function under test |
@@ -112,7 +126,7 @@ npm run cy:run
 | getFilteredTasks() should return all tasks when no filters are active | `getFilteredTasks()` |
 | getFilteredTasks() should filter tasks by priority | `getFilteredTasks()` |
 | getFilteredTasks() should return empty array when no tasks match priority filter | `getFilteredTasks()` |
-| getFilteredTasks() should filter by "none" due date | `getFilteredTasks()` |
+| getFilteredTasks() should filter by "none" due date (tasks with no due date) | `getFilteredTasks()` |
 | openShareModal() should set showShareModal to true | `openShareModal()` |
 | openShareModal() should reset shareLinkCopied to false | `openShareModal()` |
 | closeShareModal() should set showShareModal to false | `closeShareModal()` |
@@ -124,6 +138,40 @@ npm run cy:run
 | switchBoard() should not navigate when selecting the current board | `switchBoard()` |
 | switchBoard() should close the board switcher | `switchBoard()` |
 | goBack() should navigate to /boards | `goBack()` |
+
+### `PlannerBoardComponent` — 30 tests
+| Test | Function / behavior under test |
+|------|----------------------------------|
+| should create | initial load, `loading`, `projectId` |
+| should open Scheduled panel when its header button is clicked | `#planner-scheduled-toggle` → `scheduledOpen` |
+| should close Scheduled panel when header button is clicked again | toggle closed |
+| toggleScheduledOpen() should flip scheduledOpen | `toggleScheduledOpen()` |
+| should open No due date panel when its header button is clicked | `#planner-nodue-toggle` → `noDueOpen` |
+| toggleNoDueOpen() should flip noDueOpen | `toggleNoDueOpen()` |
+| unscheduledFiltered should include all no-due tasks when filter is null | `unscheduledFiltered` |
+| unscheduledFiltered should only include tasks from selected list | `noDueListFilterStageId` |
+| should show list filter select when No due date is open and stages exist | `#noDueListFilter` |
+| clicking previous month in main header should call prevMonth | `.planner-calendar-header-nav .btn-nav-month` |
+| clicking next month in main header should call nextMonth | header nav |
+| clicking Today in main header should reset view to current month | `.btn-today` |
+| clicking first mini nav button should go to previous month | `.btn-mini-nav` |
+| clicking second mini nav button should go to next month | `.btn-mini-nav` |
+| openMonthYearPicker should show dialog and set draft | `openMonthYearPicker()`, `monthYearDraft` |
+| clicking main month label button should open month/year picker | `#planner-cal-title` |
+| closeMonthYearPicker should hide dialog | `closeMonthYearPicker()` |
+| applyMonthYear should update viewMonth for valid draft | `applyMonthYear()` |
+| extraTasksOnSameDateLabel should return +1 task for two tasks | `extraTasksOnSameDateLabel()` |
+| extraTasksOnSameDateLabel should return +2 tasks for three tasks | `extraTasksOnSameDateLabel()` |
+| calendarDayToggleLabel should show +N tasks when multiple tasks and collapsed | `calendarDayToggleLabel()`, expand state |
+| tasksForCalendarCell should return one task until expanded | `tasksForCalendarCell()`, `toggleCalendarDayExpand()` |
+| visibleScheduledTasks should show one task until group expanded | `visibleScheduledTasks()`, `toggleScheduledGroupExpand()`, `scheduledGroupExpandLabel()` |
+| toggleBoardSwitcher should flip showBoardSwitcher | `toggleBoardSwitcher()` |
+| clicking theme toggle button should call themeService.toggle | `.themeToggle` |
+| goBack should navigate to /boards | `goBack()` |
+| onDayCellClick on current-month empty cell should open add-task modal | `onDayCellClick()`, `showAddTaskModal`, `newTaskDue` |
+| onDayCellClick on other-month cell should change view month | `onDayCellClick()` |
+| formatDueLabel should format YYYY-MM-DD | `formatDueLabel()` |
+| should redirect to login when user is missing | unauthenticated → `/login` |
 
 ### `AppComponent` — 3 tests
 | Test | What it checks |
@@ -166,6 +214,9 @@ npm run cy:run
 | should show error when passwords do not match |
 | should navigate to login page via the log in link |
 | should have a back to home link |
+
+### Board / Kanban (`cypress/e2e/board.cy.ts`) — 40 tests
+Covers authenticated board flows against a running app (typically with backend + seed data): **task completion** (checkbox, modal, **Active** / **Done** / **All**, persistence after reload), **list collapse** (strip toggle, multi-column, reload), **task modal** (due date, priority, notes, save payload to API), **add task** (minimal and full details, **Hide details**), **filters** (priority chips, due presets including Overdue / Today / This week / No date, **Clear filters**), **columns** (add list, rename, delete with confirm), **navigation** (Back to boards), **theme** toggle on `html`, **Share** modal, **board switcher**, **profile** menu (Account settings), and empty-stage edge case.
 
 ---
 ## Backend Work
