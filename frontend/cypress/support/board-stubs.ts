@@ -238,3 +238,24 @@ export function visitBoard(opts: VisitBoardOptions = {}) {
     cy.get('.task-card', { timeout: 10000 }).should('have.length.at.least', 1);
   }
 }
+
+/**
+ * Opens the planner (calendar) view for a board. Reuses the same API stubs as {@link visitBoard}.
+ */
+export function visitPlanner(opts: VisitBoardOptions = {}) {
+  const stubOpts: BoardStubOptions = {
+    projectId: opts.projectId,
+    tasksByStageId: opts.tasksByStageId,
+    stages: opts.stages,
+    projectsList: opts.projectsList,
+  };
+  registerBoardApiStubs(stubOpts);
+  const pid = stubOpts.projectId ?? PROJECT_ID;
+  cy.visit(`/board/${pid}/planner`, {
+    onBeforeLoad(win) {
+      seedBoardAuth(win);
+    },
+  });
+  cy.get('.planner-main', { timeout: 15000 }).should('be.visible');
+  cy.get('.planner-grid', { timeout: 10000 }).should('exist');
+}
