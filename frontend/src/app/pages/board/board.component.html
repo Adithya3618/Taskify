@@ -33,7 +33,23 @@
         <div *ngIf="showBoardSwitcher" class="boardSwitcherBackdrop" (click)="showBoardSwitcher = false"></div>
       </div>
 
-      <span class="pill">Board</span>
+      <nav class="viewTabs" aria-label="Board views">
+        <a
+          class="viewTab"
+          [routerLink]="['/board', projectId]"
+          routerLinkActive="viewTab--active"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
+          Board
+        </a>
+        <a
+          class="viewTab"
+          [routerLink]="['/board', projectId, 'planner']"
+          routerLinkActive="viewTab--active"
+        >
+          Planner
+        </a>
+      </nav>
     </div>
 
     <div class="right">
@@ -132,6 +148,64 @@
   </div>
 
   <!-- Board Content -->
+  <ng-template #taskCardInner let-task="task" let-stage="stage">
+    <label class="task-check" (click)="$event.stopPropagation()">
+      <input
+        class="board-checkbox"
+        type="checkbox"
+        [checked]="isTaskDone(task)"
+        (change)="toggleTaskCompleted(stage.id, task, $event)"
+        [attr.aria-label]="'Mark complete: ' + task.title"
+      />
+    </label>
+    <div class="task-content" (click)="openTaskDetail(task, $event)">
+      <p class="task-title">{{ task.title }}</p>
+      <p class="task-desc" *ngIf="getDisplayDescription(task)">{{ getDisplayDescription(task) }}</p>
+      <div class="task-meta-row" *ngIf="getTaskPriority(task) || getTaskDue(task)">
+        <span *ngIf="getTaskPriority(task)" class="meta-pill priority-pill" [ngClass]="getPriorityClass(task)">
+          {{ getTaskPriority(task) }}
+        </span>
+        <span *ngIf="getTaskDue(task)" class="task-due-text">{{ formatTaskDueDisplay(task) }}</span>
+      </div>
+    </div>
+    <div class="task-card-actions">
+      <button
+        type="button"
+        class="btn-edit-task"
+        (click)="editTask(task, $event)"
+        title="Edit task"
+        [attr.aria-label]="'Edit: ' + task.title"
+      >
+        <svg class="btn-edit-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="btn-delete-task"
+        (click)="requestDeleteTask(stage.id, task.id, task.title, $event)"
+        title="Delete task"
+        [attr.aria-label]="'Delete: ' + task.title"
+      >
+        <svg class="btn-trash-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
+    </div>
+  </ng-template>
+
   <div class="board-content" *ngIf="!loading">
     <div class="columns-container">
       <!-- Stage Columns -->
@@ -175,79 +249,55 @@
                 <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </button>
-            <button class="btn-delete" (click)="deleteStage(stage.id)" title="Delete stage">
+            <button
+              type="button"
+              class="btn-delete"
+              (click)="requestDeleteStage(stage.id, stage.name)"
+              title="Delete list"
+              [attr.aria-label]="'Delete list: ' + stage.name"
+            >
               ×
             </button>
           </div>
         </div>
 
-        <!-- Tasks -->
-        <div class="tasks-list">
+        <!-- Tasks: static when filtered; drag-drop when not filtered -->
+        <ng-container *ngIf="hasActiveFilters">
+          <div class="tasks-list tasks-list--static">
+            <div
+              class="task-card"
+              *ngFor="let task of getFilteredTasks(stage); trackBy: trackByTaskId"
+              [ngClass]="getPriorityClass(task)"
+              [class.task-completed]="isTaskDone(task)"
+            >
+              <ng-container *ngTemplateOutlet="taskCardInner; context: { task: task, stage: stage }"></ng-container>
+            </div>
+            <p *ngIf="!getFilteredTasks(stage).length" class="no-tasks">
+              {{ stage.tasks?.length ? 'No tasks match the filter' : 'No tasks yet' }}
+            </p>
+          </div>
+        </ng-container>
+
+        <div
+          *ngIf="!hasActiveFilters"
+          class="tasks-list"
+          cdkDropList
+          [id]="stageDropListId(stage.id)"
+          [cdkDropListData]="stageTasks(stage)"
+          [cdkDropListConnectedTo]="dropListIds"
+          (cdkDropListDropped)="onTaskDrop($event)"
+        >
           <div
             class="task-card"
-            *ngFor="let task of getFilteredTasks(stage); trackBy: trackByTaskId"
+            *ngFor="let task of stageTasks(stage); trackBy: trackByTaskId"
+            cdkDrag
+            [cdkDragData]="task"
             [ngClass]="getPriorityClass(task)"
             [class.task-completed]="isTaskDone(task)"
           >
-            <label class="task-check" (click)="$event.stopPropagation()">
-              <input
-                class="board-checkbox"
-                type="checkbox"
-                [checked]="isTaskDone(task)"
-                (change)="toggleTaskCompleted(stage.id, task, $event)"
-                [attr.aria-label]="'Mark complete: ' + task.title"
-              />
-            </label>
-            <div class="task-content" (click)="openTaskDetail(task, $event)">
-              <p class="task-title">{{ task.title }}</p>
-              <p class="task-desc" *ngIf="getDisplayDescription(task)">{{ getDisplayDescription(task) }}</p>
-              <div class="task-meta-row" *ngIf="getTaskPriority(task)">
-                <span class="meta-pill priority-pill" [ngClass]="getPriorityClass(task)">
-                  {{ getTaskPriority(task) }}
-                </span>
-              </div>
-            </div>
-            <div class="task-card-actions">
-              <button
-                type="button"
-                class="btn-edit-task"
-                (click)="editTask(task, $event)"
-                title="Edit task"
-                [attr.aria-label]="'Edit: ' + task.title"
-              >
-                <svg class="btn-edit-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path
-                    d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-              </button>
-              <button
-                type="button"
-                class="btn-delete-task"
-                (click)="requestDeleteTask(stage.id, task.id, task.title, $event)"
-                title="Delete task"
-                [attr.aria-label]="'Delete: ' + task.title"
-              >
-                <svg class="btn-trash-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path
-                    d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-              </button>
-            </div>
+            <ng-container *ngTemplateOutlet="taskCardInner; context: { task: task, stage: stage }"></ng-container>
           </div>
-          
-          <p *ngIf="!getFilteredTasks(stage).length" class="no-tasks">
-            {{ (stage.tasks?.length && hasActiveFilters) ? 'No tasks match the filter' : 'No tasks yet' }}
-          </p>
+          <p *ngIf="!stage.tasks?.length" class="no-tasks">No tasks yet</p>
         </div>
 
         <!-- Add Task -->
@@ -338,6 +388,25 @@
       <div class="task-modal-footer delete-confirm-footer">
         <button type="button" class="btn-modal-ghost" (click)="cancelDeleteTask()">Cancel</button>
         <button type="button" class="btn-modal-danger" (click)="confirmDeleteTask()">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete list (stage) confirmation -->
+  <div class="task-modal-backdrop" *ngIf="deleteStagePending" (click)="cancelDeleteStage()">
+    <div class="task-modal delete-confirm-modal" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="deleteStageTitle">
+      <div class="task-modal-header">
+        <div>
+          <h3 id="deleteStageTitle">Delete this list?</h3>
+          <p class="delete-confirm-sub">All tasks in this list will be removed. This can’t be undone.</p>
+        </div>
+      </div>
+      <div class="task-modal-body">
+        <p class="delete-confirm-task-name">{{ deleteStagePending!.stageName }}</p>
+      </div>
+      <div class="task-modal-footer delete-confirm-footer">
+        <button type="button" class="btn-modal-ghost" (click)="cancelDeleteStage()">Cancel</button>
+        <button type="button" class="btn-modal-danger" (click)="confirmDeleteStage()">Delete list</button>
       </div>
     </div>
   </div>

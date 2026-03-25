@@ -459,12 +459,11 @@ describe('Board — delete task', () => {
 // ── Delete stage ───────────────────────────────────────────────────────────
 
 describe('Board — delete stage', () => {
-  it('removes a column after browser confirm', () => {
+  it('removes a column after modal confirm', () => {
     visitBoard();
-    cy.window().then((win) => {
-      win.confirm = () => true;
-    });
     cy.get('.column:not(.add-column)').eq(1).find('.btn-delete').click();
+    cy.contains('h3', 'Delete this list?').should('be.visible');
+    cy.contains('.delete-confirm-modal button', 'Delete list').click();
     cy.wait('@deleteStage');
     cy.get('.column:not(.add-column)').should('have.length', 1);
     cy.get('.column:not(.add-column)').first().find('h3').should('contain', 'To Do');
