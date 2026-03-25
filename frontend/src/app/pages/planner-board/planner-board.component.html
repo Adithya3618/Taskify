@@ -1,0 +1,268 @@
+<div class="planner-page trello-bg">
+  <header class="planner-topbar">
+    <div class="left">
+      <button type="button" class="btn-back" (click)="goBack()">← Back</button>
+
+      <div class="boardSwitcher">
+        <button type="button" class="boardSwitcherBtn" (click)="toggleBoardSwitcher()" [class.open]="showBoardSwitcher">
+          <span class="board-title">{{ project?.name || 'Board' }}</span>
+          <svg class="switcherChevron" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+
+        <div *ngIf="showBoardSwitcher" class="boardSwitcherDropdown">
+          <div class="boardSwitcherHeader">Switch board</div>
+          <button
+            *ngFor="let board of allBoards"
+            type="button"
+            class="boardSwitcherItem"
+            [class.active]="board.id === projectId"
+            (click)="switchBoard(board.id)"
+          >
+            <span class="boardSwitcherDot"></span>
+            <span class="boardSwitcherName">{{ board.name }}</span>
+            <svg *ngIf="board.id === projectId" class="boardSwitcherCheck" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div *ngIf="allBoards.length === 0" class="boardSwitcherEmpty">No other boards</div>
+        </div>
+        <div *ngIf="showBoardSwitcher" class="boardSwitcherBackdrop" (click)="showBoardSwitcher = false"></div>
+      </div>
+
+      <nav class="viewTabs" aria-label="Board views">
+        <a
+          class="viewTab"
+          [routerLink]="['/board', projectId]"
+          routerLinkActive="viewTab--active"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
+          Board
+        </a>
+        <a
+          class="viewTab"
+          [routerLink]="['/board', projectId, 'planner']"
+          routerLinkActive="viewTab--active"
+        >
+          Planner
+        </a>
+      </nav>
+    </div>
+
+    <div class="right">
+      <button
+        type="button"
+        class="themeToggle"
+        (click)="themeService.toggle()"
+        [attr.aria-label]="themeService.isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+      >
+        <svg *ngIf="themeService.isDark" class="themeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <svg *ngIf="!themeService.isDark" class="themeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="planner-loading" *ngIf="loading">
+    <div class="loadingSpinner"></div>
+    <p>Loading planner…</p>
+  </div>
+
+  <main class="planner-main" *ngIf="!loading">
+    <div class="planner-toolbar">
+      <div class="planner-toolbar-left">
+        <h1 class="planner-heading">Calendar</h1>
+        <p class="planner-sub">Tasks with a due date appear on the grid. Others stay in <strong>No due date</strong>.</p>
+      </div>
+      <div class="planner-toolbar-right">
+        <button type="button" class="btn-nav-month" (click)="prevMonth()" aria-label="Previous month">‹</button>
+        <button type="button" class="btn-today" (click)="goToday()">Today</button>
+        <button type="button" class="btn-nav-month" (click)="nextMonth()" aria-label="Next month">›</button>
+        <button type="button" class="month-label month-label--clickable" (click)="openMonthYearPicker()">
+          {{ monthLabel() }}
+        </button>
+      </div>
+    </div>
+
+    <div class="planner-body">
+      <section class="planner-calendar" aria-label="Month calendar">
+        <div class="planner-weekdays">
+          <span *ngFor="let w of weekdayLabels" class="planner-weekday">{{ w }}</span>
+        </div>
+        <div class="planner-grid">
+          <div *ngFor="let week of calendarWeeks" class="planner-week">
+            <div
+              *ngFor="let day of week"
+              class="planner-day"
+              [class.planner-day--muted]="!isCurrentMonth(day)"
+              [class.planner-day--today]="isToday(day)"
+              (click)="onDayCellClick(day, $event)"
+            >
+              <div class="planner-day-num">{{ day.getDate() }}</div>
+              <div class="planner-day-tasks">
+                <button
+                  type="button"
+                  class="planner-task-chip"
+                  *ngFor="let task of tasksForDay(day)"
+                  [class.planner-task-chip--done]="isTaskDone(task)"
+                  (click)="openTaskDetail(task, $event)"
+                  [title]="task.title + ' — ' + task.stageName"
+                >
+                  <span class="planner-task-title">{{ task.title }}</span>
+                  <span class="planner-task-stage">{{ task.stageName }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="planner-sidebar" aria-label="Unscheduled tasks">
+        <h2 class="planner-sidebar-title">No due date</h2>
+        <p class="planner-sidebar-hint">{{ unscheduled.length }} task(s)</p>
+        <ul class="planner-unscheduled-list">
+          <li *ngFor="let task of unscheduled">
+            <button type="button" class="planner-unscheduled-item" (click)="openTaskDetail(task, $event)">
+              <span class="planner-unscheduled-title">{{ task.title }}</span>
+              <span class="planner-unscheduled-stage">{{ task.stageName }}</span>
+            </button>
+          </li>
+        </ul>
+        <p *ngIf="unscheduled.length === 0" class="planner-sidebar-empty">Everything scheduled — or add due dates on the board.</p>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<!-- Month / year -->
+<div class="task-modal-backdrop" *ngIf="showMonthYearPicker" (click)="closeMonthYearPicker()">
+  <div class="task-modal month-picker-modal" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="monthPickerTitle">
+    <div class="task-modal-header">
+      <div>
+        <h3 id="monthPickerTitle">Go to month</h3>
+        <p class="planner-modal-sub">Choose month and year</p>
+      </div>
+      <button type="button" class="btn-close-modal" (click)="closeMonthYearPicker()" title="Close">×</button>
+    </div>
+    <div class="task-modal-body">
+      <label for="monthYearInput">Month</label>
+      <input id="monthYearInput" type="month" [(ngModel)]="monthYearDraft" />
+    </div>
+    <div class="task-modal-footer">
+      <button type="button" class="btn-modal-ghost" (click)="closeMonthYearPicker()">Cancel</button>
+      <button type="button" class="btn-modal-primary" (click)="applyMonthYear()">Apply</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add task (same building blocks as board list form) -->
+<div class="task-modal-backdrop" *ngIf="showAddTaskModal" (click)="closeAddTaskModal()">
+  <div class="task-modal" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="addTaskTitle">
+    <div class="task-modal-header">
+      <div>
+        <h3 id="addTaskTitle">Add task</h3>
+        <p class="planner-modal-sub" *ngIf="newTaskDue">Due {{ newTaskDue }}</p>
+      </div>
+      <button type="button" class="btn-close-modal" (click)="closeAddTaskModal()" title="Close">×</button>
+    </div>
+    <div class="task-modal-body">
+      <p *ngIf="!stages.length" class="planner-modal-warning">Add a list on the board first, then create tasks here.</p>
+
+      <label>List</label>
+      <select [(ngModel)]="addTaskStageId" [disabled]="!stages.length">
+        <option *ngFor="let s of stages" [ngValue]="s.id">{{ s.name }}</option>
+      </select>
+
+      <label>Title</label>
+      <input type="text" [(ngModel)]="newTaskTitle" placeholder="+ Add a task..." (keyup.enter)="createTaskFromPlanner()" />
+
+      <div class="task-form-actions">
+        <button type="button" class="btn-link-details" (click)="toggleAddTaskDetails()">
+          {{ showAddTaskDetails ? 'Hide details' : '+ Add details' }}
+        </button>
+      </div>
+
+      <div class="task-detail-fields add-task-detail-fields" *ngIf="showAddTaskDetails">
+        <textarea rows="2" [(ngModel)]="newTaskDesc" placeholder="Description (optional)"></textarea>
+        <div class="task-meta-grid">
+          <input type="date" [(ngModel)]="newTaskDue" title="Due date" />
+          <select [(ngModel)]="newTaskPriority" [ngClass]="getCreatePriorityClass()">
+            <option value="">Priority</option>
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+            <option value="Critical">Critical</option>
+          </select>
+        </div>
+        <textarea rows="2" [(ngModel)]="newTaskNotes" placeholder="Notes (optional)"></textarea>
+      </div>
+    </div>
+    <div class="task-modal-footer">
+      <button type="button" class="btn-modal-ghost" (click)="closeAddTaskModal()">Cancel</button>
+      <button
+        type="button"
+        class="btn-modal-primary"
+        [disabled]="!newTaskTitle.trim() || !addTaskStageId"
+        (click)="createTaskFromPlanner()"
+      >
+        Add
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Task detail -->
+<div class="task-modal-backdrop" *ngIf="detailTask" (click)="closeTaskDetail()">
+  <div class="task-modal" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="detailTaskHeading">
+    <div class="task-modal-header">
+      <div>
+        <h3 id="detailTaskHeading">Task Details</h3>
+        <p>{{ detailStageName }}</p>
+      </div>
+      <button type="button" class="btn-close-modal" (click)="closeTaskDetail()" title="Close">×</button>
+    </div>
+
+    <div class="task-modal-body">
+      <label class="task-modal-done-row">
+        <input class="board-checkbox" type="checkbox" [(ngModel)]="detailCompleted" />
+        <span>Mark as completed</span>
+      </label>
+
+      <label>Title</label>
+      <input type="text" [(ngModel)]="detailTitle" />
+
+      <label>Description</label>
+      <textarea rows="3" [(ngModel)]="detailDesc"></textarea>
+
+      <div class="task-modal-grid">
+        <div>
+          <label>Due Date</label>
+          <input type="date" [(ngModel)]="detailDue" />
+        </div>
+        <div>
+          <label>Priority</label>
+          <select [(ngModel)]="detailPriority">
+            <option value="">None</option>
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+            <option value="Critical">Critical</option>
+          </select>
+        </div>
+      </div>
+
+      <label>Notes</label>
+      <textarea rows="4" [(ngModel)]="detailNotes"></textarea>
+    </div>
+
+    <div class="task-modal-footer">
+      <button type="button" class="btn-modal-ghost" (click)="closeTaskDetail()">Cancel</button>
+      <button type="button" class="btn-modal-primary" (click)="saveTaskDetail()">Save</button>
+    </div>
+  </div>
+</div>
