@@ -90,16 +90,70 @@
           <button type="button" class="btn-nav-month" (click)="nextMonth()" aria-label="Next month">›</button>
         </div>
 
-        <button type="button" class="planner-change-month" (click)="openMonthYearPicker()">
-          <svg class="planner-change-month-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M8 7V3m8 4V3M5 11h14M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Jump to month / year
-        </button>
+        <section class="planner-mini-calendar planner-calendar--glass" aria-label="Month at a glance">
+          <div class="planner-mini-calendar-header">
+            <span class="planner-mini-calendar-title">{{ viewMonth | date : 'MMMM yyyy' }}</span>
+          </div>
+          <div class="planner-mini-weekdays">
+            <span *ngFor="let w of weekdayLabels" class="planner-mini-weekday">{{ w[0] }}</span>
+          </div>
+          <div class="planner-mini-grid">
+            <div *ngFor="let week of calendarWeeks" class="planner-mini-week">
+              <button
+                *ngFor="let day of week"
+                type="button"
+                class="planner-mini-day"
+                [class.planner-mini-day--muted]="!isCurrentMonth(day)"
+                [class.planner-mini-day--today]="isToday(day)"
+                (click)="onDayCellClick(day, $event)"
+                [attr.aria-label]="miniDayAriaLabel(day)"
+                [attr.aria-current]="isToday(day) ? 'date' : null"
+              >
+                <span class="planner-mini-day-num">{{ day.getDate() }}</span>
+                <span *ngIf="tasksForDay(day).length" class="planner-mini-day-dot" aria-hidden="true"></span>
+              </button>
+            </div>
+          </div>
+        </section>
 
         <p class="planner-month-hint">
-          Tasks with a due date appear in the calendar. Tap a day to add a task.
+          The large calendar shows this month in detail. Tap a day to add a task; muted days jump to that month.
         </p>
+
+        <section class="planner-scheduled-panel" aria-label="Tasks with a due date">
+          <h2 class="planner-scheduled-title">Scheduled</h2>
+          <p class="planner-scheduled-count">{{ scheduledSorted.length }} with a due date</p>
+          <ul class="planner-scheduled-list">
+            <li *ngFor="let row of scheduledSorted" class="planner-scheduled-item">
+              <span class="planner-scheduled-date">{{ formatDueLabel(row.dateKey) }}</span>
+              <div
+                class="planner-task-chip planner-task-chip--sidebar"
+                [ngClass]="getPriorityClass(row.task)"
+                [class.planner-task-chip--done]="isTaskDone(row.task)"
+              >
+                <label class="planner-task-check" (click)="$event.stopPropagation()">
+                  <input
+                    class="board-checkbox"
+                    type="checkbox"
+                    [checked]="isTaskDone(row.task)"
+                    (change)="toggleTaskCompleted(row.task, $event)"
+                    [attr.aria-label]="'Mark complete: ' + row.task.title"
+                  />
+                </label>
+                <button type="button" class="planner-task-chip-body" (click)="openTaskDetail(row.task, $event)">
+                  <span class="planner-task-title">{{ row.task.title }}</span>
+                  <span class="planner-task-meta" *ngIf="getTaskPriority(row.task)">
+                    <span class="meta-pill priority-pill" [ngClass]="getPriorityClass(row.task)">{{
+                      getTaskPriority(row.task)
+                    }}</span>
+                  </span>
+                  <span class="planner-task-stage">{{ row.task.stageName }}</span>
+                </button>
+              </div>
+            </li>
+          </ul>
+          <p *ngIf="scheduledSorted.length === 0" class="planner-scheduled-empty">No due dates yet — set them on tasks or add from the calendar.</p>
+        </section>
 
         <section class="planner-no-due-panel" aria-label="Tasks without a due date">
           <h2 class="planner-no-due-title">No due date</h2>
@@ -186,27 +240,6 @@
       </div>
     </div>
   </main>
-</div>
-
-<!-- Month / year -->
-<div class="task-modal-backdrop" *ngIf="showMonthYearPicker" (click)="closeMonthYearPicker()">
-  <div class="task-modal month-picker-modal" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="monthPickerTitle">
-    <div class="task-modal-header">
-      <div>
-        <h3 id="monthPickerTitle">Go to month</h3>
-        <p class="planner-modal-sub">Choose month and year</p>
-      </div>
-      <button type="button" class="btn-close-modal" (click)="closeMonthYearPicker()" title="Close">×</button>
-    </div>
-    <div class="task-modal-body">
-      <label for="monthYearInput">Month</label>
-      <input id="monthYearInput" type="month" [(ngModel)]="monthYearDraft" />
-    </div>
-    <div class="task-modal-footer">
-      <button type="button" class="btn-modal-ghost" (click)="closeMonthYearPicker()">Cancel</button>
-      <button type="button" class="btn-modal-primary" (click)="applyMonthYear()">Apply</button>
-    </div>
-  </div>
 </div>
 
 <!-- Add task (same building blocks as board list form) -->
