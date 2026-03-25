@@ -78,22 +78,16 @@
       <!-- Left: month navigation (always visible, high contrast) -->
       <aside class="planner-month-aside" aria-label="Month navigation">
         <div class="planner-aside-top">
-        <p class="planner-kicker">Planner</p>
-
-        <div class="planner-month-hero">
-          <span class="planner-month-name">{{ viewMonth | date : 'MMMM' }}</span>
-          <span class="planner-year">{{ viewMonth | date : 'yyyy' }}</span>
-        </div>
-
-        <div class="planner-month-controls">
-          <button type="button" class="btn-nav-month" (click)="prevMonth()" aria-label="Previous month">‹</button>
-          <button type="button" class="btn-today" (click)="goToday()">Today</button>
-          <button type="button" class="btn-nav-month" (click)="nextMonth()" aria-label="Next month">›</button>
-        </div>
-
         <section class="planner-mini-calendar planner-calendar--glass" aria-label="Month at a glance">
           <div class="planner-mini-calendar-header">
-            <span class="planner-mini-calendar-title">{{ viewMonth | date : 'MMMM yyyy' }}</span>
+            <button
+              type="button"
+              class="planner-mini-calendar-title-btn"
+              (click)="openMonthYearPicker()"
+              [attr.aria-label]="'Change month and year: ' + monthLabel()"
+            >
+              {{ viewMonth | date : 'MMMM yyyy' }}
+            </button>
           </div>
           <div class="planner-mini-weekdays">
             <span *ngFor="let w of weekdayLabels" class="planner-mini-weekday">{{ w[0] }}</span>
@@ -116,10 +110,6 @@
             </div>
           </div>
         </section>
-
-        <p class="planner-month-hint">
-          Main calendar: tap a day to add a task; muted days switch months.
-        </p>
         </div>
 
         <div class="planner-aside-sections">
@@ -229,14 +219,27 @@
       <!-- Right: glass calendar -->
       <div class="planner-calendar-column">
         <section class="planner-calendar planner-calendar--glass planner-calendar--fill" aria-label="Month calendar">
-          <div class="planner-calendar-header">
-            <h2 class="planner-calendar-heading">This month</h2>
-            <span class="planner-calendar-sub">{{ monthLabel() }}</span>
+          <div class="planner-calendar-header planner-calendar-header--toolbar">
+            <button
+              type="button"
+              id="planner-cal-title"
+              class="planner-calendar-monthyear-btn"
+              (click)="openMonthYearPicker()"
+              [attr.aria-label]="'Change month and year: ' + monthLabel()"
+            >
+              {{ monthLabel() }}
+            </button>
+            <div class="planner-calendar-header-nav" aria-label="Month navigation">
+              <button type="button" class="btn-nav-month" (click)="prevMonth()" aria-label="Previous month">‹</button>
+              <button type="button" class="btn-today" (click)="goToday()">Today</button>
+              <button type="button" class="btn-nav-month" (click)="nextMonth()" aria-label="Next month">›</button>
+            </div>
           </div>
           <div class="planner-weekdays">
             <span *ngFor="let w of weekdayLabels" class="planner-weekday">{{ w }}</span>
           </div>
-          <div class="planner-grid planner-grid--equal">
+          <div class="planner-calendar-grid-scroll">
+          <div class="planner-grid planner-grid--scroll">
             <div *ngFor="let week of calendarWeeks" class="planner-week">
               <div
                 *ngFor="let day of week"
@@ -282,10 +285,32 @@
               </div>
             </div>
           </div>
+          </div>
         </section>
       </div>
     </div>
   </main>
+</div>
+
+<!-- Month / year -->
+<div class="task-modal-backdrop" *ngIf="showMonthYearPicker" (click)="closeMonthYearPicker()">
+  <div class="task-modal month-picker-modal" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="monthPickerTitle">
+    <div class="task-modal-header">
+      <div>
+        <h3 id="monthPickerTitle">Go to month</h3>
+        <p class="planner-modal-sub">Choose month and year</p>
+      </div>
+      <button type="button" class="btn-close-modal" (click)="closeMonthYearPicker()" title="Close">×</button>
+    </div>
+    <div class="task-modal-body">
+      <label for="monthYearInput">Month</label>
+      <input id="monthYearInput" type="month" [(ngModel)]="monthYearDraft" />
+    </div>
+    <div class="task-modal-footer">
+      <button type="button" class="btn-modal-ghost" (click)="closeMonthYearPicker()">Cancel</button>
+      <button type="button" class="btn-modal-primary" (click)="applyMonthYear()">Apply</button>
+    </div>
+  </div>
 </div>
 
 <!-- Add task (same building blocks as board list form) -->
