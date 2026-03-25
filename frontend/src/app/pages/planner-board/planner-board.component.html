@@ -74,67 +74,116 @@
   </div>
 
   <main class="planner-main" *ngIf="!loading">
-    <div class="planner-toolbar">
-      <div class="planner-toolbar-left">
-        <h1 class="planner-heading">Calendar</h1>
-        <p class="planner-sub">Tasks with a due date appear on the grid. Others stay in <strong>No due date</strong>.</p>
-      </div>
-      <div class="planner-toolbar-right">
-        <button type="button" class="btn-nav-month" (click)="prevMonth()" aria-label="Previous month">‹</button>
-        <button type="button" class="btn-today" (click)="goToday()">Today</button>
-        <button type="button" class="btn-nav-month" (click)="nextMonth()" aria-label="Next month">›</button>
-        <button type="button" class="month-label month-label--clickable" (click)="openMonthYearPicker()">
-          {{ monthLabel() }}
-        </button>
-      </div>
-    </div>
+    <div class="planner-layout">
+      <!-- Left: month navigation (always visible, high contrast) -->
+      <aside class="planner-month-aside" aria-label="Month navigation">
+        <p class="planner-kicker">Planner</p>
 
-    <div class="planner-body">
-      <section class="planner-calendar" aria-label="Month calendar">
-        <div class="planner-weekdays">
-          <span *ngFor="let w of weekdayLabels" class="planner-weekday">{{ w }}</span>
+        <div class="planner-month-hero">
+          <span class="planner-month-name">{{ viewMonth | date : 'MMMM' }}</span>
+          <span class="planner-year">{{ viewMonth | date : 'yyyy' }}</span>
         </div>
-        <div class="planner-grid">
-          <div *ngFor="let week of calendarWeeks" class="planner-week">
-            <div
-              *ngFor="let day of week"
-              class="planner-day"
-              [class.planner-day--muted]="!isCurrentMonth(day)"
-              [class.planner-day--today]="isToday(day)"
-              (click)="onDayCellClick(day, $event)"
-            >
-              <div class="planner-day-num">{{ day.getDate() }}</div>
-              <div class="planner-day-tasks">
-                <button
-                  type="button"
-                  class="planner-task-chip"
-                  *ngFor="let task of tasksForDay(day)"
-                  [class.planner-task-chip--done]="isTaskDone(task)"
-                  (click)="openTaskDetail(task, $event)"
-                  [title]="task.title + ' — ' + task.stageName"
-                >
+
+        <div class="planner-month-controls">
+          <button type="button" class="btn-nav-month" (click)="prevMonth()" aria-label="Previous month">‹</button>
+          <button type="button" class="btn-today" (click)="goToday()">Today</button>
+          <button type="button" class="btn-nav-month" (click)="nextMonth()" aria-label="Next month">›</button>
+        </div>
+
+        <button type="button" class="planner-change-month" (click)="openMonthYearPicker()">
+          <svg class="planner-change-month-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M8 7V3m8 4V3M5 11h14M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Jump to month / year
+        </button>
+
+        <p class="planner-month-hint">
+          Tasks with a due date appear in the calendar. Tap a day to add a task.
+        </p>
+
+        <section class="planner-no-due-panel" aria-label="Tasks without a due date">
+          <h2 class="planner-no-due-title">No due date</h2>
+          <p class="planner-no-due-count">{{ unscheduled.length }} task(s)</p>
+          <ul class="planner-no-due-list">
+            <li *ngFor="let task of unscheduled">
+              <div
+                class="planner-task-chip planner-task-chip--sidebar"
+                [ngClass]="getPriorityClass(task)"
+                [class.planner-task-chip--done]="isTaskDone(task)"
+              >
+                <label class="planner-task-check" (click)="$event.stopPropagation()">
+                  <input
+                    class="board-checkbox"
+                    type="checkbox"
+                    [checked]="isTaskDone(task)"
+                    (change)="toggleTaskCompleted(task, $event)"
+                    [attr.aria-label]="'Mark complete: ' + task.title"
+                  />
+                </label>
+                <button type="button" class="planner-task-chip-body" (click)="openTaskDetail(task, $event)">
                   <span class="planner-task-title">{{ task.title }}</span>
+                  <span class="planner-task-meta" *ngIf="getTaskPriority(task)">
+                    <span class="meta-pill priority-pill" [ngClass]="getPriorityClass(task)">{{ getTaskPriority(task) }}</span>
+                  </span>
                   <span class="planner-task-stage">{{ task.stageName }}</span>
                 </button>
               </div>
+            </li>
+          </ul>
+          <p *ngIf="unscheduled.length === 0" class="planner-no-due-empty">Nothing here — add due dates on tasks or create them from the board.</p>
+        </section>
+      </aside>
+
+      <!-- Right: glass calendar -->
+      <div class="planner-calendar-column">
+        <section class="planner-calendar planner-calendar--glass" aria-label="Month calendar">
+          <div class="planner-calendar-header">
+            <h2 class="planner-calendar-heading">This month</h2>
+            <span class="planner-calendar-sub">{{ monthLabel() }}</span>
+          </div>
+          <div class="planner-weekdays">
+            <span *ngFor="let w of weekdayLabels" class="planner-weekday">{{ w }}</span>
+          </div>
+          <div class="planner-grid">
+            <div *ngFor="let week of calendarWeeks" class="planner-week">
+              <div
+                *ngFor="let day of week"
+                class="planner-day"
+                [class.planner-day--muted]="!isCurrentMonth(day)"
+                [class.planner-day--today]="isToday(day)"
+                (click)="onDayCellClick(day, $event)"
+              >
+                <div class="planner-day-num">{{ day.getDate() }}</div>
+                <div class="planner-day-tasks">
+                  <div
+                    class="planner-task-chip"
+                    *ngFor="let task of tasksForDay(day)"
+                    [ngClass]="getPriorityClass(task)"
+                    [class.planner-task-chip--done]="isTaskDone(task)"
+                  >
+                    <label class="planner-task-check" (click)="$event.stopPropagation()">
+                      <input
+                        class="board-checkbox"
+                        type="checkbox"
+                        [checked]="isTaskDone(task)"
+                        (change)="toggleTaskCompleted(task, $event)"
+                        [attr.aria-label]="'Mark complete: ' + task.title"
+                      />
+                    </label>
+                    <button type="button" class="planner-task-chip-body" (click)="openTaskDetail(task, $event)">
+                      <span class="planner-task-title">{{ task.title }}</span>
+                      <span class="planner-task-meta" *ngIf="getTaskPriority(task)">
+                        <span class="meta-pill priority-pill" [ngClass]="getPriorityClass(task)">{{ getTaskPriority(task) }}</span>
+                      </span>
+                      <span class="planner-task-stage">{{ task.stageName }}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      <aside class="planner-sidebar" aria-label="Unscheduled tasks">
-        <h2 class="planner-sidebar-title">No due date</h2>
-        <p class="planner-sidebar-hint">{{ unscheduled.length }} task(s)</p>
-        <ul class="planner-unscheduled-list">
-          <li *ngFor="let task of unscheduled">
-            <button type="button" class="planner-unscheduled-item" (click)="openTaskDetail(task, $event)">
-              <span class="planner-unscheduled-title">{{ task.title }}</span>
-              <span class="planner-unscheduled-stage">{{ task.stageName }}</span>
-            </button>
-          </li>
-        </ul>
-        <p *ngIf="unscheduled.length === 0" class="planner-sidebar-empty">Everything scheduled — or add due dates on the board.</p>
-      </aside>
+        </section>
+      </div>
     </div>
   </main>
 </div>

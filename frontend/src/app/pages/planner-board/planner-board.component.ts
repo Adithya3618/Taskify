@@ -467,6 +467,28 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
     return !!(task.completed ?? this.taskCompletionStorage.getCompleted(this.projectId, task.id));
   }
 
+  getTaskPriority(task: Task): string {
+    return parseCardMeta(task.description || '').priority;
+  }
+
+  getPriorityClass(task: Task): string {
+    const priority = this.getTaskPriority(task).toLowerCase();
+    if (priority === 'critical' || priority === 'high' || priority === 'highest') return 'priority-high';
+    if (priority === 'medium' || priority === 'mid') return 'priority-mid';
+    if (priority === 'low' || priority === 'lowest') return 'priority-low';
+    return 'priority-none';
+  }
+
+  /** Same behavior as board task cards (localStorage completion). */
+  toggleTaskCompleted(task: TaskWithStage, event: Event): void {
+    event.stopPropagation();
+    const input = event.target as HTMLInputElement;
+    const next = input.checked;
+    this.taskCompletionStorage.setCompleted(this.projectId, task.id, next);
+    task.completed = next;
+    this.cdr.detectChanges();
+  }
+
   goBack(): void {
     this.router.navigate(['/boards']);
   }
