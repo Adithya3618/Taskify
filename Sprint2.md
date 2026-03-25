@@ -1,10 +1,6 @@
-# Sprint 2 — Frontend Development
+# Sprint 2 — Taskify Project
 
-**Branch:** `sreeja/frontendDev`
-
----
-
-## Work Completed
+## Frontend Work
 
 ### 1. Dark / Light Theming System
 - Introduced `ThemeService` with `localStorage` persistence — theme survives page refresh
@@ -168,14 +164,63 @@ npm run cy:run
 | should have a back to home link |
 
 ---
+## Backend Work Completed
 
-## Backend Unit Tests (Go) — ~95 tests
+### 1. Google OAuth Authentication
+- Implemented complete OAuth flow for Google sign-in
+- Created [`google_service.go`](Taskify/backend/internal/auth/services/google_service.go) — handles OAuth token verification and user info fetching
+- Created [`google_oauth_state_service.go`](Taskify/backend/internal/auth/services/google_oauth_state_service.go) — manages OAuth state tokens for CSRF protection
+- Created [`auth_identity_repository.go`](Taskify/backend/internal/auth/repository/auth_identity_repository.go) — stores third-party auth identities (Google)
+
+**New API Endpoints:**
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/auth/google/id-token` | POST | Login with Google ID token (mobile/web) |
+| `/api/auth/google/login` | GET | Redirects to Google OAuth consent page |
+| `/api/auth/google/callback` | GET | Handles OAuth callback from Google |
+
+**Security Features:**
+- OAuth state validation to prevent CSRF attacks
+- Email verification check (Google email must be verified)
+- Secure token exchange with Google's OAuth servers
+- Refresh token storage for session persistence
+
+**User Flow Scenarios:**
+- New users → Account created automatically
+- Existing email users → Google identity linked to existing account
+- Inactive users → Account reactivated on Google login
+
+### 2. Email Service (SMTP Integration)
+- Created [`email_service.go`](Taskify/backend/internal/auth/services/email_service.go) — sends emails via SMTP
+- Configured via environment variables: `SMTP_HOST`, `SMTP_EMAIL`, `SMTP_PASSWORD`
+- Supports OTP code delivery for password reset
+
+### 3. OTP (One-Time Password) Service
+- 6-digit random code generation using cryptographically secure random
+- 10-minute expiration for generated OTPs
+- One-time use reset tokens
+- Thread-safe operations with mutex protection
+
+### 4. Auth Identity Repository
+- New repository for managing third-party authentication identities
+- Supports multiple auth providers (Google)
+- Stores provider user ID, email, profile picture, and refresh tokens
+- Enables account linking (one user can have multiple auth methods)
+
+---
+## Backend Unit Tests (Go) — 100+ tests
 
 All backend tests are located in `backend/internal/testcases/` and can be run with:
 ```bash
 cd backend
 go test -v ./internal/testcases/...
 ```
+
+### `auth_identity_repository_test.go` — 3 tests
+| Test | Function under test |
+|------|---------------------|
+| upsert google identity | `UpsertGoogleIdentity()` |
+| update existing identity | `UpsertGoogleIdentity()` (update path) |
 
 ### `jwt_service_test.go` — 8 tests
 | Test | Function under test |
