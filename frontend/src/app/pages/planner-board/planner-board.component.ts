@@ -52,6 +52,9 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
   scheduledOpen = false;
   noDueOpen = false;
 
+  /** Filter "No due date" tasks by board list (stage); `null` = all lists. */
+  noDueListFilterStageId: number | null = null;
+
   /** Per-date: show all scheduled tasks vs first-only + “+N more”. */
   scheduledDateExpanded: Record<string, boolean> = {};
 
@@ -272,6 +275,12 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
     return n;
   }
 
+  /** No-due tasks optionally filtered by list (stage). */
+  get unscheduledFiltered(): TaskWithStage[] {
+    if (this.noDueListFilterStageId == null) return this.unscheduled;
+    return this.unscheduled.filter((t) => t.stageId === this.noDueListFilterStageId);
+  }
+
   toggleScheduledOpen(): void {
     this.scheduledOpen = !this.scheduledOpen;
   }
@@ -289,9 +298,11 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
+  /** Remaining tasks on the same date (after the first), e.g. "+2 tasks". */
   scheduledGroupExpandLabel(g: { dateKey: string; tasks: TaskWithStage[] }): string {
     if (g.tasks.length <= 1) return '';
-    return this.scheduledDateExpanded[g.dateKey] ? 'Show less' : `+${g.tasks.length - 1} more`;
+    if (this.scheduledDateExpanded[g.dateKey]) return 'Show less';
+    return this.extraTasksOnSameDateLabel(g.tasks.length);
   }
 
   visibleScheduledTasks(g: { dateKey: string; tasks: TaskWithStage[] }): TaskWithStage[] {
@@ -314,7 +325,15 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
     const all = this.tasksForDay(day);
     if (all.length <= 1) return '';
     const key = this.dateKey(day);
-    return this.calendarDateExpanded[key] ? 'Show less' : `+${all.length - 1} more`;
+    if (this.calendarDateExpanded[key]) return 'Show less';
+    return this.extraTasksOnSameDateLabel(all.length);
+  }
+
+  /** Count of tasks not shown in the compact row (total − 1), e.g. 3 dates → "+2 tasks". */
+  extraTasksOnSameDateLabel(totalOnDate: number): string {
+    const n = totalOnDate - 1;
+    if (n <= 0) return '';
+    return `+${n} ${n === 1 ? 'task' : 'tasks'}`;
   }
 
   tasksForCalendarCell(day: Date): TaskWithStage[] {
