@@ -49,6 +49,7 @@
 - **Interactions:** click an empty day in the current month to **add a task** (modal, same stage/title/description/due/priority/notes pattern as the board); click an **other-month** cell to jump the visible month; **task detail** modal for view/edit; **completed** checkbox state is read/written through **`TaskCompletionStorageService`** (same client-side persistence as Kanban)
 - **Access control:** only boards listed in `localStorage` under `taskify.board.owners` for the current user can be opened; otherwise redirect to `/boards`
 - **Shared metadata:** due date, priority, and notes are stored in the task **description** meta block via `utils/task-card-meta.ts` (`parseCardMeta`, `buildCardDescription`, `parseDueToDateKey`) — consistent with **`BoardComponent`**
+- **E2E:** `cypress/e2e/planner.cy.ts` (with `visitPlanner()` in `cypress/support/board-stubs.ts`, same HTTP stubs as the board) exercises load/calendar UI, Board ↔ Planner tabs, Scheduled / No due date panels, tasks on the grid, completion checkbox, month navigation and month/year picker, and add-task from an empty day
 
 ### 7. Client-side task completion (browser persistence)
 - **`TaskCompletionStorageService`** stores per-task completion in **`localStorage`** (keyed by project + task id); the REST API does not model completion, so this keeps Kanban and Planner in sync for “done” state
@@ -180,7 +181,7 @@ npm run cy:run
 
 ---
 
-## Cypress E2E Tests — 19 total
+## Cypress E2E Tests — 70 total
 
 ### Welcome page (`cypress/e2e/welcome.cy.ts`) — 6 tests
 | Test |
@@ -215,6 +216,9 @@ npm run cy:run
 
 ### Board / Kanban (`cypress/e2e/board.cy.ts`) — 40 tests
 Covers authenticated board flows against a running app (typically with backend + seed data): **task completion** (checkbox, modal, **Active** / **Done** / **All**, persistence after reload), **list collapse** (strip toggle, multi-column, reload), **task modal** (due date, priority, notes, save payload to API), **add task** (minimal and full details, **Hide details**), **filters** (priority chips, due presets including Overdue / Today / This week / No date, **Clear filters**), **columns** (add list, rename, delete with confirm), **navigation** (Back to boards), **theme** toggle on `html`, **Share** modal, **board switcher**, **profile** menu (Account settings), and empty-stage edge case.
+
+### Planner / calendar (`cypress/e2e/planner.cy.ts`) — 11 tests
+Uses **`visitPlanner()`** in `cypress/support/board-stubs.ts` (same intercepted API as **`visitBoard()`**, auth + `taskify.board.owners` seeded in `onBeforeLoad`). Covers **load** (calendar grid, weekdays, no stuck loading), **Board ↔ Planner** tab navigation, **Scheduled** and **No due date** collapsible panels, **task with today’s due date** on the grid and **completion checkbox**, **month** (‹ / **Today** / ›), **month/year picker** dialog, and **Add task** from an empty in-month day cell.
 
 ---
 ## Backend Work

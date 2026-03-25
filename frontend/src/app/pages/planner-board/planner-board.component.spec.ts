@@ -148,7 +148,8 @@ describe('PlannerBoardComponent', () => {
     fixture.detectChanges();
     paramsSubject.next({ id: '1' });
     fixture.detectChanges();
-    await fixture.whenStable();
+    // Do not await whenStable(): ngOnInit schedules a 5s setTimeout fallback that keeps
+    // the zone unstable and causes Jasmine's 5s hook timeout. API stubs complete sync.
     fixture.detectChanges();
   });
 
