@@ -1,8 +1,6 @@
 # Sprint 2 — Taskify Project
 
-## Frontend Development
-
-## Work Completed
+## Frontend Work Completed
 
 ### 1. Dark / Light Theming System
 - Introduced `ThemeService` with `localStorage` persistence — theme survives page refresh
