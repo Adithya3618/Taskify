@@ -1,6 +1,10 @@
-# Sprint 2 — Taskify Project
+# Sprint 2 — Frontend Development
 
-## Frontend Work
+**Branch:** `sreeja/frontendDev`
+
+---
+
+## Work Completed
 
 ### 1. Dark / Light Theming System
 - Introduced `ThemeService` with `localStorage` persistence — theme survives page refresh
@@ -164,9 +168,35 @@ npm run cy:run
 | should have a back to home link |
 
 ---
-## Backend Work Completed
+## Backend Work
 
-### 1. Google OAuth Authentication
+### 1. Login & JWT Authentication
+- Implemented complete JWT-based authentication system
+- Created [`jwt_service.go`](Taskify/backend/internal/auth/services/jwt_service.go) — handles JWT token generation and validation
+- Created [`auth_service.go`](Taskify/backend/internal/auth/services/auth_service.go) — core authentication business logic
+- Created [`auth_controller.go`](Taskify/backend/internal/auth/controller/auth_controller.go) — HTTP handlers for auth endpoints
+- Created [`auth_middleware.go`](Taskify/backend/internal/auth/middleware/auth_middleware.go) — JWT middleware for protected routes
+- Created [`user_repository.go`](Taskify/backend/internal/auth/repository/user_repository.go) — database operations for users
+
+**Login API Endpoint:**
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/auth/login` | POST | Authenticate user with email/password, returns JWT |
+
+**JWT Features:**
+- Secure token generation with HMAC-SHA256 signing
+- Token contains user ID and email claims
+- Configurable expiration time via environment variable `JWT_SECRET`
+- Middleware protects all `/api/*` routes (except auth endpoints)
+
+**Registration & Password Management:**
+- User registration with email/password
+- Password hashing using bcrypt
+- Email/password login
+- Account recovery via OTP codes
+- Password reset functionality
+
+### 3. Google OAuth Authentication
 - Implemented complete OAuth flow for Google sign-in
 - Created [`google_service.go`](Taskify/backend/internal/auth/services/google_service.go) — handles OAuth token verification and user info fetching
 - Created [`google_oauth_state_service.go`](Taskify/backend/internal/auth/services/google_oauth_state_service.go) — manages OAuth state tokens for CSRF protection
@@ -190,18 +220,18 @@ npm run cy:run
 - Existing email users → Google identity linked to existing account
 - Inactive users → Account reactivated on Google login
 
-### 2. Email Service (SMTP Integration)
+### 4. Email Service (SMTP Integration)
 - Created [`email_service.go`](Taskify/backend/internal/auth/services/email_service.go) — sends emails via SMTP
 - Configured via environment variables: `SMTP_HOST`, `SMTP_EMAIL`, `SMTP_PASSWORD`
 - Supports OTP code delivery for password reset
 
-### 3. OTP (One-Time Password) Service
+### 5. OTP (One-Time Password) Service
 - 6-digit random code generation using cryptographically secure random
 - 10-minute expiration for generated OTPs
 - One-time use reset tokens
 - Thread-safe operations with mutex protection
 
-### 4. Auth Identity Repository
+### 6. Auth Identity Repository
 - New repository for managing third-party authentication identities
 - Supports multiple auth providers (Google)
 - Stores provider user ID, email, profile picture, and refresh tokens
