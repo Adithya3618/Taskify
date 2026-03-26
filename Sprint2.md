@@ -214,12 +214,6 @@ npm run cy:run
 | should navigate to login page via the log in link |
 | should have a back to home link |
 
-### Board / Kanban (`cypress/e2e/board.cy.ts`) — 40 tests
-Covers authenticated board flows against a running app (typically with backend + seed data): **task completion** (checkbox, modal, **Active** / **Done** / **All**, persistence after reload), **list collapse** (strip toggle, multi-column, reload), **task modal** (due date, priority, notes, save payload to API), **add task** (minimal and full details, **Hide details**), **filters** (priority chips, due presets including Overdue / Today / This week / No date, **Clear filters**), **columns** (add list, rename, delete with confirm), **navigation** (Back to boards), **theme** toggle on `html`, **Share** modal, **board switcher**, **profile** menu (Account settings), and empty-stage edge case.
-
-### Planner / calendar (`cypress/e2e/planner.cy.ts`) — 11 tests
-Uses **`visitPlanner()`** in `cypress/support/board-stubs.ts` (same intercepted API as **`visitBoard()`**, auth + `taskify.board.owners` seeded in `onBeforeLoad`). Covers **load** (calendar grid, weekdays, no stuck loading), **Board ↔ Planner** tab navigation, **Scheduled** and **No due date** collapsible panels, **task with today’s due date** on the grid and **completion checkbox**, **month** (‹ / **Today** / ›), **month/year picker** dialog, and **Add task** from an empty in-month day cell.
-
 ---
 ## Backend Work
 
