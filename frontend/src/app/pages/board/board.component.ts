@@ -1,8 +1,9 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
+import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { ApiService } from '../../services/api.service';
 import { Project } from '../../models/project.model';
 import { Stage, CreateStageRequest } from '../../models/stage.model';
@@ -14,7 +15,7 @@ import { TaskCompletionStorageService } from '../../services/task-completion-sto
 @Component({
   selector: 'app-board',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DragDropModule, RouterLink, RouterLinkActive],
   templateUrl: './board.component.html',
   styleUrls: ['./board.component.scss']
 })
@@ -53,6 +54,9 @@ export class BoardComponent implements OnInit, OnDestroy {
   showBoardSwitcher = false;
   private routeSub?: Subscription;
 
+  /** Collapsed stage columns (narrow vertical strip with vertical title). Persisted per project in sessionStorage. */
+  collapsedStages: Record<number, boolean> = {};
+
   // Filter state
   showFilterPanel = false;
   /** '' = all, 'active' = not completed, 'done' = completed */
@@ -66,6 +70,9 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   /** Delete task confirmation (replaces window.confirm). */
   deleteTaskPending: { stageId: number; taskId: number; taskTitle: string } | null = null;
+
+  /** Delete list (stage) confirmation — replaces window.confirm on column ×. */
+  deleteStagePending: { stageId: number; stageName: string } | null = null;
 
   // Task detail view/edit modal state
   detailTask: Task | null = null;
@@ -186,7 +193,8 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.apiService.getStages(this.projectId).subscribe({
       next: (stages) => {
         console.log('Stages loaded:', stages);
-        this.stages = stages || [];
+        this.stages = (stages || []).map((s) => ({ ...s, tasks: s.tasks ?? [] }));
+        this.loadCollapsedColumnState();
         // Load tasks for each stage
         if (this.stages.length > 0) {
           this.stages.forEach(stage => this.loadTasks(stage));
@@ -202,6 +210,7 @@ export class BoardComponent implements OnInit, OnDestroy {
           { id: 2, project_id: this.projectId, name: 'In Progress', position: 1, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), tasks: [] },
           { id: 3, project_id: this.projectId, name: 'Done', position: 2, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), tasks: [] }
         ];
+        this.loadCollapsedColumnState();
         this.loading = false;
       }
     });
@@ -211,9 +220,73 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.apiService.getTasks(this.projectId, stage.id).subscribe({
       next: (tasks) => {
         stage.tasks = this.taskCompletionStorage.mergeTasks(this.projectId, tasks || []);
+        this.sortStageTasks(stage);
       },
       error: (err) => {
         console.error('Failed to load tasks for stage:', stage.id, err);
+      }
+    });
+  }
+
+  private sortStageTasks(stage: Stage): void {
+    if (!stage.tasks?.length) return;
+    stage.tasks.sort((a, b) => a.position - b.position);
+  }
+
+  /** CDK drop list ids for connecting columns (drag tasks between lists). */
+  get dropListIds(): string[] {
+    return this.stages.map((s) => this.stageDropListId(s.id));
+  }
+
+  stageDropListId(stageId: number): string {
+    return `stage-drop-${stageId}`;
+  }
+
+  /** Stable task array for CDK drop lists (must not allocate a new [] each change detection). */
+  stageTasks(stage: Stage): Task[] {
+    if (!stage.tasks) stage.tasks = [];
+    return stage.tasks;
+  }
+
+  private parseDropListId(dropListElementId: string): number | null {
+    const m = dropListElementId?.match(/^stage-drop-(\d+)$/);
+    return m ? +m[1] : null;
+  }
+
+  onTaskDrop(event: CdkDragDrop<Task[]>): void {
+    if (this.hasActiveFilters) return;
+
+    const prevStageId = this.parseDropListId(event.previousContainer.id);
+    const nextStageId = this.parseDropListId(event.container.id);
+    if (prevStageId === null || nextStageId === null) return;
+
+    const task = event.item.data as Task | undefined;
+    if (!task) return;
+
+    if (event.previousContainer === event.container) {
+      moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
+    } else {
+      transferArrayItem(
+        event.previousContainer.data,
+        event.container.data,
+        event.previousIndex,
+        event.currentIndex
+      );
+    }
+
+    const newPos = event.currentIndex;
+    this.apiService.moveTask(task.id, { newStageId: nextStageId, newPos }).subscribe({
+      next: () => {
+        const prev = this.stages.find((s) => s.id === prevStageId);
+        const next = this.stages.find((s) => s.id === nextStageId);
+        if (prev) this.loadTasks(prev);
+        if (next && next.id !== prev?.id) this.loadTasks(next);
+      },
+      error: () => {
+        const prev = this.stages.find((s) => s.id === prevStageId);
+        const next = this.stages.find((s) => s.id === nextStageId);
+        if (prev) this.loadTasks(prev);
+        if (next) this.loadTasks(next);
       }
     });
   }
@@ -404,23 +477,83 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.showTaskDetails[stageId] = !this.showTaskDetails[stageId];
   }
 
-  deleteStage(stageId: number) {
-    if (confirm('Are you sure you want to delete this stage and all its tasks?')) {
-      this.apiService.deleteStage(stageId).subscribe({
-        next: () => {
-          this.stages = this.stages.filter(s => s.id !== stageId);
-        },
-        error: (err) => {
-          console.error('Failed to delete stage:', err);
-          // Demo fallback: remove locally if backend delete is unavailable
-          this.stages = this.stages.filter(s => s.id !== stageId);
+  private collapsedColumnsStorageKey(): string {
+    return `taskify.board.collapsedColumns.v1.${this.projectId}`;
+  }
+
+  private loadCollapsedColumnState(): void {
+    this.collapsedStages = {};
+    try {
+      const raw = sessionStorage.getItem(this.collapsedColumnsStorageKey());
+      if (!raw) return;
+      const ids = JSON.parse(raw) as number[];
+      if (!Array.isArray(ids)) return;
+      ids.forEach((id) => {
+        if (typeof id === 'number' && !Number.isNaN(id)) {
+          this.collapsedStages[id] = true;
         }
       });
+    } catch {
+      /* ignore */
     }
+  }
+
+  private saveCollapsedColumnState(): void {
+    try {
+      const ids = Object.keys(this.collapsedStages)
+        .map(Number)
+        .filter((id) => this.collapsedStages[id]);
+      sessionStorage.setItem(this.collapsedColumnsStorageKey(), JSON.stringify(ids));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  isColumnCollapsed(stageId: number): boolean {
+    return !!this.collapsedStages[stageId];
+  }
+
+  toggleColumnCollapsed(stageId: number, event?: Event): void {
+    event?.stopPropagation();
+    this.collapsedStages[stageId] = !this.collapsedStages[stageId];
+    this.saveCollapsedColumnState();
+  }
+
+  requestDeleteStage(stageId: number, stageName: string): void {
+    this.deleteTaskPending = null;
+    this.deleteStagePending = { stageId, stageName };
+  }
+
+  cancelDeleteStage(): void {
+    this.deleteStagePending = null;
+  }
+
+  confirmDeleteStage(): void {
+    if (!this.deleteStagePending) return;
+    const { stageId } = this.deleteStagePending;
+    this.deleteStagePending = null;
+    this.performDeleteStage(stageId);
+  }
+
+  private performDeleteStage(stageId: number): void {
+    this.apiService.deleteStage(stageId).subscribe({
+      next: () => {
+        delete this.collapsedStages[stageId];
+        this.saveCollapsedColumnState();
+        this.stages = this.stages.filter((s) => s.id !== stageId);
+      },
+      error: (err) => {
+        console.error('Failed to delete stage:', err);
+        delete this.collapsedStages[stageId];
+        this.saveCollapsedColumnState();
+        this.stages = this.stages.filter((s) => s.id !== stageId);
+      }
+    });
   }
 
   requestDeleteTask(stageId: number, taskId: number, taskTitle: string, event: Event): void {
     event.stopPropagation();
+    this.deleteStagePending = null;
     this.deleteTaskPending = { stageId, taskId, taskTitle };
   }
 
@@ -651,6 +784,24 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   getTaskDue(task: Task): string {
     return this.parseCardMeta(task.description || '').due;
+  }
+
+  /** Display due as `Due Date: MM/DD/YYYY` (matches priority pill row). */
+  formatTaskDueDisplay(task: Task): string {
+    const raw = this.getTaskDue(task);
+    if (!raw?.trim()) return '';
+    const s = raw.trim();
+    const ymd = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (ymd) {
+      const [, yyyy, mm, dd] = ymd;
+      return `Due Date: ${mm}/${dd}/${yyyy}`;
+    }
+    const d = new Date(s);
+    if (Number.isNaN(d.getTime())) return s;
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `Due Date: ${mm}/${dd}/${yyyy}`;
   }
 
   getPriorityClass(task: Task): string {

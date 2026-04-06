@@ -1,10 +1,6 @@
-# Sprint 2 — Frontend Development
+# Sprint 2 — Taskify Project
 
-**Branch:** `sreeja/frontendDev`
-
----
-
-## Work Completed
+## Frontend Work Completed
 
 ### 1. Dark / Light Theming System
 - Introduced `ThemeService` with `localStorage` persistence — theme survives page refresh
@@ -17,6 +13,7 @@
   - `login.component.scss`
   - `signup.component.scss`
   - `board.component.scss`
+  - `planner-board.component.scss`
   - `home.component.scss`
 
 ### 2. Board Filter Panel
@@ -42,6 +39,22 @@
 - Fixed invisible Login button text in the welcome page navbar in light mode (was white text on white background)
 - Fixed brand name and logo link colour in light mode
 - Used `:host-context([data-theme="light"])` for Angular-encapsulated component overrides where `[data-theme="light"] .selector` was not being applied reliably
+
+### 6. Planner (calendar) view
+- **Route:** `/board/:id/planner` (registered *before* `/board/:id` so `planner` is not parsed as a numeric id); protected by `authGuard`
+- **Board ↔ Planner navigation:** Kanban and Planner share the same top bar; **Board** / **Planner** tabs switch views without a full reload (`routerLink` + `routerLinkActive`)
+- **Monthly calendar:** 6×7 grid (weeks start Sunday), main header navigation (‹ / **Today** / ›), mini calendar with prev/next month, optional **month/year picker** dialog (draft `YYYY-MM`, apply updates `viewMonth`)
+- **Task buckets:** tasks with a **due date** appear on the calendar and in a collapsible **Scheduled** list (grouped by date); tasks **without** a due date appear in a collapsible **No due date** list with optional **filter by stage** (Kanban column)
+- **Dense UI:** when several tasks share a date, the UI shows one task plus **“+N tasks”** / **Show less** for both calendar cells and scheduled groups (`calendarDateExpanded`, `scheduledDateExpanded`)
+- **Interactions:** click an empty day in the current month to **add a task** (modal, same stage/title/description/due/priority/notes pattern as the board); click an **other-month** cell to jump the visible month; **task detail** modal for view/edit; **completed** checkbox state is read/written through **`TaskCompletionStorageService`** (same client-side persistence as Kanban)
+- **Access control:** only boards listed in `localStorage` under `taskify.board.owners` for the current user can be opened; otherwise redirect to `/boards`
+- **Shared metadata:** due date, priority, and notes are stored in the task **description** meta block via `utils/task-card-meta.ts` (`parseCardMeta`, `buildCardDescription`, `parseDueToDateKey`) — consistent with **`BoardComponent`**
+- **E2E:** `cypress/e2e/planner.cy.ts` (with `visitPlanner()` in `cypress/support/board-stubs.ts`, same HTTP stubs as the board) exercises load/calendar UI, Board ↔ Planner tabs, Scheduled / No due date panels, tasks on the grid, completion checkbox, month navigation and month/year picker, and add-task from an empty day
+
+### 7. Client-side task completion (browser persistence)
+- **`TaskCompletionStorageService`** stores per-task completion in **`localStorage`** (keyed by project + task id); the REST API does not model completion, so this keeps Kanban and Planner in sync for “done” state
+- Kanban **`BoardComponent`** merges stored completion into tasks, exposes **Active / Done / All** completion filters, and persists changes when the user toggles completion on a card or in the task modal
+- Covered end-to-end in **`cypress/e2e/board.cy.ts`** (checkbox styling, **Active** / **Done** filters, survival after reload)
 
 ---
 
@@ -69,7 +82,7 @@ npm run cy:run
 
 ---
 
-## Unit Tests (Karma / Jasmine) — 45 total
+## Unit Tests (Karma / Jasmine) — 75 total
 
 ### `ThemeService` — 8 tests
 | Test | Function under test |
@@ -112,7 +125,7 @@ npm run cy:run
 | getFilteredTasks() should return all tasks when no filters are active | `getFilteredTasks()` |
 | getFilteredTasks() should filter tasks by priority | `getFilteredTasks()` |
 | getFilteredTasks() should return empty array when no tasks match priority filter | `getFilteredTasks()` |
-| getFilteredTasks() should filter by "none" due date | `getFilteredTasks()` |
+| getFilteredTasks() should filter by "none" due date (tasks with no due date) | `getFilteredTasks()` |
 | openShareModal() should set showShareModal to true | `openShareModal()` |
 | openShareModal() should reset shareLinkCopied to false | `openShareModal()` |
 | closeShareModal() should set showShareModal to false | `closeShareModal()` |
@@ -125,6 +138,40 @@ npm run cy:run
 | switchBoard() should close the board switcher | `switchBoard()` |
 | goBack() should navigate to /boards | `goBack()` |
 
+### `PlannerBoardComponent` — 30 tests
+| Test | Function / behavior under test |
+|------|----------------------------------|
+| should create | initial load, `loading`, `projectId` |
+| should open Scheduled panel when its header button is clicked | `#planner-scheduled-toggle` → `scheduledOpen` |
+| should close Scheduled panel when header button is clicked again | toggle closed |
+| toggleScheduledOpen() should flip scheduledOpen | `toggleScheduledOpen()` |
+| should open No due date panel when its header button is clicked | `#planner-nodue-toggle` → `noDueOpen` |
+| toggleNoDueOpen() should flip noDueOpen | `toggleNoDueOpen()` |
+| unscheduledFiltered should include all no-due tasks when filter is null | `unscheduledFiltered` |
+| unscheduledFiltered should only include tasks from selected list | `noDueListFilterStageId` |
+| should show list filter select when No due date is open and stages exist | `#noDueListFilter` |
+| clicking previous month in main header should call prevMonth | `.planner-calendar-header-nav .btn-nav-month` |
+| clicking next month in main header should call nextMonth | header nav |
+| clicking Today in main header should reset view to current month | `.btn-today` |
+| clicking first mini nav button should go to previous month | `.btn-mini-nav` |
+| clicking second mini nav button should go to next month | `.btn-mini-nav` |
+| openMonthYearPicker should show dialog and set draft | `openMonthYearPicker()`, `monthYearDraft` |
+| clicking main month label button should open month/year picker | `#planner-cal-title` |
+| closeMonthYearPicker should hide dialog | `closeMonthYearPicker()` |
+| applyMonthYear should update viewMonth for valid draft | `applyMonthYear()` |
+| extraTasksOnSameDateLabel should return +1 task for two tasks | `extraTasksOnSameDateLabel()` |
+| extraTasksOnSameDateLabel should return +2 tasks for three tasks | `extraTasksOnSameDateLabel()` |
+| calendarDayToggleLabel should show +N tasks when multiple tasks and collapsed | `calendarDayToggleLabel()`, expand state |
+| tasksForCalendarCell should return one task until expanded | `tasksForCalendarCell()`, `toggleCalendarDayExpand()` |
+| visibleScheduledTasks should show one task until group expanded | `visibleScheduledTasks()`, `toggleScheduledGroupExpand()`, `scheduledGroupExpandLabel()` |
+| toggleBoardSwitcher should flip showBoardSwitcher | `toggleBoardSwitcher()` |
+| clicking theme toggle button should call themeService.toggle | `.themeToggle` |
+| goBack should navigate to /boards | `goBack()` |
+| onDayCellClick on current-month empty cell should open add-task modal | `onDayCellClick()`, `showAddTaskModal`, `newTaskDue` |
+| onDayCellClick on other-month cell should change view month | `onDayCellClick()` |
+| formatDueLabel should format YYYY-MM-DD | `formatDueLabel()` |
+| should redirect to login when user is missing | unauthenticated → `/login` |
+
 ### `AppComponent` — 3 tests
 | Test | What it checks |
 |------|----------------|
@@ -134,7 +181,7 @@ npm run cy:run
 
 ---
 
-## Cypress E2E Tests — 19 total
+## Cypress E2E Tests — 70 total
 
 ### Welcome page (`cypress/e2e/welcome.cy.ts`) — 6 tests
 | Test |
@@ -166,3 +213,222 @@ npm run cy:run
 | should show error when passwords do not match |
 | should navigate to login page via the log in link |
 | should have a back to home link |
+
+---
+## Backend Work
+
+### 1. Login & JWT Authentication
+- Implemented complete JWT-based authentication system
+- Created [`jwt_service.go`](Taskify/backend/internal/auth/services/jwt_service.go) — handles JWT token generation and validation
+- Created [`auth_service.go`](Taskify/backend/internal/auth/services/auth_service.go) — core authentication business logic
+- Created [`auth_controller.go`](Taskify/backend/internal/auth/controller/auth_controller.go) — HTTP handlers for auth endpoints
+- Created [`auth_middleware.go`](Taskify/backend/internal/auth/middleware/auth_middleware.go) — JWT middleware for protected routes
+- Created [`user_repository.go`](Taskify/backend/internal/auth/repository/user_repository.go) — database operations for users
+
+**Login API Endpoint:**
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/auth/login` | POST | Authenticate user with email/password, returns JWT |
+
+**JWT Features:**
+- Secure token generation with HMAC-SHA256 signing
+- Token contains user ID and email claims
+- Configurable expiration time via environment variable `JWT_SECRET`
+- Middleware protects all `/api/*` routes (except auth endpoints)
+
+**Registration & Password Management:**
+- User registration with email/password
+- Password hashing using bcrypt
+- Email/password login
+- Account recovery via OTP codes
+- Password reset functionality
+
+### 3. Google OAuth Authentication
+- Implemented complete OAuth flow for Google sign-in
+- Created [`google_service.go`](Taskify/backend/internal/auth/services/google_service.go) — handles OAuth token verification and user info fetching
+- Created [`google_oauth_state_service.go`](Taskify/backend/internal/auth/services/google_oauth_state_service.go) — manages OAuth state tokens for CSRF protection
+- Created [`auth_identity_repository.go`](Taskify/backend/internal/auth/repository/auth_identity_repository.go) — stores third-party auth identities (Google)
+
+**New API Endpoints:**
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/auth/google/id-token` | POST | Login with Google ID token (mobile/web) |
+| `/api/auth/google/login` | GET | Redirects to Google OAuth consent page |
+| `/api/auth/google/callback` | GET | Handles OAuth callback from Google |
+
+**Security Features:**
+- OAuth state validation to prevent CSRF attacks
+- Email verification check (Google email must be verified)
+- Secure token exchange with Google's OAuth servers
+- Refresh token storage for session persistence
+
+**User Flow Scenarios:**
+- New users → Account created automatically
+- Existing email users → Google identity linked to existing account
+- Inactive users → Account reactivated on Google login
+
+### 4. Email Service (SMTP Integration)
+- Created [`email_service.go`](Taskify/backend/internal/auth/services/email_service.go) — sends emails via SMTP
+- Configured via environment variables: `SMTP_HOST`, `SMTP_EMAIL`, `SMTP_PASSWORD`
+- Supports OTP code delivery for password reset
+
+### 5. OTP (One-Time Password) Service
+- 6-digit random code generation using cryptographically secure random
+- 10-minute expiration for generated OTPs
+- One-time use reset tokens
+- Thread-safe operations with mutex protection
+
+### 6. Auth Identity Repository
+- New repository for managing third-party authentication identities
+- Supports multiple auth providers (Google)
+- Stores provider user ID, email, profile picture, and refresh tokens
+- Enables account linking (one user can have multiple auth methods)
+
+---
+## Backend Unit Tests (Go) — 100+ tests
+
+All backend tests are located in `backend/internal/testcases/` and can be run with:
+```bash
+cd backend
+go test -v ./internal/testcases/...
+```
+
+### `auth_identity_repository_test.go` — 3 tests
+| Test | Function under test |
+|------|---------------------|
+| upsert google identity | `UpsertGoogleIdentity()` |
+| update existing identity | `UpsertGoogleIdentity()` (update path) |
+
+### `jwt_service_test.go` — 8 tests
+| Test | Function under test |
+|------|---------------------|
+| valid token generation | `GenerateToken()` |
+| empty user ID | `GenerateToken()` |
+| empty email | `GenerateToken()` |
+| valid token validation | `ValidateToken()` |
+| invalid token format | `ValidateToken()` |
+| empty token | `ValidateToken()` |
+| token with wrong secret | `ValidateToken()` |
+| malformed token | `ValidateToken()` |
+
+### `otp_service_test.go` — 6 tests
+| Test | Function under test |
+|------|---------------------|
+| generates 6-digit OTP | `GenerateOTP()` |
+| generates unique OTPs | `GenerateOTP()` |
+| valid OTP verification | `VerifyOTP()` |
+| invalid OTP code | `VerifyOTP()` |
+| non-existent email | `VerifyOTP()` |
+| valid reset token | `ValidateResetToken()` |
+
+### `auth_service_test.go` — 12 tests
+| Test | Function under test |
+|------|---------------------|
+| valid email formats | `isValidEmail()` |
+| invalid email formats | `isValidEmail()` |
+| email normalization | `normalizeEmail()` |
+| valid registration | validation |
+| empty name | validation |
+| empty email | validation |
+| invalid email format | validation |
+| password too short | validation |
+| RegisterRequest structure | struct |
+| LoginRequest structure | struct |
+| AuthResponse structure | struct |
+| AuthService errors | error definitions |
+
+### `auth_controller_test.go` — 11 tests
+| Test | Function under test |
+|------|---------------------|
+| returns 400 for invalid JSON (Register) | `Register()` |
+| returns 400 for invalid JSON (Login) | `Login()` |
+| returns 401 when no user ID in context (GetMe) | `GetMe()` |
+| returns 400 for invalid JSON (ForgotPassword) | `ForgotPassword()` |
+| returns 400 for empty email | `ForgotPassword()` |
+| returns 400 for invalid JSON (VerifyOTP) | `VerifyOTP()` |
+| returns 400 for missing fields | `VerifyOTP()` |
+| returns 400 for invalid JSON (ResetPassword) | `ResetPassword()` |
+| returns 400 for missing fields | `ResetPassword()` |
+| creates new controller | `NewAuthController()` |
+| AuthService errors | error definitions |
+
+### `middleware_test.go` — 10 tests
+| Test | Function under test |
+|------|---------------------|
+| returns user ID from context | `GetUserID()` |
+| returns empty string when not set | `GetUserID()` |
+| returns empty string for wrong type | `GetUserID()` |
+| returns user email from context | `GetUserEmail()` |
+| returns empty string when not set | `GetUserEmail()` |
+| allows request with valid token | `JWTAuthMiddleware()` |
+| rejects request without Authorization header | `JWTAuthMiddleware()` |
+| rejects request with invalid token | `JWTAuthMiddleware()` |
+| rejects request with wrong secret | `JWTAuthMiddleware()` |
+| writes error response | `writeError()` |
+
+### `models_test.go` — 13 tests
+| Test | Function under test |
+|------|---------------------|
+| User.ToResponse() | user conversion |
+| RoleUser constant | constants |
+| RoleAdmin constant | constants |
+| Project structure | struct |
+| Stage structure | struct |
+| Task structure | struct |
+| Message structure | struct |
+| zero Project | zero values |
+| zero Stage | zero values |
+| zero Task | zero values |
+| zero Message | zero values |
+| UserResponse fields | struct |
+| All User fields | struct |
+
+### `controllers_test.go` — 14 tests
+| Test | Function under test |
+|------|---------------------|
+| CreateProject returns 401 without user | authorization |
+| CreateProject returns 400 for invalid JSON | validation |
+| GetAllProjects returns 401 without user | authorization |
+| CreateStage returns 401 without user | authorization |
+| GetStagesByProject returns 401 without user | authorization |
+| GetStage returns 401 without user | authorization |
+| CreateTask returns 401 without user | authorization |
+| GetTasksByStage returns 401 without user | authorization |
+| GetTask returns 401 without user | authorization |
+| CreateMessage returns 401 without user | authorization |
+| GetMessagesByProject returns 401 without user | authorization |
+| DeleteMessage returns 401 without user | authorization |
+| GetUserID helper returns user ID | helper |
+| GetUserID helper returns empty without context | helper |
+
+### `services_test.go` — 4 tests
+| Test | Function under test |
+|------|---------------------|
+| NewProjectService returns non-nil | constructor |
+| NewStageService returns non-nil | constructor |
+| NewTaskService returns non-nil | constructor |
+| NewMessageService returns non-nil | constructor |
+
+### `user_repository_test.go` — 11 tests
+| Test | Function under test |
+|------|---------------------|
+| NewUserRepository returns non-nil | constructor |
+| CreateUser inserts user | `CreateUser()` |
+| GetUserByEmail returns nil for non-existent | `GetUserByEmail()` |
+| GetUserByEmail returns user for existing | `GetUserByEmail()` |
+| GetUserByID returns nil for non-existent | `GetUserByID()` |
+| GetUserByID returns user for existing | `GetUserByID()` |
+| EmailExists returns false for non-existent | `EmailExists()` |
+| EmailExists returns true for existing | `EmailExists()` |
+| UpdatePassword succeeds | `UpdatePassword()` |
+| UpdatePassword fails for non-existent email | `UpdatePassword()` |
+
+### `database_test.go` — 6 tests
+| Test | Function under test |
+|------|---------------------|
+| sql.Open creates connection | database |
+| db.Ping succeeds | database |
+| exec creates table | SQL |
+| exec inserts row | SQL |
+| query selects row | SQL |
+| transaction support | transaction |
