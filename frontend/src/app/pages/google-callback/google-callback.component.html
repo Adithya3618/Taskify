@@ -1,0 +1,30 @@
+<div class="page">
+  <div class="card">
+    <div class="logo">
+      <svg class="logoSvg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="lgCb" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#22D3EE"/>
+            <stop offset="55%" stop-color="#818CF8"/>
+            <stop offset="100%" stop-color="#E879F9"/>
+          </linearGradient>
+          <clipPath id="tcCb">
+            <path d="M10 8 H90 V30 H60 V92 H40 V30 H10 Z"/>
+          </clipPath>
+        </defs>
+        <path d="M10 8 H90 V30 H60 V92 H40 V30 H10 Z" fill="url(#lgCb)"/>
+      </svg>
+    </div>
+
+    <ng-container *ngIf="!error">
+      <div class="spinner"></div>
+      <p class="message">Signing you in with Google...</p>
+    </ng-container>
+
+    <ng-container *ngIf="error">
+      <p class="errorIcon">✕</p>
+      <p class="message error">{{ error }}</p>
+      <button class="btn" (click)="goToLogin()">Back to login</button>
+    </ng-container>
+  </div>
+</div>

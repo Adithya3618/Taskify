@@ -21,6 +21,7 @@ export class LoginComponent implements OnDestroy {
   loading = false;
   error = '';
   showPassword = false;
+  googleLoading = false;
   showForgotNewPassword = false;
   showForgotConfirmPassword = false;
 
@@ -210,6 +211,11 @@ export class LoginComponent implements OnDestroy {
     if (this.forgotStep === 'reset') return 'Choose a strong new password for your account.';
     if (this.forgotStep === 'success') return 'You can now sign in with your new password.';
     return 'Enter your registered email to receive a verification code.';
+  }
+
+  signInWithGoogle() {
+    this.googleLoading = true;
+    this.authService.initiateGoogleLogin();
   }
 
   onSubmit() {

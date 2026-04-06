@@ -69,6 +69,21 @@ export class AuthService {
     });
   }
 
+  initiateGoogleLogin(): void {
+    window.location.href = '/api/auth/google/login';
+  }
+
+  loginWithGoogleCallback(state: string, code: string): Observable<LoginResponse> {
+    return this.http.get<LoginResponse>(`${this.apiUrl}/google/callback`, {
+      params: { state, code }
+    }).pipe(
+      tap(response => {
+        this.setToken(response.token);
+        this.setSession(response.user);
+      })
+    );
+  }
+
   logout(): void {
     localStorage.removeItem(this.tokenKey);
     localStorage.removeItem(this.sessionKey);
