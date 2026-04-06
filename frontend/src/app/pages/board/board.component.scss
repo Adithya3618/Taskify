@@ -512,6 +512,15 @@
       line-height: 1.35;
       font-variant-numeric: tabular-nums;
       letter-spacing: 0.01em;
+
+      &.due-overdue {
+        color: #f87171;
+        font-weight: 700;
+      }
+      &.due-today {
+        color: #f59e0b;
+        font-weight: 700;
+      }
     }
   }
 
@@ -680,6 +689,14 @@
   .task-content .task-due-text {
     color: #64748b;
     font-weight: 500;
+    &.due-overdue {
+      color: #dc2626;
+      font-weight: 700;
+    }
+    &.due-today {
+      color: #d97706;
+      font-weight: 700;
+    }
   }
   &.priority-high {
     background: rgba(254, 242, 242, 0.72);

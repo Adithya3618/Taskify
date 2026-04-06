@@ -22,6 +22,7 @@ export class LoginComponent implements OnDestroy {
   error = '';
   showPassword = false;
   googleLoading = false;
+  googleError = '';
   showForgotNewPassword = false;
   showForgotConfirmPassword = false;
 
@@ -215,7 +216,14 @@ export class LoginComponent implements OnDestroy {
 
   signInWithGoogle() {
     this.googleLoading = true;
-    this.authService.initiateGoogleLogin();
+    this.googleError = '';
+    this.authService.startGoogleLogin().subscribe({
+      next: () => { window.location.href = '/api/auth/google/login'; },
+      error: (err: Error) => {
+        this.googleLoading = false;
+        this.googleError = err.message || 'Google sign-in is not available right now.';
+      }
+    });
   }
 
   onSubmit() {

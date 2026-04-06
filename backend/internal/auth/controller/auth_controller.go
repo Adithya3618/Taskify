@@ -5,6 +5,8 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"net/url"
+	"os"
 
 	"backend/internal/auth/services"
 
@@ -109,11 +111,26 @@ func (c *AuthController) GoogleCallback(w http.ResponseWriter, r *http.Request) 
 
 	resp, err := c.authService.GoogleLoginWithCode(r.Context(), state, code)
 	if err != nil {
-		c.handleAuthError(w, err)
+		frontendURL := os.Getenv("FRONTEND_URL")
+		if frontendURL == "" {
+			frontendURL = "http://localhost:4200"
+		}
+		q := url.Values{}
+		q.Set("error", "google_auth_failed")
+		http.Redirect(w, r, frontendURL+"/auth/google/callback?"+q.Encode(), http.StatusTemporaryRedirect)
 		return
 	}
 
-	c.writeJSON(w, http.StatusOK, resp)
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "http://localhost:4200"
+	}
+	q := url.Values{}
+	q.Set("token", resp.Token)
+	q.Set("name", resp.User.Name)
+	q.Set("email", resp.User.Email)
+	q.Set("id", resp.User.ID)
+	http.Redirect(w, r, frontendURL+"/auth/google/callback?"+q.Encode(), http.StatusTemporaryRedirect)
 }
 
 // GetMe handles GET /api/auth/me

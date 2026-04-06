@@ -17,8 +17,6 @@ export class GoogleCallbackComponent implements OnInit {
 
   ngOnInit(): void {
     const params = new URLSearchParams(window.location.search);
-    const state = params.get('state');
-    const code = params.get('code');
     const errorParam = params.get('error');
 
     if (errorParam) {
@@ -28,25 +26,30 @@ export class GoogleCallbackComponent implements OnInit {
       return;
     }
 
+    // Backend redirect flow: token passed directly as query param
+    const token = params.get('token');
+    if (token) {
+      this.authService.handleGoogleToken({
+        token,
+        name: params.get('name') || '',
+        email: params.get('email') || '',
+        id: params.get('id') || ''
+      });
+      this.router.navigate(['/boards']);
+      return;
+    }
+
+    // Fallback: frontend-redirect flow (state + code)
+    const state = params.get('state');
+    const code = params.get('code');
     if (!state || !code) {
       this.error = 'Invalid callback. Please try signing in again.';
       return;
     }
 
     this.authService.loginWithGoogleCallback(state, code).subscribe({
-      next: () => {
-        this.router.navigate(['/boards']);
-      },
-      error: (err) => {
-        const msg = err.error?.error || err.error?.message || '';
-        if (msg.toLowerCase().includes('not configured')) {
-          this.error = 'Google sign-in is not available right now.';
-        } else if (msg.toLowerCase().includes('state') || msg.toLowerCase().includes('oauth')) {
-          this.error = 'Sign-in session expired. Please try again.';
-        } else {
-          this.error = 'Google sign-in failed. Please try again.';
-        }
-      }
+      next: () => this.router.navigate(['/boards']),
+      error: () => { this.error = 'Google sign-in failed. Please try again.'; }
     });
   }
 

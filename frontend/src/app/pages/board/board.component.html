@@ -122,7 +122,7 @@
           <button class="filterChip chip-low"      [class.active]="filterPriority === 'Low'"      (click)="filterPriority = 'Low'">Low</button>
           <button class="filterChip chip-mid"      [class.active]="filterPriority === 'Medium'"   (click)="filterPriority = 'Medium'">Medium</button>
           <button class="filterChip chip-high"     [class.active]="filterPriority === 'High'"     (click)="filterPriority = 'High'">High</button>
-          <button class="filterChip chip-critical" [class.active]="filterPriority === 'Critical'" (click)="filterPriority = 'Critical'">Critical</button>
+          <button class="filterChip chip-critical" [class.active]="filterPriority === 'Urgent'" (click)="filterPriority = 'Urgent'">Urgent</button>
         </div>
       </div>
 
@@ -162,10 +162,11 @@
       <p class="task-title">{{ task.title }}</p>
       <p class="task-desc" *ngIf="getDisplayDescription(task)">{{ getDisplayDescription(task) }}</p>
       <div class="task-meta-row" *ngIf="getTaskPriority(task) || getTaskDue(task)">
-        <span *ngIf="getTaskPriority(task)" class="meta-pill priority-pill" [ngClass]="getPriorityClass(task)">
-          {{ getTaskPriority(task) }}
+        <span *ngIf="getEffectivePriority(task)" class="meta-pill priority-pill" [ngClass]="getPriorityClass(task)"
+              [title]="getEffectivePriority(task) !== getTaskPriority(task) ? 'Set: ' + getTaskPriority(task) + ' → Escalated due to deadline' : ''">
+          {{ getEffectivePriority(task) }}
         </span>
-        <span *ngIf="getTaskDue(task)" class="task-due-text">{{ formatTaskDueDisplay(task) }}</span>
+        <span *ngIf="getTaskDue(task)" class="task-due-text" [ngClass]="getDueDateClass(task)">{{ formatTaskDueDisplay(task) }}</span>
       </div>
     </div>
     <div class="task-card-actions">
@@ -332,7 +333,7 @@
                 <option value="Low">Low</option>
                 <option value="Medium">Medium</option>
                 <option value="High">High</option>
-                <option value="Critical">Critical</option>
+                <option value="Urgent">Urgent</option>
               </select>
             </div>
             <textarea
@@ -441,12 +442,12 @@
           </div>
           <div>
             <label>Priority</label>
-            <select [(ngModel)]="detailPriority">
+            <select [(ngModel)]="detailPriority" [ngClass]="getDetailPriorityClass()">
               <option value="">None</option>
               <option value="Low">Low</option>
               <option value="Medium">Medium</option>
               <option value="High">High</option>
-              <option value="Critical">Critical</option>
+              <option value="Urgent">Urgent</option>
             </select>
           </div>
         </div>

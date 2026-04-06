@@ -652,7 +652,7 @@ export class BoardComponent implements OnInit, OnDestroy {
     }
     if (this.filterPriority) {
       tasks = tasks.filter(t => {
-        const p = this.getTaskPriority(t).toLowerCase();
+        const p = this.getEffectivePriority(t).toLowerCase();
         return p === this.filterPriority.toLowerCase();
       });
     }
@@ -804,9 +804,32 @@ export class BoardComponent implements OnInit, OnDestroy {
     return `Due Date: ${mm}/${dd}/${yyyy}`;
   }
 
+  /** Returns the visually escalated priority based on deadline proximity.
+   *  The stored priority is never changed — this is display-only. */
+  getEffectivePriority(task: Task): string {
+    const set = this.getTaskPriority(task).toLowerCase();
+    const raw = this.getTaskDue(task);
+
+    if (!raw?.trim()) return set; // no deadline → show as set
+
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const due = new Date(raw); due.setHours(0, 0, 0, 0);
+    const daysLeft = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    const rank: Record<string, number> = { '': 0, 'low': 1, 'lowest': 1, 'medium': 2, 'mid': 2, 'high': 3, 'highest': 3, 'urgent': 4, 'critical': 4 };
+    const label: Record<number, string> = { 1: 'Low', 2: 'Medium', 3: 'High', 4: 'Urgent' };
+
+    let minRank = rank[set] ?? 0;
+    if (daysLeft < 0)       minRank = Math.max(minRank, 4); // overdue → Urgent
+    else if (daysLeft === 0) minRank = Math.max(minRank, 3); // today   → High
+    else if (daysLeft <= 2)  minRank = Math.max(minRank, 2); // ≤2 days → Medium
+
+    return label[minRank] ?? set;
+  }
+
   getPriorityClass(task: Task): string {
-    const priority = this.getTaskPriority(task).toLowerCase();
-    if (priority === 'critical' || priority === 'high' || priority === 'highest') return 'priority-high';
+    const priority = this.getEffectivePriority(task).toLowerCase();
+    if (priority === 'urgent' || priority === 'critical' || priority === 'high' || priority === 'highest') return 'priority-high';
     if (priority === 'medium' || priority === 'mid') return 'priority-mid';
     if (priority === 'low' || priority === 'lowest') return 'priority-low';
     return 'priority-none';
@@ -814,10 +837,28 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   getCreatePriorityClass(stageId: number): string {
     const priority = (this.newTaskPriorities[stageId] || '').toLowerCase();
-    if (priority === 'critical' || priority === 'high') return 'priority-high';
+    if (priority === 'urgent' || priority === 'critical' || priority === 'high') return 'priority-high';
     if (priority === 'medium') return 'priority-mid';
     if (priority === 'low') return 'priority-low';
     return 'priority-none';
+  }
+
+  getDetailPriorityClass(): string {
+    const priority = (this.detailPriority || '').toLowerCase();
+    if (priority === 'urgent' || priority === 'critical' || priority === 'high') return 'priority-high';
+    if (priority === 'medium') return 'priority-mid';
+    if (priority === 'low') return 'priority-low';
+    return 'priority-none';
+  }
+
+  getDueDateClass(task: Task): string {
+    const raw = this.getTaskDue(task);
+    if (!raw?.trim()) return '';
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const due = new Date(raw); due.setHours(0, 0, 0, 0);
+    if (due < today) return 'due-overdue';
+    if (due.getTime() === today.getTime()) return 'due-today';
+    return '';
   }
 
   private migrateBoardOwnersEmail(oldEmail: string, newEmail: string) {

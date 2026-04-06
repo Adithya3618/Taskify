@@ -104,6 +104,7 @@
       <span class="googleSpinner" *ngIf="googleLoading"></span>
       {{ googleLoading ? 'Redirecting...' : 'Sign in with Google' }}
     </button>
+    <p *ngIf="googleError" class="error googleError">{{ googleError }}</p>
 
     <p class="footerText">
       Don't have an account?
