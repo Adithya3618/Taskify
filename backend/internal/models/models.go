@@ -25,14 +25,17 @@ type Stage struct {
 
 // Task represents a task/card in a stage
 type Task struct {
-	ID          int64     `json:"id"`
-	UserID      string    `json:"user_id"`
-	StageID     int64     `json:"stage_id"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	Position    int       `json:"position"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          int64      `json:"id"`
+	UserID      string     `json:"user_id"`
+	StageID     int64      `json:"stage_id"`
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	Position    int        `json:"position"`
+	Deadline    *time.Time `json:"deadline"`
+	Priority    *string    `json:"priority"`
+	AssignedTo  *string    `json:"assigned_to"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
 // Message represents a chat message in a project

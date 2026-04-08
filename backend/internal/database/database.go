@@ -68,6 +68,9 @@ func (db *DB) createTables() error {
 		title TEXT NOT NULL,
 		description TEXT,
 		position INTEGER DEFAULT 0,
+		deadline DATETIME,
+		priority TEXT,
+		assigned_to TEXT,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY (stage_id) REFERENCES stages(id) ON DELETE CASCADE
@@ -129,7 +132,10 @@ func (db *DB) migrateLegacySchema() error {
 			"user_id": "TEXT",
 		},
 		"tasks": {
-			"user_id": "TEXT",
+			"user_id":     "TEXT",
+			"deadline":    "DATETIME",
+			"priority":    "TEXT",
+			"assigned_to": "TEXT",
 		},
 		"messages": {
 			"user_id": "TEXT",
