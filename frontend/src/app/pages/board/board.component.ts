@@ -12,11 +12,13 @@ import { Label } from '../../models/label.model';
 import { AuthService } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
 import { TaskCompletionStorageService } from '../../services/task-completion-storage.service';
+import { NotificationService } from '../../services/notification.service';
+import { NotificationBellComponent } from '../../components/notification-bell/notification-bell.component';
 
 @Component({
   selector: 'app-board',
   standalone: true,
-  imports: [CommonModule, FormsModule, DragDropModule, RouterLink, RouterLinkActive],
+  imports: [CommonModule, FormsModule, DragDropModule, RouterLink, RouterLinkActive, NotificationBellComponent],
   templateUrl: './board.component.html',
   styleUrls: ['./board.component.scss']
 })
@@ -107,7 +109,8 @@ export class BoardComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     public themeService: ThemeService,
     private taskCompletionStorage: TaskCompletionStorageService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) {}
 
   ngOnInit() {
@@ -237,6 +240,13 @@ export class BoardComponent implements OnInit, OnDestroy {
       next: (tasks) => {
         stage.tasks = this.taskCompletionStorage.mergeTasks(this.projectId, tasks || []);
         this.sortStageTasks(stage);
+        // Check for upcoming/overdue deadlines and push notifications
+        const withDeadlines = (tasks || [])
+          .map(t => ({ id: t.id, title: t.title, deadline: this.parseCardMeta(t.description || '').due }))
+          .filter(t => !!t.deadline);
+        if (withDeadlines.length) {
+          this.notificationService.checkDeadlines(withDeadlines, this.projectId);
+        }
       },
       error: (err) => {
         console.error('Failed to load tasks for stage:', stage.id, err);
