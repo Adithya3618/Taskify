@@ -213,7 +213,7 @@
 }
 .card.boardCard {
   background: var(--card-bg); border: 1px solid var(--card-border);
-  overflow: hidden; position: relative;
+  overflow: visible; position: relative;
   animation: cardEntrance 0.5s cubic-bezier(0.22,1,0.36,1) both;
   &:hover { transform: translateY(-4px); box-shadow: var(--card-shadow-hover); background: var(--card-bg-hover); }
 }
@@ -226,7 +226,7 @@
 .grid .card:nth-child(7) { animation-delay: 0.47s; }
 .grid .card:nth-child(8) { animation-delay: 0.54s; }
 
-.cardColorBar { height: 4px; width: 100%; flex-shrink: 0; }
+.cardColorBar { height: 4px; width: 100%; flex-shrink: 0; border-radius: 14px 14px 0 0; }
 .cardBody { padding: 16px; }
 .cardTop { position: relative; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
 .menuWrap { position: relative; }

@@ -63,6 +63,13 @@
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
+      <button class="btn-ghost" (click)="showLabelManager = true">
+        <svg class="topbarIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="7" y1="7" x2="7.01" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        Labels
+      </button>
       <button class="btn-ghost" [class.btn-ghost-active]="hasActiveFilters" (click)="toggleFilterPanel()">
         <svg class="topbarIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M3 6h18M7 12h10M11 18h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -122,7 +129,7 @@
           <button class="filterChip chip-low"      [class.active]="filterPriority === 'Low'"      (click)="filterPriority = 'Low'">Low</button>
           <button class="filterChip chip-mid"      [class.active]="filterPriority === 'Medium'"   (click)="filterPriority = 'Medium'">Medium</button>
           <button class="filterChip chip-high"     [class.active]="filterPriority === 'High'"     (click)="filterPriority = 'High'">High</button>
-          <button class="filterChip chip-critical" [class.active]="filterPriority === 'Critical'" (click)="filterPriority = 'Critical'">Critical</button>
+          <button class="filterChip chip-critical" [class.active]="filterPriority === 'Urgent'" (click)="filterPriority = 'Urgent'">Urgent</button>
         </div>
       </div>
 
@@ -134,6 +141,23 @@
           <button class="filterChip" [class.active]="filterDue === 'today'"   (click)="filterDue = 'today'">Today</button>
           <button class="filterChip" [class.active]="filterDue === 'week'"    (click)="filterDue = 'week'">This week</button>
           <button class="filterChip" [class.active]="filterDue === 'none'"    (click)="filterDue = 'none'">No date</button>
+        </div>
+      </div>
+
+      <div class="filterGroup" *ngIf="projectLabels.length">
+        <span class="filterGroupLabel">Label</span>
+        <div class="filterChips">
+          <button class="filterChip" [class.active]="filterLabel === ''" (click)="filterLabel = ''">All</button>
+          <button
+            *ngFor="let label of projectLabels"
+            class="filterChip"
+            [class.active]="filterLabel === label.id"
+            [style.border-color]="filterLabel === label.id ? label.color : ''"
+            [style.background]="filterLabel === label.id ? label.color + '28' : ''"
+            [style.color]="filterLabel === label.id ? label.color : ''"
+            (click)="filterLabel = filterLabel === label.id ? '' : label.id">
+            {{ label.name }}
+          </button>
         </div>
       </div>
 
@@ -161,11 +185,24 @@
     <div class="task-content" (click)="openTaskDetail(task, $event)">
       <p class="task-title">{{ task.title }}</p>
       <p class="task-desc" *ngIf="getDisplayDescription(task)">{{ getDisplayDescription(task) }}</p>
-      <div class="task-meta-row" *ngIf="getTaskPriority(task) || getTaskDue(task)">
-        <span *ngIf="getTaskPriority(task)" class="meta-pill priority-pill" [ngClass]="getPriorityClass(task)">
-          {{ getTaskPriority(task) }}
+      <div class="task-label-chips" *ngIf="getTaskLabels(task.id).length">
+        <span *ngFor="let label of getTaskLabels(task.id)"
+              class="label-chip"
+              [style.background]="label.color + '28'"
+              [style.border-color]="label.color"
+              [style.color]="label.color">
+          {{ label.name }}
         </span>
-        <span *ngIf="getTaskDue(task)" class="task-due-text">{{ formatTaskDueDisplay(task) }}</span>
+      </div>
+      <div *ngIf="projectLabels.length && !getTaskLabels(task.id).length" class="task-label-chips">
+        <span class="label-chip label-chip-add" (click)="openTaskDetail(task, $event)">+ Add label</span>
+      </div>
+      <div class="task-meta-row" *ngIf="getTaskPriority(task) || getTaskDue(task)">
+        <span *ngIf="getEffectivePriority(task)" class="meta-pill priority-pill" [ngClass]="getPriorityClass(task)"
+              [title]="getEffectivePriority(task) !== getTaskPriority(task) ? 'Set: ' + getTaskPriority(task) + ' → Escalated due to deadline' : ''">
+          {{ getEffectivePriority(task) }}
+        </span>
+        <span *ngIf="getTaskDue(task)" class="task-due-text" [ngClass]="getDueDateClass(task)">{{ formatTaskDueDisplay(task) }}</span>
       </div>
     </div>
     <div class="task-card-actions">
@@ -332,8 +369,28 @@
                 <option value="Low">Low</option>
                 <option value="Medium">Medium</option>
                 <option value="High">High</option>
-                <option value="Critical">Critical</option>
+                <option value="Urgent">Urgent</option>
               </select>
+            </div>
+            <div *ngIf="projectLabels.length" class="newTaskLabelPicker">
+              <span class="newTaskLabelTitle">Labels</span>
+              <div class="labelChipPicker">
+                <div *ngFor="let label of projectLabels"
+                     class="labelPickerChip"
+                     [class.selected]="isLabelSelectedForNew(stage.id, label.id)"
+                     [style.border-color]="label.color"
+                     [style.background]="isLabelSelectedForNew(stage.id, label.id) ? label.color : 'transparent'"
+                     [style.color]="isLabelSelectedForNew(stage.id, label.id) ? '#fff' : label.color"
+                     (click)="toggleNewTaskLabel(stage.id, label.id)">
+                  <span class="labelPickerDot"
+                        *ngIf="!isLabelSelectedForNew(stage.id, label.id)"
+                        [style.background]="label.color"></span>
+                  <svg *ngIf="isLabelSelectedForNew(stage.id, label.id)" class="labelPickerCheck" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  {{ label.name }}
+                </div>
+              </div>
             </div>
             <textarea
               rows="2"
@@ -441,13 +498,34 @@
           </div>
           <div>
             <label>Priority</label>
-            <select [(ngModel)]="detailPriority">
+            <select [(ngModel)]="detailPriority" [ngClass]="getDetailPriorityClass()">
               <option value="">None</option>
               <option value="Low">Low</option>
               <option value="Medium">Medium</option>
               <option value="High">High</option>
-              <option value="Critical">Critical</option>
+              <option value="Urgent">Urgent</option>
             </select>
+          </div>
+        </div>
+
+        <div *ngIf="projectLabels.length" class="labelSection">
+          <span class="labelSectionTitle">Labels</span>
+          <div class="labelChipPicker">
+            <div *ngFor="let label of projectLabels"
+                 class="labelPickerChip"
+                 [class.selected]="isLabelOnTask(detailTask!.id, label.id)"
+                 [style.border-color]="label.color"
+                 [style.background]="isLabelOnTask(detailTask!.id, label.id) ? label.color : 'transparent'"
+                 [style.color]="isLabelOnTask(detailTask!.id, label.id) ? '#fff' : label.color"
+                 (click)="toggleLabelOnTask(detailTask!.id, label.id)">
+              <span class="labelPickerDot"
+                    *ngIf="!isLabelOnTask(detailTask!.id, label.id)"
+                    [style.background]="label.color"></span>
+              <svg *ngIf="isLabelOnTask(detailTask!.id, label.id)" class="labelPickerCheck" viewBox="0 0 24 24" fill="none">
+                <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              {{ label.name }}
+            </div>
           </div>
         </div>
 
@@ -458,6 +536,49 @@
       <div class="task-modal-footer">
         <button class="btn-modal-ghost" (click)="closeTaskDetail()">Cancel</button>
         <button class="btn-modal-primary" (click)="saveTaskDetail()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Label Manager Modal -->
+  <div *ngIf="showLabelManager" class="task-modal-backdrop" (click)="showLabelManager = false">
+    <div class="task-modal labelModal" (click)="$event.stopPropagation()">
+      <div class="task-modal-header">
+        <div><h3>Labels</h3><p>Create and manage labels for this board.</p></div>
+        <button class="btn-close-modal" (click)="showLabelManager = false">×</button>
+      </div>
+      <div class="task-modal-body">
+
+        <!-- Create new label -->
+        <div class="labelCreateRow">
+          <input type="text" [(ngModel)]="newLabelName" placeholder="Label name" (keyup.enter)="createLabel()" />
+          <div class="colorPicker">
+            <button *ngFor="let c of LABEL_COLORS"
+                    class="colorSwatch"
+                    [class.selected]="newLabelColor === c"
+                    [style.background]="c"
+                    (click)="newLabelColor = c">
+            </button>
+          </div>
+          <button class="btn-modal-primary" (click)="createLabel()" [disabled]="!newLabelName.trim()">Add</button>
+        </div>
+
+        <!-- Existing labels -->
+        <div class="labelList" *ngIf="projectLabels.length">
+          <div class="labelListItem" *ngFor="let label of projectLabels">
+            <span class="labelDot" [style.background]="label.color"></span>
+            <span class="labelListName">{{ label.name }}</span>
+            <button class="labelDeleteBtn" (click)="deleteLabel(label.id)" title="Delete label">×</button>
+          </div>
+        </div>
+        <p *ngIf="!projectLabels.length" class="labelEmpty">No labels yet. Create one above.</p>
+        <p *ngIf="projectLabels.length" class="labelHint">
+          💡 Click any task on the board to open its detail and assign labels.
+        </p>
+
+      </div>
+      <div class="task-modal-footer">
+        <button class="btn-modal-ghost" (click)="showLabelManager = false">Done</button>
       </div>
     </div>
   </div>

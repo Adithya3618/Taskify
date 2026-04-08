@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, of, throwError } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 
 export interface AuthUser {
   id?: string;
@@ -67,6 +68,36 @@ export class AuthService {
       reset_token: resetToken,
       new_password: newPassword
     });
+  }
+
+  handleGoogleToken(params: { token: string; name: string; email: string; id: string }): void {
+    this.setToken(params.token);
+    this.setSession({ id: params.id, name: params.name, email: params.email });
+  }
+
+  /** Check if Google OAuth is configured, then redirect. Returns error observable if not available. */
+  startGoogleLogin(): Observable<boolean> {
+    return this.http.get('/api/auth/google/login', { responseType: 'text', observe: 'response' }).pipe(
+      map(() => true),
+      catchError(err => {
+        if (err.status === 503 || err.status === 500) {
+          return throwError(() => new Error('Google sign-in is not available right now.'));
+        }
+        // status 0 = CORS/network error = backend redirected to Google = it IS configured
+        return of(true);
+      })
+    );
+  }
+
+  loginWithGoogleCallback(state: string, code: string): Observable<LoginResponse> {
+    return this.http.get<LoginResponse>(`${this.apiUrl}/google/callback`, {
+      params: { state, code }
+    }).pipe(
+      tap(response => {
+        this.setToken(response.token);
+        this.setSession(response.user);
+      })
+    );
   }
 
   logout(): void {
