@@ -102,4 +102,5 @@ describe('AuthService', () => {
     expect(service.getToken()).toBe(mockToken);
     expect(service.getCurrentUser()).toEqual(mockUser);
   });
+
 });
