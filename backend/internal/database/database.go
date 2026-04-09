@@ -128,7 +128,23 @@ func (db *DB) createTables() error {
 	)
 	`
 
-	tables := []string{projectsTable, stagesTable, tasksTable, messagesTable, projectMembersTable, activityLogsTable}
+	// Create project_invites table for invite links
+	projectInvitesTable := `
+	CREATE TABLE IF NOT EXISTS project_invites (
+		id TEXT PRIMARY KEY,
+		project_id INTEGER NOT NULL,
+		invited_by TEXT NOT NULL,
+		role TEXT NOT NULL DEFAULT 'member',
+		status TEXT NOT NULL DEFAULT 'pending',
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		expires_at DATETIME,
+		accepted_by TEXT,
+		FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+		FOREIGN KEY (invited_by) REFERENCES users(id) ON DELETE CASCADE
+	)
+	`
+
+	tables := []string{projectsTable, stagesTable, tasksTable, messagesTable, projectMembersTable, activityLogsTable, projectInvitesTable}
 
 	for _, table := range tables {
 		if _, err := db.Exec(table); err != nil {
@@ -155,6 +171,9 @@ func (db *DB) createTables() error {
 		"CREATE INDEX IF NOT EXISTS idx_activity_logs_project ON activity_logs(project_id)",
 		"CREATE INDEX IF NOT EXISTS idx_activity_logs_user ON activity_logs(user_id)",
 		"CREATE INDEX IF NOT EXISTS idx_activity_logs_action ON activity_logs(action)",
+		"CREATE INDEX IF NOT EXISTS idx_project_invites_project ON project_invites(project_id)",
+		"CREATE INDEX IF NOT EXISTS idx_project_invites_id ON project_invites(id)",
+		"CREATE INDEX IF NOT EXISTS idx_project_invites_status ON project_invites(status)",
 	}
 
 	for _, index := range indexes {

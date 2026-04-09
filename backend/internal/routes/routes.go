@@ -95,6 +95,16 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	projectMemberRoutes.HandleFunc("", projectMemberController.GetMembers).Methods("GET")
 	projectMemberRoutes.HandleFunc("/{userId}", projectMemberController.RemoveMember).Methods("DELETE")
 
+	// Invite routes (protected)
+	inviteRoutes := api.PathPrefix("/projects/{id}/invites").Subrouter()
+	inviteRoutes.Use(jwtMiddleware)
+	inviteRoutes.Use(projectAccessMiddleware)
+	inviteRoutes.HandleFunc("", projectMemberController.CreateInvite).Methods("POST")
+
+	// Public invite acceptance (needs auth but not project access)
+	protected.HandleFunc("/invites/{id}", projectMemberController.GetInvite).Methods("GET")
+	protected.HandleFunc("/invites/{id}/accept", projectMemberController.AcceptInvite).Methods("POST")
+
 	// Stage routes (protected)
 	protected.HandleFunc("/projects/{projectId}/stages", stageController.CreateStage).Methods("POST")
 	protected.HandleFunc("/projects/{projectId}/stages", stageController.GetStagesByProject).Methods("GET")

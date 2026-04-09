@@ -22,6 +22,81 @@ func NewProjectMemberController(service *services.ProjectMemberService) *Project
 	return &ProjectMemberController{service: service}
 }
 
+// CreateInvite handles POST /api/projects/:id/invites
+func (c *ProjectMemberController) CreateInvite(w http.ResponseWriter, r *http.Request) {
+	currentUserID := getUserIDFromContext(r)
+	if currentUserID == "" {
+		helpers.WriteError(w, http.StatusUnauthorized, "Authentication required", helpers.ErrCodeUnauthorized)
+		return
+	}
+
+	projectID, err := getProjectID(r)
+	if err != nil {
+		helpers.WriteError(w, http.StatusBadRequest, "Invalid project ID", helpers.ErrCodeBadRequest)
+		return
+	}
+
+	var req struct {
+		ExpiresInHours int `json:"expires_in_hours"`
+	}
+	json.NewDecoder(r.Body).Decode(&req)
+
+	// Default expiry: 7 days
+	if req.ExpiresInHours <= 0 {
+		req.ExpiresInHours = 168 // 7 days
+	}
+
+	invite, err := c.service.CreateInvite(projectID, currentUserID, req.ExpiresInHours)
+	if err != nil {
+		handleServiceError(w, err)
+		return
+	}
+
+	helpers.WriteSuccess(w, http.StatusCreated, invite, "Invite created successfully")
+}
+
+// AcceptInvite handles POST /api/invites/:id/accept
+func (c *ProjectMemberController) AcceptInvite(w http.ResponseWriter, r *http.Request) {
+	currentUserID := getUserIDFromContext(r)
+	if currentUserID == "" {
+		helpers.WriteError(w, http.StatusUnauthorized, "Authentication required", helpers.ErrCodeUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	inviteID := vars["id"]
+	if inviteID == "" {
+		helpers.WriteError(w, http.StatusBadRequest, "Invite ID required", helpers.ErrCodeBadRequest)
+		return
+	}
+
+	invite, err := c.service.AcceptInviteByID(inviteID, currentUserID)
+	if err != nil {
+		handleServiceError(w, err)
+		return
+	}
+
+	helpers.WriteSuccess(w, http.StatusOK, invite, "Invite accepted successfully")
+}
+
+// GetInvite handles GET /api/invites/:id
+func (c *ProjectMemberController) GetInvite(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	inviteID := vars["id"]
+	if inviteID == "" {
+		helpers.WriteError(w, http.StatusBadRequest, "Invite ID required", helpers.ErrCodeBadRequest)
+		return
+	}
+
+	invite, err := c.service.GetInvite(inviteID)
+	if err != nil {
+		handleServiceError(w, err)
+		return
+	}
+
+	helpers.WriteSuccess(w, http.StatusOK, invite, "")
+}
+
 // AddMember handles POST /api/projects/:id/members
 func (c *ProjectMemberController) AddMember(w http.ResponseWriter, r *http.Request) {
 	currentUserID := getUserIDFromContext(r)
