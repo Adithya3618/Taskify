@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"backend/internal/auth/controller"
-	"backend/internal/auth/middleware"
+	authmiddleware "backend/internal/auth/middleware"
 	"backend/internal/auth/repository"
 	"backend/internal/auth/services"
 	"backend/internal/controllers"
 	"backend/internal/database"
+	"backend/internal/middleware"
 	projectServices "backend/internal/services"
 
 	"github.com/gorilla/mux"
@@ -43,15 +44,20 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	stageService := projectServices.NewStageService(db.DB)
 	taskService := projectServices.NewTaskService(db.DB)
 	messageService := projectServices.NewMessageService(db.DB)
+	projectMemberService := projectServices.NewProjectMemberService(db.DB)
 
 	// Initialize controllers
 	projectController := controllers.NewProjectController(projectService)
 	stageController := controllers.NewStageController(stageService)
 	taskController := controllers.NewTaskController(taskService)
 	messageController := controllers.NewMessageController(messageService)
+	projectMemberController := controllers.NewProjectMemberController(projectMemberService)
 
 	// Create JWT middleware
-	jwtMiddleware := middleware.JWTAuthMiddleware(jwtService)
+	jwtMiddleware := authmiddleware.JWTAuthMiddleware(jwtService)
+
+	// Create project access middleware
+	projectAccessMiddleware := middleware.ProjectAccessMiddleware(projectMemberService)
 
 	// API Routes
 	api := router.PathPrefix("/api").Subrouter()
@@ -80,6 +86,14 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	protected.HandleFunc("/projects/{id}", projectController.GetProject).Methods("GET")
 	protected.HandleFunc("/projects/{id}", projectController.UpdateProject).Methods("PUT")
 	protected.HandleFunc("/projects/{id}", projectController.DeleteProject).Methods("DELETE")
+
+	// Project Member routes (protected with project access check)
+	projectMemberRoutes := api.PathPrefix("/projects/{id}/members").Subrouter()
+	projectMemberRoutes.Use(jwtMiddleware)
+	projectMemberRoutes.Use(projectAccessMiddleware)
+	projectMemberRoutes.HandleFunc("", projectMemberController.AddMember).Methods("POST")
+	projectMemberRoutes.HandleFunc("", projectMemberController.GetMembers).Methods("GET")
+	projectMemberRoutes.HandleFunc("/{userId}", projectMemberController.RemoveMember).Methods("DELETE")
 
 	// Stage routes (protected)
 	protected.HandleFunc("/projects/{projectId}/stages", stageController.CreateStage).Methods("POST")
