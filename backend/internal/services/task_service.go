@@ -106,7 +106,23 @@ func (s *TaskService) GetTasksByStage(userID string, stageID int64) ([]models.Ta
 	}
 
 	rows, err := s.db.Query(
-		"SELECT id, user_id, stage_id, title, description, position, deadline, priority, assigned_to, created_at, updated_at FROM tasks WHERE stage_id = ? AND user_id = ? ORDER BY position",
+		`SELECT
+			tasks.id,
+			tasks.user_id,
+			tasks.stage_id,
+			tasks.title,
+			tasks.description,
+			tasks.position,
+			tasks.deadline,
+			tasks.priority,
+			tasks.assigned_to,
+			COALESCE((SELECT COUNT(*) FROM subtasks WHERE subtasks.task_id = tasks.id), 0) AS subtask_count,
+			COALESCE((SELECT COUNT(*) FROM subtasks WHERE subtasks.task_id = tasks.id AND subtasks.is_completed = 1), 0) AS completed_count,
+			tasks.created_at,
+			tasks.updated_at
+		FROM tasks
+		WHERE tasks.stage_id = ? AND tasks.user_id = ?
+		ORDER BY tasks.position`,
 		stageID, userID,
 	)
 	if err != nil {
@@ -129,7 +145,22 @@ func (s *TaskService) GetTasksByStage(userID string, stageID int64) ([]models.Ta
 // GetTaskByID retrieves a task by ID (validates ownership)
 func (s *TaskService) GetTaskByID(userID string, id int64) (*models.Task, error) {
 	row := s.db.QueryRow(
-		"SELECT id, user_id, stage_id, title, description, position, deadline, priority, assigned_to, created_at, updated_at FROM tasks WHERE id = ? AND user_id = ?",
+		`SELECT
+			tasks.id,
+			tasks.user_id,
+			tasks.stage_id,
+			tasks.title,
+			tasks.description,
+			tasks.position,
+			tasks.deadline,
+			tasks.priority,
+			tasks.assigned_to,
+			COALESCE((SELECT COUNT(*) FROM subtasks WHERE subtasks.task_id = tasks.id), 0) AS subtask_count,
+			COALESCE((SELECT COUNT(*) FROM subtasks WHERE subtasks.task_id = tasks.id AND subtasks.is_completed = 1), 0) AS completed_count,
+			tasks.created_at,
+			tasks.updated_at
+		FROM tasks
+		WHERE tasks.id = ? AND tasks.user_id = ?`,
 		id, userID,
 	)
 	task, err := scanTask(row)
@@ -229,6 +260,8 @@ func scanTask(scanner taskScanner) (models.Task, error) {
 		&deadline,
 		&priority,
 		&assignedTo,
+		&task.SubtaskCount,
+		&task.CompletedCount,
 		&task.CreatedAt,
 		&task.UpdatedAt,
 	)

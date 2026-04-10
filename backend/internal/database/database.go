@@ -90,7 +90,33 @@ func (db *DB) createTables() error {
 	)
 	`
 
-	tables := []string{projectsTable, stagesTable, tasksTable, messagesTable}
+	commentsTable := `
+	CREATE TABLE IF NOT EXISTS comments (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		task_id INTEGER NOT NULL,
+		user_id TEXT,
+		author_name TEXT NOT NULL,
+		content TEXT NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+	)
+	`
+
+	subtasksTable := `
+	CREATE TABLE IF NOT EXISTS subtasks (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		task_id INTEGER NOT NULL,
+		title TEXT NOT NULL,
+		is_completed INTEGER DEFAULT 0,
+		position INTEGER DEFAULT 0,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+	)
+	`
+
+	tables := []string{projectsTable, stagesTable, tasksTable, messagesTable, commentsTable, subtasksTable}
 
 	for _, table := range tables {
 		if _, err := db.Exec(table); err != nil {
@@ -111,6 +137,10 @@ func (db *DB) createTables() error {
 		"CREATE INDEX IF NOT EXISTS idx_tasks_stage ON tasks(stage_id)",
 		"CREATE INDEX IF NOT EXISTS idx_messages_user ON messages(user_id)",
 		"CREATE INDEX IF NOT EXISTS idx_messages_project ON messages(project_id)",
+		"CREATE INDEX IF NOT EXISTS idx_comments_task ON comments(task_id)",
+		"CREATE INDEX IF NOT EXISTS idx_comments_user ON comments(user_id)",
+		"CREATE INDEX IF NOT EXISTS idx_subtasks_task ON subtasks(task_id)",
+		"CREATE INDEX IF NOT EXISTS idx_subtasks_task_position ON subtasks(task_id, position)",
 	}
 
 	for _, index := range indexes {
