@@ -95,7 +95,7 @@ The application follows a clean client–server architecture:
 ```bash ![1771628297360](image/README/1771628297360.png)![1771628300694](image/README/1771628300694.png)![1771628301067](image/README/1771628301067.png)
 cd backend
 go mod tidy
-go run main.go
+go run cmd/server/main.go
 ```
 ## Frontend Setup
 ```bash

@@ -22,12 +22,26 @@ export class SignupComponent {
   error = '';
   showPassword = false;
   showConfirmPassword = false;
+  googleLoading = false;
+  googleError = '';
 
   constructor(
     private router: Router,
     private authService: AuthService,
     public themeService: ThemeService
   ) {}
+
+  signInWithGoogle() {
+    this.googleLoading = true;
+    this.googleError = '';
+    this.authService.startGoogleLogin().subscribe({
+      next: () => { window.location.href = '/api/auth/google/login'; },
+      error: (err: Error) => {
+        this.googleLoading = false;
+        this.googleError = err.message || 'Google sign-in is not available right now.';
+      }
+    });
+  }
 
   onSubmit() {
     this.error = '';

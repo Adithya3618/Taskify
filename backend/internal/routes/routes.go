@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"backend/internal/auth/controller"
-	"backend/internal/auth/middleware"
+	authmiddleware "backend/internal/auth/middleware"
 	"backend/internal/auth/repository"
 	"backend/internal/auth/services"
 	"backend/internal/controllers"
 	"backend/internal/database"
+	"backend/internal/middleware"
 	projectServices "backend/internal/services"
 
 	"github.com/gorilla/mux"
@@ -45,6 +46,7 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	commentService := projectServices.NewCommentService(db.DB)
 	subtaskService := projectServices.NewSubtaskService(db.DB)
 	messageService := projectServices.NewMessageService(db.DB)
+	projectMemberService := projectServices.NewProjectMemberService(db.DB)
 
 	// Initialize controllers
 	projectController := controllers.NewProjectController(projectService)
@@ -53,9 +55,13 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	commentController := controllers.NewCommentController(commentService)
 	subtaskController := controllers.NewSubtaskController(subtaskService)
 	messageController := controllers.NewMessageController(messageService)
+	projectMemberController := controllers.NewProjectMemberController(projectMemberService)
 
 	// Create JWT middleware
-	jwtMiddleware := middleware.JWTAuthMiddleware(jwtService)
+	jwtMiddleware := authmiddleware.JWTAuthMiddleware(jwtService)
+
+	// Create project access middleware
+	projectAccessMiddleware := middleware.ProjectAccessMiddleware(projectMemberService)
 
 	// API Routes
 	api := router.PathPrefix("/api").Subrouter()
@@ -84,6 +90,24 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	protected.HandleFunc("/projects/{id}", projectController.GetProject).Methods("GET")
 	protected.HandleFunc("/projects/{id}", projectController.UpdateProject).Methods("PUT")
 	protected.HandleFunc("/projects/{id}", projectController.DeleteProject).Methods("DELETE")
+
+	// Project Member routes (protected with project access check)
+	projectMemberRoutes := api.PathPrefix("/projects/{id}/members").Subrouter()
+	projectMemberRoutes.Use(jwtMiddleware)
+	projectMemberRoutes.Use(projectAccessMiddleware)
+	projectMemberRoutes.HandleFunc("", projectMemberController.AddMember).Methods("POST")
+	projectMemberRoutes.HandleFunc("", projectMemberController.GetMembers).Methods("GET")
+	projectMemberRoutes.HandleFunc("/{userId}", projectMemberController.RemoveMember).Methods("DELETE")
+
+	// Invite routes (protected)
+	inviteRoutes := api.PathPrefix("/projects/{id}/invites").Subrouter()
+	inviteRoutes.Use(jwtMiddleware)
+	inviteRoutes.Use(projectAccessMiddleware)
+	inviteRoutes.HandleFunc("", projectMemberController.CreateInvite).Methods("POST")
+
+	// Public invite acceptance (needs auth but not project access)
+	protected.HandleFunc("/invites/{id}", projectMemberController.GetInvite).Methods("GET")
+	protected.HandleFunc("/invites/{id}/accept", projectMemberController.AcceptInvite).Methods("POST")
 
 	// Stage routes (protected)
 	protected.HandleFunc("/projects/{projectId}/stages", stageController.CreateStage).Methods("POST")

@@ -1,20 +1,24 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
+import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { ApiService } from '../../services/api.service';
 import { Project } from '../../models/project.model';
 import { Stage, CreateStageRequest } from '../../models/stage.model';
 import { Task, CreateTaskRequest } from '../../models/task.model';
+import { Label } from '../../models/label.model';
 import { AuthService } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
 import { TaskCompletionStorageService } from '../../services/task-completion-storage.service';
+import { NotificationService } from '../../services/notification.service';
+import { NotificationBellComponent } from '../../components/notification-bell/notification-bell.component';
 
 @Component({
   selector: 'app-board',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DragDropModule, RouterLink, RouterLinkActive, NotificationBellComponent],
   templateUrl: './board.component.html',
   styleUrls: ['./board.component.scss']
 })
@@ -46,6 +50,7 @@ export class BoardComponent implements OnInit, OnDestroy {
   newTaskDues: { [key: number]: string } = {};
   newTaskPriorities: { [key: number]: string } = {};
   newTaskNotes: { [key: number]: string } = {};
+  newTaskLabels: { [key: number]: string[] } = {};
   showTaskDetails: { [key: number]: boolean } = {};
 
   // Board switcher
@@ -62,6 +67,19 @@ export class BoardComponent implements OnInit, OnDestroy {
   filterCompletion = '';
   filterPriority = '';
   filterDue = '';
+  filterLabel = '';
+
+  // Labels
+  projectLabels: Label[] = [];
+  showLabelManager = false;
+  newLabelName = '';
+  newLabelColor = '#818CF8';
+  taskLabelMap: Record<number, string[]> = {};
+  readonly LABEL_COLORS = [
+    '#818CF8', '#6366f1', '#22D3EE', '#34D399',
+    '#FBBF24', '#F87171', '#E879F9', '#F59E0B',
+    '#10B981', '#60A5FA', '#FB923C', '#A78BFA'
+  ];
 
   // Share state
   showShareModal = false;
@@ -69,6 +87,9 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   /** Delete task confirmation (replaces window.confirm). */
   deleteTaskPending: { stageId: number; taskId: number; taskTitle: string } | null = null;
+
+  /** Delete list (stage) confirmation — replaces window.confirm on column ×. */
+  deleteStagePending: { stageId: number; stageName: string } | null = null;
 
   // Task detail view/edit modal state
   detailTask: Task | null = null;
@@ -88,7 +109,8 @@ export class BoardComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     public themeService: ThemeService,
     private taskCompletionStorage: TaskCompletionStorageService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private notificationService: NotificationService
   ) {}
 
   ngOnInit() {
@@ -161,6 +183,7 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   loadProject() {
     this.loading = true;
+    this.loadLabels();
     console.log('Loading project from API...');
     this.apiService.getProject(this.projectId).subscribe({
       next: (project) => {
@@ -189,7 +212,7 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.apiService.getStages(this.projectId).subscribe({
       next: (stages) => {
         console.log('Stages loaded:', stages);
-        this.stages = stages || [];
+        this.stages = (stages || []).map((s) => ({ ...s, tasks: s.tasks ?? [] }));
         this.loadCollapsedColumnState();
         // Load tasks for each stage
         if (this.stages.length > 0) {
@@ -216,9 +239,80 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.apiService.getTasks(this.projectId, stage.id).subscribe({
       next: (tasks) => {
         stage.tasks = this.taskCompletionStorage.mergeTasks(this.projectId, tasks || []);
+        this.sortStageTasks(stage);
+        // Check for upcoming/overdue deadlines and push notifications
+        const withDeadlines = (tasks || [])
+          .map(t => ({ id: t.id, title: t.title, deadline: this.parseCardMeta(t.description || '').due }))
+          .filter(t => !!t.deadline);
+        if (withDeadlines.length) {
+          this.notificationService.checkDeadlines(withDeadlines, this.projectId);
+        }
       },
       error: (err) => {
         console.error('Failed to load tasks for stage:', stage.id, err);
+      }
+    });
+  }
+
+  private sortStageTasks(stage: Stage): void {
+    if (!stage.tasks?.length) return;
+    stage.tasks.sort((a, b) => a.position - b.position);
+  }
+
+  /** CDK drop list ids for connecting columns (drag tasks between lists). */
+  get dropListIds(): string[] {
+    return this.stages.map((s) => this.stageDropListId(s.id));
+  }
+
+  stageDropListId(stageId: number): string {
+    return `stage-drop-${stageId}`;
+  }
+
+  /** Stable task array for CDK drop lists (must not allocate a new [] each change detection). */
+  stageTasks(stage: Stage): Task[] {
+    if (!stage.tasks) stage.tasks = [];
+    return stage.tasks;
+  }
+
+  private parseDropListId(dropListElementId: string): number | null {
+    const m = dropListElementId?.match(/^stage-drop-(\d+)$/);
+    return m ? +m[1] : null;
+  }
+
+  onTaskDrop(event: CdkDragDrop<Task[]>): void {
+    if (this.hasActiveFilters) return;
+
+    const prevStageId = this.parseDropListId(event.previousContainer.id);
+    const nextStageId = this.parseDropListId(event.container.id);
+    if (prevStageId === null || nextStageId === null) return;
+
+    const task = event.item.data as Task | undefined;
+    if (!task) return;
+
+    if (event.previousContainer === event.container) {
+      moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
+    } else {
+      transferArrayItem(
+        event.previousContainer.data,
+        event.container.data,
+        event.previousIndex,
+        event.currentIndex
+      );
+    }
+
+    const newPos = event.currentIndex;
+    this.apiService.moveTask(task.id, { newStageId: nextStageId, newPos }).subscribe({
+      next: () => {
+        const prev = this.stages.find((s) => s.id === prevStageId);
+        const next = this.stages.find((s) => s.id === nextStageId);
+        if (prev) this.loadTasks(prev);
+        if (next && next.id !== prev?.id) this.loadTasks(next);
+      },
+      error: () => {
+        const prev = this.stages.find((s) => s.id === prevStageId);
+        const next = this.stages.find((s) => s.id === nextStageId);
+        if (prev) this.loadTasks(prev);
+        if (next) this.loadTasks(next);
       }
     });
   }
@@ -370,16 +464,22 @@ export class BoardComponent implements OnInit, OnDestroy {
           if (!stage.tasks) stage.tasks = [];
           stage.tasks.push(task);
         }
+        // Apply selected labels to the new task
+        const selectedLabels = this.newTaskLabels[stageId] || [];
+        if (selectedLabels.length) {
+          this.taskLabelMap[task.id] = selectedLabels;
+          localStorage.setItem(this.taskLabelsKey(task.id), JSON.stringify(selectedLabels));
+        }
         this.newTaskTitles[stageId] = '';
         this.newTaskDescs[stageId] = '';
         this.newTaskDues[stageId] = '';
         this.newTaskPriorities[stageId] = '';
         this.newTaskNotes[stageId] = '';
+        this.newTaskLabels[stageId] = [];
         this.showTaskDetails[stageId] = false;
       },
       error: (err) => {
         console.error('Failed to create task:', err);
-        // Demo fallback: keep board usable even when backend task creation fails
         const stage = this.stages.find(s => s.id === stageId);
         if (stage) {
           if (!stage.tasks) stage.tasks = [];
@@ -394,12 +494,18 @@ export class BoardComponent implements OnInit, OnDestroy {
             updated_at: new Date().toISOString()
           };
           stage.tasks.push(localTask);
+          const selectedLabels = this.newTaskLabels[stageId] || [];
+          if (selectedLabels.length) {
+            this.taskLabelMap[localTask.id] = selectedLabels;
+            localStorage.setItem(this.taskLabelsKey(localTask.id), JSON.stringify(selectedLabels));
+          }
         }
         this.newTaskTitles[stageId] = '';
         this.newTaskDescs[stageId] = '';
         this.newTaskDues[stageId] = '';
         this.newTaskPriorities[stageId] = '';
         this.newTaskNotes[stageId] = '';
+        this.newTaskLabels[stageId] = [];
         this.showTaskDetails[stageId] = false;
       }
     });
@@ -451,27 +557,41 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.saveCollapsedColumnState();
   }
 
-  deleteStage(stageId: number) {
-    if (confirm('Are you sure you want to delete this stage and all its tasks?')) {
-      this.apiService.deleteStage(stageId).subscribe({
-        next: () => {
-          delete this.collapsedStages[stageId];
-          this.saveCollapsedColumnState();
-          this.stages = this.stages.filter(s => s.id !== stageId);
-        },
-        error: (err) => {
-          console.error('Failed to delete stage:', err);
-          // Demo fallback: remove locally if backend delete is unavailable
-          delete this.collapsedStages[stageId];
-          this.saveCollapsedColumnState();
-          this.stages = this.stages.filter(s => s.id !== stageId);
-        }
-      });
-    }
+  requestDeleteStage(stageId: number, stageName: string): void {
+    this.deleteTaskPending = null;
+    this.deleteStagePending = { stageId, stageName };
+  }
+
+  cancelDeleteStage(): void {
+    this.deleteStagePending = null;
+  }
+
+  confirmDeleteStage(): void {
+    if (!this.deleteStagePending) return;
+    const { stageId } = this.deleteStagePending;
+    this.deleteStagePending = null;
+    this.performDeleteStage(stageId);
+  }
+
+  private performDeleteStage(stageId: number): void {
+    this.apiService.deleteStage(stageId).subscribe({
+      next: () => {
+        delete this.collapsedStages[stageId];
+        this.saveCollapsedColumnState();
+        this.stages = this.stages.filter((s) => s.id !== stageId);
+      },
+      error: (err) => {
+        console.error('Failed to delete stage:', err);
+        delete this.collapsedStages[stageId];
+        this.saveCollapsedColumnState();
+        this.stages = this.stages.filter((s) => s.id !== stageId);
+      }
+    });
   }
 
   requestDeleteTask(stageId: number, taskId: number, taskTitle: string, event: Event): void {
     event.stopPropagation();
+    this.deleteStagePending = null;
     this.deleteTaskPending = { stageId, taskId, taskTitle };
   }
 
@@ -555,10 +675,11 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.filterCompletion = '';
     this.filterPriority = '';
     this.filterDue = '';
+    this.filterLabel = '';
   }
 
   get hasActiveFilters(): boolean {
-    return !!(this.filterCompletion || this.filterPriority || this.filterDue);
+    return !!(this.filterCompletion || this.filterPriority || this.filterDue || this.filterLabel);
   }
 
   getFilteredTasks(stage: Stage): Task[] {
@@ -570,7 +691,7 @@ export class BoardComponent implements OnInit, OnDestroy {
     }
     if (this.filterPriority) {
       tasks = tasks.filter(t => {
-        const p = this.getTaskPriority(t).toLowerCase();
+        const p = this.getEffectivePriority(t).toLowerCase();
         return p === this.filterPriority.toLowerCase();
       });
     }
@@ -590,7 +711,83 @@ export class BoardComponent implements OnInit, OnDestroy {
         return true;
       });
     }
+    if (this.filterLabel) {
+      tasks = tasks.filter(t => this.getTaskLabelIds(t.id).includes(this.filterLabel));
+    }
     return tasks;
+  }
+
+  // ── Labels ────────────────────────────────────
+
+  private labelsKey(): string { return `taskify.labels.${this.projectId}`; }
+  private taskLabelsKey(taskId: number): string { return `taskify.task-labels.${this.projectId}.${taskId}`; }
+
+  loadLabels(): void {
+    try {
+      const raw = localStorage.getItem(this.labelsKey());
+      this.projectLabels = raw ? JSON.parse(raw) : [];
+    } catch { this.projectLabels = []; }
+  }
+
+  private saveLabels(): void {
+    localStorage.setItem(this.labelsKey(), JSON.stringify(this.projectLabels));
+  }
+
+  createLabel(): void {
+    const name = this.newLabelName.trim();
+    if (!name) return;
+    const label: Label = { id: `label-${Date.now()}`, name, color: this.newLabelColor };
+    this.projectLabels = [...this.projectLabels, label];
+    this.saveLabels();
+    this.newLabelName = '';
+  }
+
+  deleteLabel(labelId: string): void {
+    this.projectLabels = this.projectLabels.filter(l => l.id !== labelId);
+    this.saveLabels();
+    if (this.filterLabel === labelId) this.filterLabel = '';
+    Object.keys(this.taskLabelMap).forEach(tid => {
+      const id = +tid;
+      this.taskLabelMap[id] = (this.taskLabelMap[id] || []).filter(i => i !== labelId);
+      localStorage.setItem(this.taskLabelsKey(id), JSON.stringify(this.taskLabelMap[id]));
+    });
+  }
+
+  getTaskLabelIds(taskId: number): string[] {
+    if (!this.taskLabelMap[taskId]) {
+      try {
+        const raw = localStorage.getItem(this.taskLabelsKey(taskId));
+        this.taskLabelMap[taskId] = raw ? JSON.parse(raw) : [];
+      } catch { this.taskLabelMap[taskId] = []; }
+    }
+    return this.taskLabelMap[taskId];
+  }
+
+  getTaskLabels(taskId: number): Label[] {
+    return this.projectLabels.filter(l => this.getTaskLabelIds(taskId).includes(l.id));
+  }
+
+  isLabelOnTask(taskId: number, labelId: string): boolean {
+    return this.getTaskLabelIds(taskId).includes(labelId);
+  }
+
+  toggleLabelOnTask(taskId: number, labelId: string): void {
+    const current = this.getTaskLabelIds(taskId);
+    this.taskLabelMap[taskId] = current.includes(labelId)
+      ? current.filter(id => id !== labelId)
+      : [...current, labelId];
+    localStorage.setItem(this.taskLabelsKey(taskId), JSON.stringify(this.taskLabelMap[taskId]));
+  }
+
+  toggleNewTaskLabel(stageId: number, labelId: string): void {
+    const current = this.newTaskLabels[stageId] || [];
+    this.newTaskLabels[stageId] = current.includes(labelId)
+      ? current.filter(id => id !== labelId)
+      : [...current, labelId];
+  }
+
+  isLabelSelectedForNew(stageId: number, labelId: string): boolean {
+    return (this.newTaskLabels[stageId] || []).includes(labelId);
   }
 
   // ── Share ─────────────────────────────────────
@@ -704,9 +901,50 @@ export class BoardComponent implements OnInit, OnDestroy {
     return this.parseCardMeta(task.description || '').due;
   }
 
+  /** Display due as `Due Date: MM/DD/YYYY` (matches priority pill row). */
+  formatTaskDueDisplay(task: Task): string {
+    const raw = this.getTaskDue(task);
+    if (!raw?.trim()) return '';
+    const s = raw.trim();
+    const ymd = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (ymd) {
+      const [, yyyy, mm, dd] = ymd;
+      return `Due Date: ${mm}/${dd}/${yyyy}`;
+    }
+    const d = new Date(s);
+    if (Number.isNaN(d.getTime())) return s;
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `Due Date: ${mm}/${dd}/${yyyy}`;
+  }
+
+  /** Returns the visually escalated priority based on deadline proximity.
+   *  The stored priority is never changed — this is display-only. */
+  getEffectivePriority(task: Task): string {
+    const set = this.getTaskPriority(task).toLowerCase();
+    const raw = this.getTaskDue(task);
+
+    if (!raw?.trim()) return set; // no deadline → show as set
+
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const due = new Date(raw); due.setHours(0, 0, 0, 0);
+    const daysLeft = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    const rank: Record<string, number> = { '': 0, 'low': 1, 'lowest': 1, 'medium': 2, 'mid': 2, 'high': 3, 'highest': 3, 'urgent': 4, 'critical': 4 };
+    const label: Record<number, string> = { 1: 'Low', 2: 'Medium', 3: 'High', 4: 'Urgent' };
+
+    let minRank = rank[set] ?? 0;
+    if (daysLeft < 0)       minRank = Math.max(minRank, 4); // overdue → Urgent
+    else if (daysLeft === 0) minRank = Math.max(minRank, 3); // today   → High
+    else if (daysLeft <= 2)  minRank = Math.max(minRank, 2); // ≤2 days → Medium
+
+    return label[minRank] ?? set;
+  }
+
   getPriorityClass(task: Task): string {
-    const priority = this.getTaskPriority(task).toLowerCase();
-    if (priority === 'critical' || priority === 'high' || priority === 'highest') return 'priority-high';
+    const priority = this.getEffectivePriority(task).toLowerCase();
+    if (priority === 'urgent' || priority === 'critical' || priority === 'high' || priority === 'highest') return 'priority-high';
     if (priority === 'medium' || priority === 'mid') return 'priority-mid';
     if (priority === 'low' || priority === 'lowest') return 'priority-low';
     return 'priority-none';
@@ -714,10 +952,28 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   getCreatePriorityClass(stageId: number): string {
     const priority = (this.newTaskPriorities[stageId] || '').toLowerCase();
-    if (priority === 'critical' || priority === 'high') return 'priority-high';
+    if (priority === 'urgent' || priority === 'critical' || priority === 'high') return 'priority-high';
     if (priority === 'medium') return 'priority-mid';
     if (priority === 'low') return 'priority-low';
     return 'priority-none';
+  }
+
+  getDetailPriorityClass(): string {
+    const priority = (this.detailPriority || '').toLowerCase();
+    if (priority === 'urgent' || priority === 'critical' || priority === 'high') return 'priority-high';
+    if (priority === 'medium') return 'priority-mid';
+    if (priority === 'low') return 'priority-low';
+    return 'priority-none';
+  }
+
+  getDueDateClass(task: Task): string {
+    const raw = this.getTaskDue(task);
+    if (!raw?.trim()) return '';
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const due = new Date(raw); due.setHours(0, 0, 0, 0);
+    if (due < today) return 'due-overdue';
+    if (due.getTime() === today.getTime()) return 'due-today';
+    return '';
   }
 
   private migrateBoardOwnersEmail(oldEmail: string, newEmail: string) {

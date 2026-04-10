@@ -42,6 +42,19 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/signup/signup.component').then((m) => m.SignupComponent),
   },
+  {
+    path: 'auth/google/callback',
+    loadComponent: () =>
+      import('./pages/google-callback/google-callback.component').then((m) => m.GoogleCallbackComponent),
+  },
+
+  // Board — calendar / planner (must be registered before `board/:id` so the segment `planner` is not parsed as an id)
+  {
+    path: 'board/:id/planner',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/planner-board/planner-board.component').then((m) => m.PlannerBoardComponent),
+  },
 
   // Kanban board view
   {

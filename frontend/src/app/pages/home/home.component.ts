@@ -6,11 +6,12 @@ import { ApiService } from '../../services/api.service';
 import { Project } from '../../models/project.model';
 import { AuthService } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
+import { NotificationBellComponent } from '../../components/notification-bell/notification-bell.component';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, NotificationBellComponent],
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss']
 })

@@ -7,7 +7,7 @@ describe('Login Page', () => {
   });
 
   it('should display the login form', () => {
-    cy.get('h1').should('contain.text', 'Welcome back');
+    cy.get('h1').should('contain.text', 'Log in to Taskify');
     cy.get('input[name="email"]').should('be.visible');
     cy.get('input[name="password"]').should('be.visible');
     cy.get('button[type="submit"]').should('be.visible');
