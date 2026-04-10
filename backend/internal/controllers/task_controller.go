@@ -2,10 +2,13 @@ package controllers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"backend/internal/helpers"
+	"backend/internal/models"
 	"backend/internal/services"
 
 	"github.com/gorilla/mux"
@@ -13,6 +16,22 @@ import (
 
 type TaskController struct {
 	service *services.TaskService
+}
+
+type taskRequest struct {
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	Position    int        `json:"position"`
+	Deadline    *time.Time `json:"deadline"`
+	Priority    *string    `json:"priority"`
+	AssignedTo  *string    `json:"assigned_to"`
+}
+
+type taskUpdateRequest struct {
+	taskRequest
+	DeadlineProvided   bool
+	PriorityProvided   bool
+	AssignedToProvided bool
 }
 
 func NewTaskController(service *services.TaskService) *TaskController {
@@ -34,13 +53,8 @@ func (c *TaskController) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req struct {
-		Title       string `json:"title"`
-		Description string `json:"description"`
-		Position    int    `json:"position"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	req, err := decodeTaskRequest(r)
+	if err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
@@ -50,8 +64,12 @@ func (c *TaskController) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := c.service.CreateTask(userID, stageID, req.Title, req.Description, req.Position)
+	task, err := c.service.CreateTask(userID, stageID, req.Title, req.Description, req.Position, taskAttributesFromRequest(req))
 	if err != nil {
+		if errors.Is(err, services.ErrInvalidTaskPriority) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -131,19 +149,30 @@ func (c *TaskController) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req struct {
-		Title       string `json:"title"`
-		Description string `json:"description"`
-		Position    int    `json:"position"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	req, err := decodeTaskUpdateRequest(r)
+	if err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	task, err := c.service.UpdateTask(userID, id, req.Title, req.Description, req.Position)
+	existingTask, err := c.service.GetTaskByID(userID, id)
 	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if existingTask == nil {
+		http.Error(w, "Task not found or access denied", http.StatusNotFound)
+		return
+	}
+
+	attrs := mergeTaskAttributes(existingTask, req)
+
+	task, err := c.service.UpdateTask(userID, id, req.Title, req.Description, req.Position, attrs)
+	if err != nil {
+		if errors.Is(err, services.ErrInvalidTaskPriority) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -218,4 +247,61 @@ func (c *TaskController) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func taskAttributesFromRequest(req taskRequest) services.TaskAttributes {
+	return services.TaskAttributes{
+		Deadline:   req.Deadline,
+		Priority:   req.Priority,
+		AssignedTo: req.AssignedTo,
+	}
+}
+
+func mergeTaskAttributes(existing *models.Task, req taskUpdateRequest) services.TaskAttributes {
+	attrs := services.TaskAttributes{
+		Deadline:   existing.Deadline,
+		Priority:   existing.Priority,
+		AssignedTo: existing.AssignedTo,
+	}
+
+	if req.DeadlineProvided {
+		attrs.Deadline = req.Deadline
+	}
+	if req.PriorityProvided {
+		attrs.Priority = req.Priority
+	}
+	if req.AssignedToProvided {
+		attrs.AssignedTo = req.AssignedTo
+	}
+
+	return attrs
+}
+
+func decodeTaskRequest(r *http.Request) (taskRequest, error) {
+	var req taskRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	return req, err
+}
+
+func decodeTaskUpdateRequest(r *http.Request) (taskUpdateRequest, error) {
+	var raw map[string]json.RawMessage
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+		return taskUpdateRequest{}, err
+	}
+
+	payload, err := json.Marshal(raw)
+	if err != nil {
+		return taskUpdateRequest{}, err
+	}
+
+	var req taskUpdateRequest
+	if err := json.Unmarshal(payload, &req.taskRequest); err != nil {
+		return taskUpdateRequest{}, err
+	}
+
+	_, req.DeadlineProvided = raw["deadline"]
+	_, req.PriorityProvided = raw["priority"]
+	_, req.AssignedToProvided = raw["assigned_to"]
+
+	return req, nil
 }

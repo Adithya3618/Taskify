@@ -43,6 +43,8 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	projectService := projectServices.NewProjectService(db.DB)
 	stageService := projectServices.NewStageService(db.DB)
 	taskService := projectServices.NewTaskService(db.DB)
+	commentService := projectServices.NewCommentService(db.DB)
+	subtaskService := projectServices.NewSubtaskService(db.DB)
 	messageService := projectServices.NewMessageService(db.DB)
 	projectMemberService := projectServices.NewProjectMemberService(db.DB)
 
@@ -50,6 +52,8 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	projectController := controllers.NewProjectController(projectService)
 	stageController := controllers.NewStageController(stageService)
 	taskController := controllers.NewTaskController(taskService)
+	commentController := controllers.NewCommentController(commentService)
+	subtaskController := controllers.NewSubtaskController(subtaskService)
 	messageController := controllers.NewMessageController(messageService)
 	projectMemberController := controllers.NewProjectMemberController(projectMemberService)
 
@@ -119,6 +123,14 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	protected.HandleFunc("/tasks/{id}", taskController.UpdateTask).Methods("PUT")
 	protected.HandleFunc("/tasks/{id}/move", taskController.MoveTask).Methods("PUT")
 	protected.HandleFunc("/tasks/{id}", taskController.DeleteTask).Methods("DELETE")
+	protected.HandleFunc("/tasks/{id}/comments", commentController.CreateComment).Methods("POST")
+	protected.HandleFunc("/tasks/{id}/comments", commentController.GetCommentsByTask).Methods("GET")
+	protected.HandleFunc("/tasks/{id}/subtasks", subtaskController.CreateSubtask).Methods("POST")
+	protected.HandleFunc("/tasks/{id}/subtasks", subtaskController.GetSubtasksByTask).Methods("GET")
+	protected.HandleFunc("/comments/{id}", commentController.UpdateComment).Methods("PATCH")
+	protected.HandleFunc("/comments/{id}", commentController.DeleteComment).Methods("DELETE")
+	protected.HandleFunc("/subtasks/{id}", subtaskController.UpdateSubtask).Methods("PATCH")
+	protected.HandleFunc("/subtasks/{id}", subtaskController.DeleteSubtask).Methods("DELETE")
 
 	// Message routes (protected)
 	protected.HandleFunc("/projects/{projectId}/messages", messageController.CreateMessage).Methods("POST")
