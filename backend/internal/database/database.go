@@ -115,7 +115,6 @@ func (db *DB) createTables() error {
 	)
 	`
 
-<<<<<<< HEAD
 	commentsTable := `
 	CREATE TABLE IF NOT EXISTS comments (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -142,8 +141,6 @@ func (db *DB) createTables() error {
 	)
 	`
 
-	tables := []string{projectsTable, stagesTable, tasksTable, messagesTable, commentsTable, subtasksTable}
-=======
 	// Create activity_logs table for audit trail
 	activityLogsTable := `
 	CREATE TABLE IF NOT EXISTS activity_logs (
@@ -176,8 +173,17 @@ func (db *DB) createTables() error {
 	)
 	`
 
-	tables := []string{projectsTable, stagesTable, tasksTable, messagesTable, projectMembersTable, activityLogsTable, projectInvitesTable}
->>>>>>> 93bf3be21961f9a72356306483d97cb92d9c0b5b
+	tables := []string{
+		projectsTable,
+		projectMembersTable,
+		stagesTable,
+		tasksTable,
+		messagesTable,
+		commentsTable,
+		subtasksTable,
+		activityLogsTable,
+		projectInvitesTable,
+	}
 
 	for _, table := range tables {
 		if _, err := db.Exec(table); err != nil {
@@ -198,12 +204,10 @@ func (db *DB) createTables() error {
 		"CREATE INDEX IF NOT EXISTS idx_tasks_stage ON tasks(stage_id)",
 		"CREATE INDEX IF NOT EXISTS idx_messages_user ON messages(user_id)",
 		"CREATE INDEX IF NOT EXISTS idx_messages_project ON messages(project_id)",
-<<<<<<< HEAD
 		"CREATE INDEX IF NOT EXISTS idx_comments_task ON comments(task_id)",
 		"CREATE INDEX IF NOT EXISTS idx_comments_user ON comments(user_id)",
 		"CREATE INDEX IF NOT EXISTS idx_subtasks_task ON subtasks(task_id)",
 		"CREATE INDEX IF NOT EXISTS idx_subtasks_task_position ON subtasks(task_id, position)",
-=======
 		"CREATE INDEX IF NOT EXISTS idx_project_members_project ON project_members(project_id)",
 		"CREATE INDEX IF NOT EXISTS idx_project_members_user ON project_members(user_id)",
 		"CREATE INDEX IF NOT EXISTS idx_project_members_project_user ON project_members(project_id, user_id)",
@@ -213,7 +217,6 @@ func (db *DB) createTables() error {
 		"CREATE INDEX IF NOT EXISTS idx_project_invites_project ON project_invites(project_id)",
 		"CREATE INDEX IF NOT EXISTS idx_project_invites_id ON project_invites(id)",
 		"CREATE INDEX IF NOT EXISTS idx_project_invites_status ON project_invites(status)",
->>>>>>> 93bf3be21961f9a72356306483d97cb92d9c0b5b
 	}
 
 	for _, index := range indexes {
