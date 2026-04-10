@@ -3,26 +3,136 @@ package services
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
 	"backend/internal/auth/repository"
 	"backend/internal/models"
 	pmrepository "backend/internal/repository"
+
+	"github.com/google/uuid"
 )
 
 // ProjectMemberService handles business logic for project members
 type ProjectMemberService struct {
-	db       *sql.DB
-	pmRepo   *pmrepository.ProjectMemberRepository
-	userRepo *repository.UserRepository
+	db         *sql.DB
+	pmRepo     *pmrepository.ProjectMemberRepository
+	inviteRepo *pmrepository.InviteRepository
+	userRepo   *repository.UserRepository
 }
 
 // NewProjectMemberService creates a new ProjectMemberService
 func NewProjectMemberService(db *sql.DB) *ProjectMemberService {
 	return &ProjectMemberService{
-		db:       db,
-		pmRepo:   pmrepository.NewProjectMemberRepository(db),
-		userRepo: repository.NewUserRepository(db),
+		db:         db,
+		pmRepo:     pmrepository.NewProjectMemberRepository(db),
+		inviteRepo: pmrepository.NewInviteRepository(db),
+		userRepo:   repository.NewUserRepository(db),
 	}
+}
+
+// CreateInvite creates an invite link for a project
+func (s *ProjectMemberService) CreateInvite(projectID int64, invitedBy string, expiresInHours int) (*models.ProjectInvite, error) {
+	// Check if user is owner
+	isOwner, err := s.pmRepo.IsOwner(projectID, invitedBy)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check ownership: %v", err)
+	}
+	if !isOwner {
+		return nil, &ServiceError{Code: "ACCESS_DENIED", Message: "only owner can create invites"}
+	}
+
+	// Check project exists
+	exists, err := s.projectExists(projectID)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, &ServiceError{Code: "PROJECT_NOT_FOUND", Message: "project not found"}
+	}
+
+	// Generate invite ID
+	inviteID := uuid.New().String()
+
+	// Calculate expiry time
+	var expiresAt time.Time
+	if expiresInHours > 0 {
+		expiresAt = time.Now().Add(time.Duration(expiresInHours) * time.Hour)
+	}
+
+	invite := &models.ProjectInvite{
+		ID:        inviteID,
+		ProjectID: projectID,
+		InvitedBy: invitedBy,
+		Role:      "member",
+		Status:    "pending",
+		CreatedAt: time.Now(),
+		ExpiresAt: expiresAt,
+	}
+
+	err = s.inviteRepo.CreateInvite(invite)
+	if err != nil {
+		return nil, err
+	}
+
+	return invite, nil
+}
+
+// AcceptInviteByID accepts an invite using the invite ID
+func (s *ProjectMemberService) AcceptInviteByID(inviteID string, userID string) (*models.ProjectInvite, error) {
+	// Get invite
+	invite, err := s.inviteRepo.GetInviteByID(inviteID)
+	if err != nil {
+		return nil, err
+	}
+	if invite == nil {
+		return nil, &ServiceError{Code: "INVITE_NOT_FOUND", Message: "invite not found"}
+	}
+
+	// Check if invite is valid
+	valid, err := s.inviteRepo.IsValidInvite(inviteID)
+	if err != nil {
+		return nil, err
+	}
+	if !valid {
+		return nil, &ServiceError{Code: "INVITE_INVALID", Message: "invite is invalid or expired"}
+	}
+
+	// Check if user is already a member
+	isMember, err := s.pmRepo.IsMember(invite.ProjectID, userID)
+	if err != nil {
+		return nil, err
+	}
+	if isMember {
+		return nil, &ServiceError{Code: "ALREADY_MEMBER", Message: "you are already a member of this project"}
+	}
+
+	// Add user as member
+	_, err = s.pmRepo.AddMember(invite.ProjectID, userID, invite.InvitedBy, invite.Role)
+	if err != nil {
+		return nil, err
+	}
+
+	// Mark invite as accepted
+	err = s.inviteRepo.AcceptInvite(inviteID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	invite.Status = "accepted"
+	invite.AcceptedBy = userID
+	return invite, nil
+}
+
+// GetInvite retrieves an invite by ID
+func (s *ProjectMemberService) GetInvite(inviteID string) (*models.ProjectInvite, error) {
+	invite, err := s.inviteRepo.GetInviteByID(inviteID)
+	if err != nil {
+		return nil, err
+	}
+	if invite == nil {
+		return nil, &ServiceError{Code: "INVITE_NOT_FOUND", Message: "invite not found"}
+	}
+	return invite, nil
 }
 
 // projectExists checks if a project exists
