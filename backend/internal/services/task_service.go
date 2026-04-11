@@ -9,11 +9,12 @@ import (
 )
 
 type TaskService struct {
-	db *sql.DB
+	db          *sql.DB
+	activitySvc *ActivityService
 }
 
-func NewTaskService(db *sql.DB) *TaskService {
-	return &TaskService{db: db}
+func NewTaskService(db *sql.DB, activitySvc *ActivityService) *TaskService {
+	return &TaskService{db: db, activitySvc: activitySvc}
 }
 
 // verifyStageOwnership checks if stage belongs to user's project
@@ -55,6 +56,11 @@ func (s *TaskService) CreateTask(userID string, stageID int64, title, descriptio
 	id, err := result.LastInsertId()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get last insert id: %v", err)
+	}
+
+	// Log activity (ignore errors, non-critical)
+	if s.activitySvc != nil {
+		s.activitySvc.LogTaskCreated(projectID, userID, "", id, title)
 	}
 
 	return &models.Task{
@@ -158,11 +164,24 @@ func (s *TaskService) MoveTask(userID string, id int64, newStageID int64, newPos
 		return nil, fmt.Errorf("failed to move task: %v", err)
 	}
 
+	// Log activity
+	if s.activitySvc != nil {
+		s.activitySvc.LogTaskMoved(projectID, userID, "", id, "", "", "")
+	}
+
 	return s.GetTaskByID(userID, id)
 }
 
 // DeleteTask deletes a task (validates ownership)
 func (s *TaskService) DeleteTask(userID string, id int64) error {
+	// Get projectID for logging before deleting
+	var projectID int64
+	s.db.QueryRow(`
+		SELECT stages.project_id 
+		FROM tasks 
+		JOIN stages ON tasks.stage_id = stages.id 
+		WHERE tasks.id = ? AND tasks.user_id = ?`, id, userID).Scan(&projectID)
+
 	result, err := s.db.Exec("DELETE FROM tasks WHERE id = ? AND user_id = ?", id, userID)
 	if err != nil {
 		return fmt.Errorf("failed to delete task: %v", err)
@@ -175,6 +194,11 @@ func (s *TaskService) DeleteTask(userID string, id int64) error {
 
 	if rowsAffected == 0 {
 		return fmt.Errorf("task not found or access denied")
+	}
+
+	// Log activity
+	if s.activitySvc != nil && projectID > 0 {
+		s.activitySvc.LogTaskDeleted(projectID, userID, "", "")
 	}
 
 	return nil

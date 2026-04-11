@@ -42,9 +42,10 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	// Initialize business services
 	projectService := projectServices.NewProjectService(db.DB)
 	stageService := projectServices.NewStageService(db.DB)
-	taskService := projectServices.NewTaskService(db.DB)
 	messageService := projectServices.NewMessageService(db.DB)
 	projectMemberService := projectServices.NewProjectMemberService(db.DB)
+	activityService := projectServices.NewActivityService(db.DB, projectMemberService)
+	taskService := projectServices.NewTaskService(db.DB, activityService)
 
 	// Initialize controllers
 	projectController := controllers.NewProjectController(projectService)
@@ -52,6 +53,7 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	taskController := controllers.NewTaskController(taskService)
 	messageController := controllers.NewMessageController(messageService)
 	projectMemberController := controllers.NewProjectMemberController(projectMemberService)
+	activityController := controllers.NewActivityController(activityService)
 
 	// Create JWT middleware
 	jwtMiddleware := authmiddleware.JWTAuthMiddleware(jwtService)
@@ -125,6 +127,13 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	protected.HandleFunc("/projects/{projectId}/messages", messageController.GetMessagesByProject).Methods("GET")
 	protected.HandleFunc("/projects/{projectId}/messages/recent", messageController.GetRecentMessages).Methods("GET")
 	protected.HandleFunc("/messages/{id}", messageController.DeleteMessage).Methods("DELETE")
+
+	// Activity routes (protected with project access check)
+	activityRoutes := api.PathPrefix("/projects/{id}/activity").Subrouter()
+	activityRoutes.Use(jwtMiddleware)
+	activityRoutes.Use(projectAccessMiddleware)
+	activityRoutes.HandleFunc("", activityController.GetActivity).Methods("GET")
+	activityRoutes.HandleFunc("/recent", activityController.GetRecentActivity).Methods("GET")
 
 	// Health check endpoint (public)
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
