@@ -21,6 +21,8 @@ export class LoginComponent implements OnDestroy {
   loading = false;
   error = '';
   showPassword = false;
+  googleLoading = false;
+  googleError = '';
   showForgotNewPassword = false;
   showForgotConfirmPassword = false;
 
@@ -210,6 +212,18 @@ export class LoginComponent implements OnDestroy {
     if (this.forgotStep === 'reset') return 'Choose a strong new password for your account.';
     if (this.forgotStep === 'success') return 'You can now sign in with your new password.';
     return 'Enter your registered email to receive a verification code.';
+  }
+
+  signInWithGoogle() {
+    this.googleLoading = true;
+    this.googleError = '';
+    this.authService.startGoogleLogin().subscribe({
+      next: () => { window.location.href = '/api/auth/google/login'; },
+      error: (err: Error) => {
+        this.googleLoading = false;
+        this.googleError = err.message || 'Google sign-in is not available right now.';
+      }
+    });
   }
 
   onSubmit() {

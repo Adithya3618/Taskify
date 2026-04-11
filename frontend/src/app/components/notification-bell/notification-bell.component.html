@@ -1,0 +1,51 @@
+<div class="bellWrap">
+  <!-- Bell button -->
+  <button class="bellBtn" (click)="toggle()" [class.active]="isOpen" aria-label="Notifications">
+    <svg class="bellIcon" viewBox="0 0 24 24" fill="none">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span class="badge" *ngIf="notifService.unreadCount() > 0">
+      {{ notifService.unreadCount() > 9 ? '9+' : notifService.unreadCount() }}
+    </span>
+  </button>
+
+  <!-- Dropdown panel -->
+  <div class="notifPanel" *ngIf="isOpen">
+    <div class="notifHeader">
+      <span class="notifTitle">Notifications</span>
+      <button class="markAllBtn" *ngIf="notifService.unreadCount() > 0" (click)="markAllRead()">
+        Mark all read
+      </button>
+    </div>
+
+    <!-- List -->
+    <div class="notifList" *ngIf="notifService.notifications().length; else emptyState">
+      <div
+        *ngFor="let n of notifService.notifications()"
+        class="notifItem"
+        [class.unread]="!n.is_read"
+        (click)="onNotificationClick(n)">
+        <span class="notifIcon">{{ iconForType(n.type) }}</span>
+        <div class="notifBody">
+          <p class="notifMsg">{{ n.message }}</p>
+          <span class="notifTime">{{ notifService.timeAgo(n.created_at) }}</span>
+        </div>
+        <span class="unreadDot" *ngIf="!n.is_read"></span>
+      </div>
+    </div>
+
+    <ng-template #emptyState>
+      <div class="notifEmpty">
+        <svg viewBox="0 0 24 24" fill="none" class="emptyIcon">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p>You're all caught up!</p>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Click-outside backdrop -->
+  <div class="notifBackdrop" *ngIf="isOpen" (click)="close()"></div>
+</div>

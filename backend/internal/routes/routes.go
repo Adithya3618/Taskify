@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"backend/internal/auth/controller"
-	"backend/internal/auth/middleware"
+	authmiddleware "backend/internal/auth/middleware"
 	"backend/internal/auth/repository"
 	"backend/internal/auth/services"
 	"backend/internal/controllers"
 	"backend/internal/database"
+	"backend/internal/middleware"
 	projectServices "backend/internal/services"
 
 	"github.com/gorilla/mux"
@@ -42,16 +43,25 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	projectService := projectServices.NewProjectService(db.DB)
 	stageService := projectServices.NewStageService(db.DB)
 	taskService := projectServices.NewTaskService(db.DB)
+	commentService := projectServices.NewCommentService(db.DB)
+	subtaskService := projectServices.NewSubtaskService(db.DB)
 	messageService := projectServices.NewMessageService(db.DB)
+	projectMemberService := projectServices.NewProjectMemberService(db.DB)
 
 	// Initialize controllers
 	projectController := controllers.NewProjectController(projectService)
 	stageController := controllers.NewStageController(stageService)
 	taskController := controllers.NewTaskController(taskService)
+	commentController := controllers.NewCommentController(commentService)
+	subtaskController := controllers.NewSubtaskController(subtaskService)
 	messageController := controllers.NewMessageController(messageService)
+	projectMemberController := controllers.NewProjectMemberController(projectMemberService)
 
 	// Create JWT middleware
-	jwtMiddleware := middleware.JWTAuthMiddleware(jwtService)
+	jwtMiddleware := authmiddleware.JWTAuthMiddleware(jwtService)
+
+	// Create project access middleware
+	projectAccessMiddleware := middleware.ProjectAccessMiddleware(projectMemberService)
 
 	// API Routes
 	api := router.PathPrefix("/api").Subrouter()
@@ -81,6 +91,24 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	protected.HandleFunc("/projects/{id}", projectController.UpdateProject).Methods("PUT")
 	protected.HandleFunc("/projects/{id}", projectController.DeleteProject).Methods("DELETE")
 
+	// Project Member routes (protected with project access check)
+	projectMemberRoutes := api.PathPrefix("/projects/{id}/members").Subrouter()
+	projectMemberRoutes.Use(jwtMiddleware)
+	projectMemberRoutes.Use(projectAccessMiddleware)
+	projectMemberRoutes.HandleFunc("", projectMemberController.AddMember).Methods("POST")
+	projectMemberRoutes.HandleFunc("", projectMemberController.GetMembers).Methods("GET")
+	projectMemberRoutes.HandleFunc("/{userId}", projectMemberController.RemoveMember).Methods("DELETE")
+
+	// Invite routes (protected)
+	inviteRoutes := api.PathPrefix("/projects/{id}/invites").Subrouter()
+	inviteRoutes.Use(jwtMiddleware)
+	inviteRoutes.Use(projectAccessMiddleware)
+	inviteRoutes.HandleFunc("", projectMemberController.CreateInvite).Methods("POST")
+
+	// Public invite acceptance (needs auth but not project access)
+	protected.HandleFunc("/invites/{id}", projectMemberController.GetInvite).Methods("GET")
+	protected.HandleFunc("/invites/{id}/accept", projectMemberController.AcceptInvite).Methods("POST")
+
 	// Stage routes (protected)
 	protected.HandleFunc("/projects/{projectId}/stages", stageController.CreateStage).Methods("POST")
 	protected.HandleFunc("/projects/{projectId}/stages", stageController.GetStagesByProject).Methods("GET")
@@ -95,6 +123,14 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	protected.HandleFunc("/tasks/{id}", taskController.UpdateTask).Methods("PUT")
 	protected.HandleFunc("/tasks/{id}/move", taskController.MoveTask).Methods("PUT")
 	protected.HandleFunc("/tasks/{id}", taskController.DeleteTask).Methods("DELETE")
+	protected.HandleFunc("/tasks/{id}/comments", commentController.CreateComment).Methods("POST")
+	protected.HandleFunc("/tasks/{id}/comments", commentController.GetCommentsByTask).Methods("GET")
+	protected.HandleFunc("/tasks/{id}/subtasks", subtaskController.CreateSubtask).Methods("POST")
+	protected.HandleFunc("/tasks/{id}/subtasks", subtaskController.GetSubtasksByTask).Methods("GET")
+	protected.HandleFunc("/comments/{id}", commentController.UpdateComment).Methods("PATCH")
+	protected.HandleFunc("/comments/{id}", commentController.DeleteComment).Methods("DELETE")
+	protected.HandleFunc("/subtasks/{id}", subtaskController.UpdateSubtask).Methods("PATCH")
+	protected.HandleFunc("/subtasks/{id}", subtaskController.DeleteSubtask).Methods("DELETE")
 
 	// Message routes (protected)
 	protected.HandleFunc("/projects/{projectId}/messages", messageController.CreateMessage).Methods("POST")
