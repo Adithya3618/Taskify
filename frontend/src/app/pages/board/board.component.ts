@@ -94,6 +94,7 @@ export class BoardComponent implements OnInit, OnDestroy {
   memberSuccess = '';
   addingMember = false;
   removingMemberId: string | null = null;
+  pendingMemberRemoval: { member: ProjectMember; timeoutId: ReturnType<typeof setTimeout> } | null = null;
   knownUsers: AuthUser[] = [];
 
   /** Delete task confirmation (replaces window.confirm). */
@@ -167,6 +168,9 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.routeSub?.unsubscribe();
+    if (this.pendingMemberRemoval) {
+      clearTimeout(this.pendingMemberRemoval.timeoutId);
+    }
   }
 
   private loadAllBoards() {
@@ -256,6 +260,7 @@ export class BoardComponent implements OnInit, OnDestroy {
       next: (tasks) => {
         stage.tasks = this.taskCompletionStorage.mergeTasks(this.projectId, tasks || []);
         this.sortStageTasks(stage);
+        this.apiService.primeTaskComments((stage.tasks || []).map((task) => task.id));
         // Check for upcoming/overdue deadlines and push notifications
         const withDeadlines = (tasks || [])
           .map(t => ({ id: t.id, title: t.title, deadline: this.parseCardMeta(t.description || '').due }))
@@ -898,6 +903,10 @@ export class BoardComponent implements OnInit, OnDestroy {
     return this.isProjectOwner() && member.role !== 'owner';
   }
 
+  getTaskCommentCount(taskId: number): number {
+    return this.apiService.getTaskCommentCount(taskId);
+  }
+
   addMember(user?: AuthUser): void {
     const query = (user?.email || this.addMemberQuery).trim();
     const normalizedQuery = query.toLowerCase();
@@ -955,22 +964,56 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   removeMember(member: ProjectMember): void {
     if (!this.canRemoveMember(member)) return;
+    if (!window.confirm(`Remove ${member.user_name || member.user_email || 'this member'} from the project?`)) {
+      return;
+    }
+
+    if (this.pendingMemberRemoval) {
+      this.finalizePendingMemberRemoval();
+    }
 
     this.memberError = '';
-    this.memberSuccess = '';
+    this.memberSuccess = `${member.user_name || member.user_email || 'Member'} will be removed. Undo if needed.`;
     this.removingMemberId = member.user_id;
 
-    this.apiService.removeProjectMember(this.projectId, member.user_id).subscribe({
+    this.projectMembers = this.sortMembers(
+      this.projectMembers.filter((projectMember) => projectMember.user_id !== member.user_id)
+    );
+    this.apiService.setCachedProjectMembers(this.projectId, this.projectMembers);
+    this.syncProjectMemberCount();
+
+    const timeoutId = setTimeout(() => this.finalizePendingMemberRemoval(), 5000);
+    this.pendingMemberRemoval = { member, timeoutId };
+  }
+
+  undoRemoveMember(): void {
+    if (!this.pendingMemberRemoval) return;
+
+    clearTimeout(this.pendingMemberRemoval.timeoutId);
+    this.projectMembers = this.sortMembers([...this.projectMembers, this.pendingMemberRemoval.member]);
+    this.apiService.setCachedProjectMembers(this.projectId, this.projectMembers);
+    this.syncProjectMemberCount();
+    this.memberSuccess = `${this.pendingMemberRemoval.member.user_name || this.pendingMemberRemoval.member.user_email || 'Member'} restored.`;
+    this.removingMemberId = null;
+    this.pendingMemberRemoval = null;
+    this.loadAllBoards();
+  }
+
+  private finalizePendingMemberRemoval(): void {
+    if (!this.pendingMemberRemoval) return;
+
+    const pendingRemoval = this.pendingMemberRemoval;
+    this.pendingMemberRemoval = null;
+    this.apiService.removeProjectMember(this.projectId, pendingRemoval.member.user_id).subscribe({
       next: () => {
-        this.projectMembers = this.sortMembers(
-          this.projectMembers.filter((projectMember) => projectMember.user_id !== member.user_id)
-        );
-        this.syncProjectMemberCount();
-        this.memberSuccess = `${member.user_name || member.user_email || 'Member'} removed from the project.`;
+        this.memberSuccess = `${pendingRemoval.member.user_name || pendingRemoval.member.user_email || 'Member'} removed from the project.`;
         this.removingMemberId = null;
         this.loadAllBoards();
       },
       error: (error) => {
+        this.projectMembers = this.sortMembers([...this.projectMembers, pendingRemoval.member]);
+        this.apiService.setCachedProjectMembers(this.projectId, this.projectMembers);
+        this.syncProjectMemberCount();
         this.memberError = error?.error?.error || 'Could not remove this member.';
         this.removingMemberId = null;
       }
@@ -1156,6 +1199,7 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   confirmDeleteComment(comment: Comment): void {
     if (!this.detailTask) return;
+    if (!window.confirm('Delete this comment?')) return;
 
     this.commentError = '';
     this.deletingCommentId = comment.id;
@@ -1190,8 +1234,13 @@ export class BoardComponent implements OnInit, OnDestroy {
   private scrollCommentsToLatest(): void {
     setTimeout(() => {
       const commentContainer = document.querySelector('.commentsList') as HTMLElement | null;
+      const latestComment = commentContainer?.querySelector('.commentCard:last-child') as HTMLElement | null;
       if (commentContainer) {
+        commentContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
         commentContainer.scrollTop = commentContainer.scrollHeight;
+      }
+      if (latestComment) {
+        latestComment.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
     });
   }

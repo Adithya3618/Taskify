@@ -1231,6 +1231,50 @@
   color: var(--text-muted);
 }
 
+.task-comment-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.task-comment-icon {
+  width: 13px;
+  height: 13px;
+  display: block;
+}
+
+.undoToast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 160;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(129, 140, 248, 0.35);
+  background: rgba(15, 23, 42, 0.94);
+  color: #e2e8f0;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.3);
+}
+
+.undoToastBtn {
+  border: none;
+  background: rgba(129, 140, 248, 0.18);
+  color: #c7d2fe;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
 .commentSection {
   margin-top: 10px;
 }

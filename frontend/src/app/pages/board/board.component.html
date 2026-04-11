@@ -214,6 +214,12 @@
         </span>
         <span *ngIf="getTaskDue(task)" class="task-due-text" [ngClass]="getDueDateClass(task)">{{ formatTaskDueDisplay(task) }}</span>
       </div>
+      <div class="task-comment-meta">
+        <svg class="task-comment-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H7l-4 3v-5.5A8.5 8.5 0 1 1 21 11.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>{{ getTaskCommentCount(task.id) }}</span>
+      </div>
     </div>
     <div class="task-card-actions">
       <button
@@ -836,6 +842,11 @@
         <button class="btn-modal-ghost" (click)="closeProjectSettings()">Done</button>
       </div>
     </div>
+  </div>
+
+  <div *ngIf="pendingMemberRemoval" class="undoToast">
+    <span>{{ pendingMemberRemoval.member.user_name || pendingMemberRemoval.member.user_email || 'Member' }} removed.</span>
+    <button type="button" class="undoToastBtn" (click)="undoRemoveMember()">Undo</button>
   </div>
 
   <!-- Account Settings Modal -->
