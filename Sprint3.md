@@ -5,7 +5,7 @@
 | Developer | GitHub Issue | Feature |
 |-----------|-------------|---------|
 | saisreejachava (Sreeja) | #70, #71, #72, #73 | Google OAuth, Task Deadlines & Priority UI, Labels/Tags, Notification Center |
-| *(teammate 2)* | #74–#77 | *(backend features)* |
+| nandhan (Jyothi Nandhan Repaka) | #67, #68, #69 | Task Enhancements API, Task Comments API, Subtasks / Checklists API |
 | *(teammate 3)* | #78–#81 | *(backend/frontend features)* |
 | *(teammate 4)* | #82–#85 | *(backend/frontend features)* |
 
@@ -109,6 +109,99 @@
   - `HomeComponent` navbar (between theme toggle and profile menu)
 
 - `BoardComponent.loadTasks()` calls `notificationService.checkDeadlines()` passing tasks with parsed due dates from `parseCardMeta(t.description).due`
+
+---
+
+## Backend Work Completed — Nandhan (`nandhan/backend`)
+
+### Issue #67 — Task Enhancements API
+
+- Extended the `tasks` schema with first-class backend fields for:
+  - `deadline`
+  - `priority`
+  - `assigned_to`
+- Updated `Task` and task request/response handling so deadline, priority, assignee, subtask count, and completed subtask count are returned by the API
+- Added priority validation in `TaskService` with normalized allowed values:
+  - `low`
+  - `medium`
+  - `high`
+  - `urgent`
+- Added normalization logic so blank values can be cleared and invalid priorities are rejected with `ErrInvalidTaskPriority`
+- Updated task create and update flows to persist these fields in SQLite
+- Enhanced task read queries to return:
+  - `subtask_count`
+  - `completed_count`
+- Added backend tests in `backend/internal/testcases/task_enhancements_test.go` covering:
+  - create / read / update / clear task enhancements
+  - invalid priority rejection in the service layer
+  - invalid priority handling in the task controller
+
+### Issue #68 — Task Comments: DB Schema & CRUD API
+
+- Added a new `comments` table in the backend database schema with:
+  - `task_id`
+  - `user_id`
+  - `author_name`
+  - `content`
+  - `created_at`
+  - `updated_at`
+- Added indexes for comment lookups by:
+  - `task_id`
+  - `user_id`
+- Implemented `CommentService` with full CRUD behavior:
+  - create comment
+  - list comments for a task
+  - update comment
+  - delete comment
+- Enforced task-level access checks before reading or creating comments
+- Added author-name resolution from the authenticated user record
+- Added validation for empty comment content using `ErrCommentContentRequired`
+- Added comment routes:
+  - `POST /api/tasks/{id}/comments`
+  - `GET /api/tasks/{id}/comments`
+  - `PATCH /api/comments/{id}`
+  - `DELETE /api/comments/{id}`
+
+### Issue #69 — Subtasks / Checklists: DB Schema & CRUD API
+
+- Added a new `subtasks` table in the backend database schema with:
+  - `task_id`
+  - `title`
+  - `is_completed`
+  - `position`
+  - `created_at`
+  - `updated_at`
+- Added indexes for subtask lookup and ordering:
+  - `idx_subtasks_task`
+  - `idx_subtasks_task_position`
+- Implemented `SubtaskService` with full CRUD behavior:
+  - create subtask
+  - list subtasks for a task
+  - update subtask title / completion / position
+  - delete subtask
+- Used SQL transactions for safe subtask reordering and deletion compaction
+- Added validation for:
+  - empty subtask titles
+  - invalid insert positions
+  - invalid move positions
+- Added subtask routes:
+  - `POST /api/tasks/{id}/subtasks`
+  - `GET /api/tasks/{id}/subtasks`
+  - `PATCH /api/subtasks/{id}`
+  - `DELETE /api/subtasks/{id}`
+
+### Backend Files Updated for These Issues
+
+- `backend/internal/database/database.go`
+- `backend/internal/models/models.go`
+- `backend/internal/controllers/task_controller.go`
+- `backend/internal/controllers/comment_controller.go`
+- `backend/internal/controllers/subtask_controller.go`
+- `backend/internal/services/task_service.go`
+- `backend/internal/services/comment_service.go`
+- `backend/internal/services/subtask_service.go`
+- `backend/internal/routes/routes.go`
+- `backend/internal/testcases/task_enhancements_test.go`
 
 ---
 
@@ -435,19 +528,29 @@ See [Sprint2.md](Sprint2.md) for the full list of backend test cases.
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/projects/:id/stages/:stageId/tasks` | List tasks in a stage |
-| POST | `/api/projects/:id/stages/:stageId/tasks` | Create a task |
+| POST | `/api/projects/:id/stages/:stageId/tasks` | Create a task with title, description, position, deadline, priority, and assigned user |
 | GET | `/api/tasks/:id` | Get task by ID |
-| PUT | `/api/tasks/:id` | Update task (title, description, position) |
+| PUT | `/api/tasks/:id` | Update task title, description, position, deadline, priority, and assigned user |
 | DELETE | `/api/tasks/:id` | Delete task |
+| PUT | `/api/tasks/:id/move` | Move a task to another stage / position |
 
-> **Note:** Due date, priority, labels, and notes are encoded in the task `description` field using the metadata block format:
-> ```
-> <user description>
-> ---
-> due:YYYY-MM-DD
-> priority:Low|Medium|High|Urgent
-> notes:<free text>
-> ```
+### Comment Endpoints (JWT required)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/tasks/:id/comments` | Create a comment for a task |
+| GET | `/api/tasks/:id/comments` | List comments for a task |
+| PATCH | `/api/comments/:id` | Update an existing comment |
+| DELETE | `/api/comments/:id` | Delete a comment |
+
+### Subtask Endpoints (JWT required)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/tasks/:id/subtasks` | Create a subtask / checklist item |
+| GET | `/api/tasks/:id/subtasks` | List subtasks for a task |
+| PATCH | `/api/subtasks/:id` | Update subtask title, completion, or position |
+| DELETE | `/api/subtasks/:id` | Delete a subtask / checklist item |
 
 ### Message Endpoints (JWT required)
 
@@ -468,3 +571,12 @@ Key commits on branch `sreeja/frontendDev`:
 - Labels/Tags UI — Closes #72
 - Notification Center UI (bell, service, deadline reminders, home page) — Closes #73
 - Sprint 3 Cypress E2E tests and Karma unit tests
+
+## Commit History — Nandhan (`nandhan/backend`)
+
+Key backend work merged for Sprint 3:
+
+- Task enhancements API for deadline, priority, and assignee support
+- Task comments schema and CRUD API
+- Subtasks / checklist schema, ordering logic, and CRUD API
+- Merge-conflict resolution in `backend/internal/database/database.go` to preserve both Sprint 3 backend feature sets
