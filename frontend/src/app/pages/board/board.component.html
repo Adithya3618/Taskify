@@ -77,6 +77,15 @@
         Filter
         <span *ngIf="hasActiveFilters" class="filterBadge"></span>
       </button>
+      <button class="btn-ghost" type="button" (click)="openProjectSettings('members')">
+        <svg class="topbarIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Settings
+      </button>
       <button class="btn-primary" (click)="openShareModal()">
         <svg class="topbarIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="1.8"/>
@@ -612,6 +621,139 @@
       </div>
       <div class="task-modal-footer">
         <button class="btn-modal-ghost" (click)="closeShareModal()">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Project Settings Modal -->
+  <div *ngIf="showProjectSettingsModal" class="task-modal-backdrop" (click)="closeProjectSettings()">
+    <div class="task-modal settingsModal" (click)="$event.stopPropagation()">
+      <div class="task-modal-header">
+        <div>
+          <h3>Project settings</h3>
+          <p>Manage board details and team access.</p>
+        </div>
+        <button class="btn-close-modal" (click)="closeProjectSettings()" title="Close">×</button>
+      </div>
+
+      <div class="settingsTabs">
+        <button
+          type="button"
+          class="settingsTab"
+          [class.settingsTabActive]="settingsActiveTab === 'general'"
+          (click)="setSettingsTab('general')"
+        >
+          General
+        </button>
+        <button
+          type="button"
+          class="settingsTab"
+          [class.settingsTabActive]="settingsActiveTab === 'members'"
+          (click)="setSettingsTab('members')"
+        >
+          Members
+          <span class="settingsTabBadge">{{ memberCount }}</span>
+        </button>
+      </div>
+
+      <div class="task-modal-body settingsBody" *ngIf="settingsActiveTab === 'general'">
+        <div class="settingsSummaryCard">
+          <span class="settingsSummaryLabel">Board name</span>
+          <h4>{{ project?.name || 'Untitled board' }}</h4>
+          <p>{{ project?.description || 'No description added yet.' }}</p>
+        </div>
+
+        <div class="settingsGeneralGrid">
+          <div class="settingsInfoCard">
+            <span class="settingsInfoLabel">Members</span>
+            <strong>{{ memberCount }}</strong>
+            <p>{{ isProjectOwner() ? 'You can manage who has access to this board.' : 'You can view the current team for this board.' }}</p>
+          </div>
+          <div class="settingsInfoCard">
+            <span class="settingsInfoLabel">Your role</span>
+            <strong>{{ isProjectOwner() ? 'Owner' : 'Member' }}</strong>
+            <p>{{ isProjectOwner() ? 'Remove access for other members from the Members tab.' : 'Only the owner can remove members.' }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="task-modal-body settingsBody" *ngIf="settingsActiveTab === 'members'">
+        <div class="memberToolbar">
+          <div class="memberSearchField">
+            <input
+              type="text"
+              [(ngModel)]="addMemberQuery"
+              placeholder="Search by name or email"
+              (keyup.enter)="addMember()"
+            />
+            <button
+              type="button"
+              class="btn-modal-primary"
+              (click)="addMember()"
+              [disabled]="addingMember || !addMemberQuery.trim()"
+            >
+              {{ addingMember ? 'Adding...' : 'Add Member' }}
+            </button>
+          </div>
+
+          <div class="memberSearchResults" *ngIf="memberSearchResults.length">
+            <button
+              type="button"
+              class="memberSearchResult"
+              *ngFor="let user of memberSearchResults"
+              (click)="addMember(user)"
+            >
+              <span class="memberAvatar memberAvatarSmall">{{ (user.name || user.email).charAt(0).toUpperCase() }}</span>
+              <span class="memberSearchText">
+                <strong>{{ user.name }}</strong>
+                <span>{{ user.email }}</span>
+              </span>
+              <span class="memberSearchAction">Add</span>
+            </button>
+          </div>
+
+          <p *ngIf="memberError" class="memberFeedback memberFeedbackError">{{ memberError }}</p>
+          <p *ngIf="memberSuccess" class="memberFeedback memberFeedbackSuccess">{{ memberSuccess }}</p>
+        </div>
+
+        <div class="membersPanel">
+          <div class="membersPanelHead">
+            <h4>Current members</h4>
+            <span>{{ memberCount }} total</span>
+          </div>
+
+          <div *ngIf="membersLoading" class="memberEmptyState">Loading members...</div>
+
+          <div *ngIf="!membersLoading && projectMembers.length === 0" class="memberEmptyState">
+            No members found yet.
+          </div>
+
+          <div *ngIf="!membersLoading && projectMembers.length" class="memberList">
+            <div class="memberRow" *ngFor="let member of projectMembers">
+              <span class="memberAvatar">{{ getMemberInitial(member) }}</span>
+              <div class="memberIdentity">
+                <strong>{{ member.user_name || member.user_email }}</strong>
+                <span>{{ member.user_email || member.user_id }}</span>
+              </div>
+              <span class="memberRole" [class.memberRoleOwner]="member.role === 'owner'">
+                {{ member.role === 'owner' ? 'Owner' : 'Member' }}
+              </span>
+              <button
+                *ngIf="canRemoveMember(member)"
+                type="button"
+                class="memberRemoveBtn"
+                (click)="removeMember(member)"
+                [disabled]="removingMemberId === member.user_id"
+              >
+                {{ removingMemberId === member.user_id ? 'Removing...' : 'Remove' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="task-modal-footer">
+        <button class="btn-modal-ghost" (click)="closeProjectSettings()">Done</button>
       </div>
     </div>
   </div>

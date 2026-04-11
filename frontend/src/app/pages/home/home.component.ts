@@ -138,12 +138,18 @@ export class HomeComponent {
   private filterProjectsForCurrentUser(projects: Project[]): Project[] {
     const email = this.userEmail.trim().toLowerCase();
     if (!email) return [];
-    return projects.filter((project) => this.boardOwners[String(project.id)] === email);
+    return projects
+      .filter((project) => this.apiService.userHasProjectAccess(project.id, email))
+      .map((project) => ({
+        ...project,
+        member_count: this.apiService.getProjectMemberCount(project.id)
+      }));
   }
 
   private setBoardOwner(projectId: number) {
     this.boardOwners[String(projectId)] = this.userEmail.trim().toLowerCase();
     this.saveBoardOwners();
+    this.apiService.seedProjectOwner(projectId);
   }
 
   private removeBoardOwner(projectId: number) {
