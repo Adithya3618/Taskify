@@ -5,11 +5,11 @@ import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { ApiService } from '../../services/api.service';
-import { Project } from '../../models/project.model';
+import { AddProjectMemberRequest, Project, ProjectMember } from '../../models/project.model';
 import { Stage, CreateStageRequest } from '../../models/stage.model';
 import { Task, CreateTaskRequest } from '../../models/task.model';
 import { Label } from '../../models/label.model';
-import { AuthService } from '../../services/auth.service';
+import { AuthService, AuthUser } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
 import { TaskCompletionStorageService } from '../../services/task-completion-storage.service';
 import { NotificationService } from '../../services/notification.service';
@@ -84,6 +84,16 @@ export class BoardComponent implements OnInit, OnDestroy {
   // Share state
   showShareModal = false;
   shareLinkCopied = false;
+  showProjectSettingsModal = false;
+  settingsActiveTab: 'general' | 'members' = 'general';
+  projectMembers: ProjectMember[] = [];
+  membersLoading = false;
+  addMemberQuery = '';
+  memberError = '';
+  memberSuccess = '';
+  addingMember = false;
+  removingMemberId: string | null = null;
+  knownUsers: AuthUser[] = [];
 
   /** Delete task confirmation (replaces window.confirm). */
   deleteTaskPending: { stageId: number; taskId: number; taskTitle: string } | null = null;
@@ -121,6 +131,7 @@ export class BoardComponent implements OnInit, OnDestroy {
     }
     this.userDisplayName = currentUser.name;
     this.userEmail = currentUser.email;
+    this.knownUsers = this.authService.getKnownUsers();
 
     this.loadAllBoards();
 
@@ -153,9 +164,7 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.apiService.getProjects().subscribe({
       next: (projects) => {
         const email = this.userEmail.trim().toLowerCase();
-        const raw = localStorage.getItem(this.boardOwnersKey);
-        const owners: Record<string, string> = raw ? JSON.parse(raw) : {};
-        this.allBoards = (projects || []).filter(p => owners[String(p.id)] === email);
+        this.allBoards = (projects || []).filter((project) => this.apiService.userHasProjectAccess(project.id, email));
       },
       error: () => { this.allBoards = []; }
     });
@@ -172,23 +181,19 @@ export class BoardComponent implements OnInit, OnDestroy {
   }
 
   private canAccessBoard(projectId: number, email: string): boolean {
-    try {
-      const raw = localStorage.getItem(this.boardOwnersKey);
-      const owners = raw ? JSON.parse(raw) as Record<string, string> : {};
-      return owners[String(projectId)] === email.trim().toLowerCase();
-    } catch {
-      return false;
-    }
+    return this.apiService.userHasProjectAccess(projectId, email);
   }
 
   loadProject() {
     this.loading = true;
     this.loadLabels();
+    const currentUser = this.authService.getCurrentUser();
     console.log('Loading project from API...');
     this.apiService.getProject(this.projectId).subscribe({
       next: (project) => {
         console.log('Project loaded:', project);
         this.project = project;
+        this.apiService.seedProjectOwner(this.projectId, project);
         this.loadStages();
       },
       error: (err) => {
@@ -197,11 +202,13 @@ export class BoardComponent implements OnInit, OnDestroy {
         // Keep user on board page even if backend is unavailable.
         this.project = {
           id: this.projectId,
+          owner_id: currentUser?.id,
           name: `Board ${this.projectId}`,
           description: 'Demo board (backend unavailable)',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
+        this.apiService.seedProjectOwner(this.projectId, this.project);
         this.loadStages();
       }
     });
@@ -794,6 +801,182 @@ export class BoardComponent implements OnInit, OnDestroy {
   openShareModal() {
     this.showShareModal = true;
     this.shareLinkCopied = false;
+  }
+
+  openProjectSettings(tab: 'general' | 'members' = 'general'): void {
+    this.showProjectSettingsModal = true;
+    this.settingsActiveTab = tab;
+    this.memberError = '';
+    this.memberSuccess = '';
+    this.addMemberQuery = '';
+    this.loadProjectMembers();
+  }
+
+  closeProjectSettings(): void {
+    if (this.addingMember || this.removingMemberId) return;
+    this.showProjectSettingsModal = false;
+    this.memberError = '';
+    this.memberSuccess = '';
+    this.addMemberQuery = '';
+  }
+
+  setSettingsTab(tab: 'general' | 'members'): void {
+    this.settingsActiveTab = tab;
+    if (tab === 'members' && !this.projectMembers.length) {
+      this.loadProjectMembers();
+    }
+  }
+
+  loadProjectMembers(): void {
+    this.membersLoading = true;
+    this.apiService.getProjectMembers(this.projectId).subscribe({
+      next: (members) => {
+        this.projectMembers = this.sortMembers(members || []);
+        this.syncProjectMemberCount();
+        this.membersLoading = false;
+      },
+      error: () => {
+        this.projectMembers = this.sortMembers(this.apiService.getCachedProjectMembers(this.projectId));
+        this.syncProjectMemberCount();
+        this.membersLoading = false;
+      }
+    });
+  }
+
+  get memberSearchResults(): AuthUser[] {
+    const query = this.addMemberQuery.trim().toLowerCase();
+    if (!query) return [];
+
+    return this.knownUsers
+      .filter((user) => {
+        const name = user.name?.trim().toLowerCase() || '';
+        const email = user.email?.trim().toLowerCase() || '';
+        const notAlreadyAdded = !this.projectMembers.some((member) => {
+          const memberEmail = (member.user_email || '').trim().toLowerCase();
+          return memberEmail === email || (!!user.id && member.user_id === user.id);
+        });
+
+        return notAlreadyAdded && (name.includes(query) || email.includes(query));
+      })
+      .slice(0, 5);
+  }
+
+  get memberCount(): number {
+    return this.projectMembers.length || this.apiService.getProjectMemberCount(this.projectId);
+  }
+
+  isProjectOwner(): boolean {
+    const currentEmail = this.userEmail.trim().toLowerCase();
+    const currentId = this.authService.getCurrentUser()?.id;
+
+    if (currentId && this.project?.owner_id && currentId === this.project.owner_id) {
+      return true;
+    }
+
+    return this.projectMembers.some((member) => {
+      const memberEmail = (member.user_email || '').trim().toLowerCase();
+      return member.role === 'owner' && (memberEmail === currentEmail || (!!currentId && member.user_id === currentId));
+    });
+  }
+
+  canRemoveMember(member: ProjectMember): boolean {
+    return this.isProjectOwner() && member.role !== 'owner';
+  }
+
+  addMember(user?: AuthUser): void {
+    const query = (user?.email || this.addMemberQuery).trim();
+    const normalizedQuery = query.toLowerCase();
+    this.memberError = '';
+    this.memberSuccess = '';
+
+    if (!query) {
+      this.memberError = 'Enter a name or email to add a member.';
+      return;
+    }
+
+    const matchedUser = user || this.knownUsers.find((knownUser) => {
+      const name = knownUser.name?.trim().toLowerCase() || '';
+      const email = knownUser.email?.trim().toLowerCase() || '';
+      return email === normalizedQuery || name === normalizedQuery;
+    });
+
+    const request: AddProjectMemberRequest = {
+      user_id: matchedUser?.id,
+      email: matchedUser?.email || (this.isValidEmail(normalizedQuery) ? normalizedQuery : undefined)
+    };
+
+    if (!request.user_id && !request.email) {
+      this.memberError = 'Select a matching user or enter a valid email address.';
+      return;
+    }
+
+    const duplicate = this.projectMembers.some((member) => {
+      const memberEmail = (member.user_email || '').trim().toLowerCase();
+      return memberEmail === (request.email || '').trim().toLowerCase() || (!!request.user_id && member.user_id === request.user_id);
+    });
+
+    if (duplicate) {
+      this.memberError = 'This member is already on the project.';
+      return;
+    }
+
+    this.addingMember = true;
+
+    this.apiService.addProjectMember(this.projectId, request).subscribe({
+      next: (member) => {
+        this.projectMembers = this.sortMembers([...this.projectMembers, member]);
+        this.syncProjectMemberCount();
+        this.addMemberQuery = '';
+        this.memberSuccess = `${member.user_name || member.user_email || 'Member'} added to the project.`;
+        this.addingMember = false;
+        this.loadAllBoards();
+      },
+      error: (error) => {
+        this.memberError = error?.error?.error || 'Could not add this member.';
+        this.addingMember = false;
+      }
+    });
+  }
+
+  removeMember(member: ProjectMember): void {
+    if (!this.canRemoveMember(member)) return;
+
+    this.memberError = '';
+    this.memberSuccess = '';
+    this.removingMemberId = member.user_id;
+
+    this.apiService.removeProjectMember(this.projectId, member.user_id).subscribe({
+      next: () => {
+        this.projectMembers = this.sortMembers(
+          this.projectMembers.filter((projectMember) => projectMember.user_id !== member.user_id)
+        );
+        this.syncProjectMemberCount();
+        this.memberSuccess = `${member.user_name || member.user_email || 'Member'} removed from the project.`;
+        this.removingMemberId = null;
+        this.loadAllBoards();
+      },
+      error: (error) => {
+        this.memberError = error?.error?.error || 'Could not remove this member.';
+        this.removingMemberId = null;
+      }
+    });
+  }
+
+  getMemberInitial(member: ProjectMember): string {
+    return (member.user_name || member.user_email || 'M').charAt(0).toUpperCase();
+  }
+
+  private syncProjectMemberCount(): void {
+    if (this.project) {
+      this.project = { ...this.project, member_count: this.projectMembers.length || 1 };
+    }
+  }
+
+  private sortMembers(members: ProjectMember[]): ProjectMember[] {
+    return [...members].sort((a, b) => {
+      if (a.role !== b.role) return a.role === 'owner' ? -1 : 1;
+      return (a.user_name || a.user_email || '').localeCompare(b.user_name || b.user_email || '');
+    });
   }
 
   closeShareModal() {

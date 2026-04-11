@@ -136,9 +136,7 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
     this.apiService.getProjects().subscribe({
       next: (projects) => {
         const email = this.userEmail.trim().toLowerCase();
-        const raw = localStorage.getItem(this.boardOwnersKey);
-        const owners: Record<string, string> = raw ? JSON.parse(raw) : {};
-        this.allBoards = (projects || []).filter((p) => owners[String(p.id)] === email);
+        this.allBoards = (projects || []).filter((p) => this.apiService.userHasProjectAccess(p.id, email));
       },
       error: () => {
         this.allBoards = [];
@@ -160,13 +158,7 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
   }
 
   private canAccessBoard(projectId: number, email: string): boolean {
-    try {
-      const raw = localStorage.getItem(this.boardOwnersKey);
-      const owners = raw ? (JSON.parse(raw) as Record<string, string>) : {};
-      return owners[String(projectId)] === email.trim().toLowerCase();
-    } catch {
-      return false;
-    }
+    return this.apiService.userHasProjectAccess(projectId, email);
   }
 
   private loadProject(): void {
