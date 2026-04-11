@@ -214,6 +214,12 @@
         </span>
         <span *ngIf="getTaskDue(task)" class="task-due-text" [ngClass]="getDueDateClass(task)">{{ formatTaskDueDisplay(task) }}</span>
       </div>
+      <div class="task-comment-meta">
+        <svg class="task-comment-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H7l-4 3v-5.5A8.5 8.5 0 1 1 21 11.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>{{ getTaskCommentCount(task.id) }}</span>
+      </div>
     </div>
     <div class="task-card-actions">
       <button
@@ -541,6 +547,86 @@
 
         <label>Notes</label>
         <textarea rows="4" [(ngModel)]="detailNotes"></textarea>
+
+        <div class="commentSection">
+          <div class="commentSectionHeader">
+            <div>
+              <label class="commentSectionLabel">Comments</label>
+              <p>Ask questions, share updates, and keep task discussion in one place.</p>
+            </div>
+          </div>
+
+          <p *ngIf="commentError" class="memberFeedback memberFeedbackError">{{ commentError }}</p>
+
+          <div class="commentsComposer">
+            <textarea
+              rows="3"
+              [(ngModel)]="newCommentContent"
+              placeholder="Write a comment..."
+            ></textarea>
+            <div class="commentsComposerActions">
+              <button
+                type="button"
+                class="btn-modal-primary"
+                (click)="postComment()"
+                [disabled]="commentSaving || !newCommentContent.trim()"
+              >
+                {{ commentSaving && !editingCommentId ? 'Posting...' : 'Post' }}
+              </button>
+            </div>
+          </div>
+
+          <div class="commentsList">
+            <div *ngIf="commentsLoading" class="memberEmptyState">Loading comments...</div>
+
+            <div *ngIf="!commentsLoading && !detailComments.length" class="memberEmptyState">
+              No comments yet. Start the conversation below.
+            </div>
+
+            <div class="commentCard" *ngFor="let comment of detailComments">
+              <span class="commentAvatar">{{ getCommentInitial(comment) }}</span>
+              <div class="commentBody">
+                <div class="commentMeta">
+                  <strong>{{ comment.author_name }}</strong>
+                  <span>{{ formatCommentTimestamp(comment.updated_at || comment.created_at) }}</span>
+                </div>
+
+                <div *ngIf="editingCommentId !== comment.id; else editCommentForm" class="commentContent">
+                  {{ comment.content }}
+                </div>
+
+                <ng-template #editCommentForm>
+                  <div class="commentEditForm">
+                    <textarea rows="3" [(ngModel)]="editingCommentContent"></textarea>
+                    <div class="commentEditActions">
+                      <button
+                        type="button"
+                        class="btn-modal-primary"
+                        (click)="saveCommentEdit(comment)"
+                        [disabled]="commentSaving || !editingCommentContent.trim()"
+                      >
+                        {{ commentSaving ? 'Saving...' : 'Save' }}
+                      </button>
+                      <button type="button" class="btn-modal-ghost" (click)="cancelCommentEdit()">Cancel</button>
+                    </div>
+                  </div>
+                </ng-template>
+              </div>
+
+              <div class="commentActions" *ngIf="canManageComment(comment) && editingCommentId !== comment.id">
+                <button type="button" class="commentActionBtn" (click)="startCommentEdit(comment)">Edit</button>
+                <button
+                  type="button"
+                  class="commentActionBtn danger"
+                  (click)="confirmDeleteComment(comment)"
+                  [disabled]="deletingCommentId === comment.id"
+                >
+                  {{ deletingCommentId === comment.id ? 'Deleting...' : 'Delete' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="task-modal-footer">
@@ -756,6 +842,11 @@
         <button class="btn-modal-ghost" (click)="closeProjectSettings()">Done</button>
       </div>
     </div>
+  </div>
+
+  <div *ngIf="pendingMemberRemoval" class="undoToast">
+    <span>{{ pendingMemberRemoval.member.user_name || pendingMemberRemoval.member.user_email || 'Member' }} removed.</span>
+    <button type="button" class="undoToastBtn" (click)="undoRemoveMember()">Undo</button>
   </div>
 
   <!-- Account Settings Modal -->

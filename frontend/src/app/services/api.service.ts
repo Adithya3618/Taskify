@@ -3,6 +3,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, catchError, map, of, tap, throwError } from 'rxjs';
 
 import { AddProjectMemberRequest, CreateProjectRequest, Project, ProjectMember } from '../models/project.model';
+import { Comment, CreateCommentRequest } from '../models/comment.model';
 import { Stage, CreateStageRequest } from '../models/stage.model';
 import { Task, CreateTaskRequest, MoveTaskRequest } from '../models/task.model';
 import { Message, CreateMessageRequest } from '../models/message.model';
@@ -28,6 +29,7 @@ interface ApiPaginatedResponse<T> {
 export class ApiService {
   private baseUrl = '/api';
   private readonly memberStorePrefix = 'taskify.project.members.v1.';
+  private readonly commentStorePrefix = 'taskify.task.comments.v1.';
   private readonly boardOwnersKey = 'taskify.board.owners';
 
   constructor(
@@ -78,6 +80,26 @@ export class ApiService {
     localStorage.setItem(this.memberStoreKey(projectId), JSON.stringify(members));
   }
 
+  private commentStoreKey(taskId: number): string {
+    return `${this.commentStorePrefix}${taskId}`;
+  }
+
+  getCachedTaskComments(taskId: number): Comment[] {
+    const raw = localStorage.getItem(this.commentStoreKey(taskId));
+    if (!raw) return [];
+
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private saveCachedTaskComments(taskId: number, comments: Comment[]): void {
+    localStorage.setItem(this.commentStoreKey(taskId), JSON.stringify(comments));
+  }
+
   private getBoardOwnerEmail(projectId: number): string {
     try {
       const raw = localStorage.getItem(this.boardOwnersKey);
@@ -103,6 +125,39 @@ export class ApiService {
       joined_at: member.joined_at || new Date().toISOString(),
       avatar: name.charAt(0).toUpperCase()
     };
+  }
+
+  private normalizeComment(taskId: number, comment: Partial<Comment>): Comment {
+    const currentUser = this.authService.getCurrentUser();
+
+    return {
+      id: comment.id ?? `local-${Date.now()}`,
+      task_id: comment.task_id ?? taskId,
+      user_id: comment.user_id || currentUser?.id || currentUser?.email || 'local-user',
+      author_name: comment.author_name || currentUser?.name || 'You',
+      content: comment.content?.trim() || '',
+      created_at: comment.created_at || new Date().toISOString(),
+      updated_at: comment.updated_at || comment.created_at || new Date().toISOString(),
+      isLocalOnly: !!comment.isLocalOnly
+    };
+  }
+
+  private mergeComments(taskId: number, incomingComments: Comment[], existingComments: Comment[] = []): Comment[] {
+    const byKey = new Map<string, Comment>();
+
+    [...existingComments, ...incomingComments]
+      .map((comment) => this.normalizeComment(taskId, comment))
+      .forEach((comment) => {
+        const key = String(comment.id);
+        const previous = byKey.get(key);
+        byKey.set(key, previous ? { ...previous, ...comment } : comment);
+      });
+
+    return [...byKey.values()].sort((a, b) => {
+      const createdDiff = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      if (createdDiff !== 0) return createdDiff;
+      return String(a.id).localeCompare(String(b.id));
+    });
   }
 
   seedProjectOwner(projectId: number, project?: Project | null): void {
@@ -201,6 +256,7 @@ export class ApiService {
 
   getProjectMembers(projectId: number): Observable<ProjectMember[]> {
     this.seedProjectOwner(projectId);
+    const cachedMembers = this.getCachedProjectMembers(projectId);
 
     return this.http.get<ApiPaginatedResponse<ProjectMember[]> | ProjectMember[]>(
       `${this.baseUrl}/projects/${projectId}/members`
@@ -208,14 +264,29 @@ export class ApiService {
       this.unwrapPaginated<ProjectMember[]>(),
       map((members) => (members || []).map((member) => this.normalizeMember(projectId, member))),
       tap((members) => {
-        const cachedOwner = this.getCachedProjectMembers(projectId).find((member) => member.role === 'owner');
-        const combinedMembers = cachedOwner
-          ? [cachedOwner, ...members.filter((member) => member.user_id !== cachedOwner.user_id)]
-          : members;
-        this.saveCachedProjectMembers(projectId, combinedMembers);
+        const mergedMembers = this.mergeMembers(projectId, cachedMembers, members || []);
+        this.saveCachedProjectMembers(projectId, mergedMembers);
       }),
-      catchError(() => of(this.getCachedProjectMembers(projectId)))
+      map((members) => this.mergeMembers(projectId, cachedMembers, members || [])),
+      catchError(() => of(cachedMembers))
     );
+  }
+
+  private mergeMembers(projectId: number, existingMembers: ProjectMember[], nextMembers: ProjectMember[]): ProjectMember[] {
+    const byKey = new Map<string, ProjectMember>();
+
+    [...existingMembers, ...nextMembers]
+      .map((member) => this.normalizeMember(projectId, member))
+      .forEach((member) => {
+        const key = (member.user_email || member.user_id).trim().toLowerCase();
+        const previous = byKey.get(key);
+        byKey.set(key, previous ? { ...previous, ...member } : member);
+      });
+
+    return [...byKey.values()].sort((a, b) => {
+      if (a.role !== b.role) return a.role === 'owner' ? -1 : 1;
+      return (a.user_name || a.user_email || '').localeCompare(b.user_name || b.user_email || '');
+    });
   }
 
   addProjectMember(projectId: number, request: AddProjectMemberRequest): Observable<ProjectMember> {
@@ -253,14 +324,14 @@ export class ApiService {
       this.unwrapSuccess<ProjectMember>(),
       map((member) => this.normalizeMember(projectId, member || fallbackMember)),
       tap((member) => {
-        this.saveCachedProjectMembers(projectId, [...cachedMembers, member]);
+        this.saveCachedProjectMembers(projectId, this.mergeMembers(projectId, cachedMembers, [member]));
       }),
       catchError((error) => {
         if (error?.status === 409) {
           return throwError(() => error);
         }
 
-        this.saveCachedProjectMembers(projectId, [...cachedMembers, fallbackMember]);
+        this.saveCachedProjectMembers(projectId, this.mergeMembers(projectId, cachedMembers, [fallbackMember]));
         return of(fallbackMember);
       })
     );
@@ -341,6 +412,91 @@ createTask(projectId: number, stageId: number, request: CreateTaskRequest): Obse
 
   deleteTask(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/tasks/${id}`);
+  }
+
+  // ---------------- Comments ----------------
+  getComments(taskId: number): Observable<Comment[]> {
+    const cachedComments = this.getCachedTaskComments(taskId);
+
+    return this.http.get<Comment[]>(`${this.baseUrl}/tasks/${taskId}/comments`).pipe(
+      map((comments) => this.mergeComments(taskId, comments || [], cachedComments)),
+      tap((comments) => this.saveCachedTaskComments(taskId, comments)),
+      catchError(() => of(cachedComments))
+    );
+  }
+
+  createComment(taskId: number, request: CreateCommentRequest): Observable<Comment> {
+    const currentUser = this.authService.getCurrentUser();
+    const fallbackComment = this.normalizeComment(taskId, {
+      id: `local-${Date.now()}`,
+      task_id: taskId,
+      user_id: currentUser?.id || currentUser?.email || 'local-user',
+      author_name: currentUser?.name || 'You',
+      content: request.content,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      isLocalOnly: true
+    });
+
+    return this.http.post<Comment>(
+      `${this.baseUrl}/tasks/${taskId}/comments`,
+      request,
+      { headers: this.jsonHeaders() }
+    ).pipe(
+      map((comment) => this.normalizeComment(taskId, comment)),
+      tap((comment) => {
+        const merged = this.mergeComments(taskId, [comment], this.getCachedTaskComments(taskId));
+        this.saveCachedTaskComments(taskId, merged);
+      }),
+      catchError(() => {
+        const merged = this.mergeComments(taskId, [fallbackComment], this.getCachedTaskComments(taskId));
+        this.saveCachedTaskComments(taskId, merged);
+        return of(fallbackComment);
+      })
+    );
+  }
+
+  updateComment(commentId: number | string, taskId: number, request: CreateCommentRequest): Observable<Comment> {
+    const cachedComments = this.getCachedTaskComments(taskId);
+    const target = cachedComments.find((comment) => String(comment.id) === String(commentId));
+    const fallbackComment = this.normalizeComment(taskId, {
+      ...target,
+      id: commentId,
+      content: request.content,
+      updated_at: new Date().toISOString(),
+      isLocalOnly: target?.isLocalOnly ?? true
+    });
+
+    return this.http.patch<Comment>(
+      `${this.baseUrl}/comments/${commentId}`,
+      request,
+      { headers: this.jsonHeaders() }
+    ).pipe(
+      map((comment) => this.normalizeComment(taskId, comment)),
+      tap((comment) => {
+        const merged = this.mergeComments(taskId, [comment], cachedComments);
+        this.saveCachedTaskComments(taskId, merged);
+      }),
+      catchError(() => {
+        const merged = this.mergeComments(taskId, [fallbackComment], cachedComments);
+        this.saveCachedTaskComments(taskId, merged);
+        return of(fallbackComment);
+      })
+    );
+  }
+
+  deleteComment(commentId: number | string, taskId: number): Observable<void> {
+    const cachedComments = this.getCachedTaskComments(taskId);
+    const nextComments = cachedComments.filter((comment) => String(comment.id) !== String(commentId));
+
+    return this.http.delete<void>(`${this.baseUrl}/comments/${commentId}`).pipe(
+      tap(() => this.saveCachedTaskComments(taskId, nextComments)),
+      map(() => void 0),
+      catchError(() => {
+        this.saveCachedTaskComments(taskId, nextComments);
+        return of(void 0);
+      })
+    );
   }
 
   // ---------------- Messages ----------------

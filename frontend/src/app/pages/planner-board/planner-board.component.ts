@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { forkJoin, of, Subscription } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { ApiService } from '../../services/api.service';
+import { Comment, CreateCommentRequest } from '../../models/comment.model';
 import { Project } from '../../models/project.model';
 import { Stage } from '../../models/stage.model';
 import { CreateTaskRequest, Task } from '../../models/task.model';
@@ -84,6 +85,14 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
   detailPriority = '';
   detailNotes = '';
   detailCompleted = false;
+  detailComments: Comment[] = [];
+  commentsLoading = false;
+  newCommentContent = '';
+  commentError = '';
+  commentSaving = false;
+  editingCommentId: number | string | null = null;
+  editingCommentContent = '';
+  deletingCommentId: number | string | null = null;
 
   private routeSub?: Subscription;
   private allTasks: TaskWithStage[] = [];
@@ -212,6 +221,7 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (rows) => {
           this.allTasks = rows;
+          this.apiService.primeTaskComments(rows.map((task) => task.id));
           this.applyTaskBuckets();
           this.calendarWeeks = this.buildMonthWeeks(this.viewMonth);
           this.loading = false;
@@ -502,10 +512,22 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
     this.detailNotes = parsed.notes;
     this.detailCompleted =
       task.completed ?? this.taskCompletionStorage.getCompleted(this.projectId, task.id);
+    this.newCommentContent = '';
+    this.commentError = '';
+    this.editingCommentId = null;
+    this.editingCommentContent = '';
+    this.deletingCommentId = null;
+    this.loadTaskComments(task.id, true);
   }
 
   closeTaskDetail(): void {
     this.detailTask = null;
+    this.detailComments = [];
+    this.newCommentContent = '';
+    this.commentError = '';
+    this.editingCommentId = null;
+    this.editingCommentContent = '';
+    this.deletingCommentId = null;
   }
 
   saveTaskDetail(): void {
@@ -540,6 +562,137 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
           this.applyTaskBuckets();
         },
       });
+  }
+
+  loadTaskComments(taskId: number, scrollToBottom = false): void {
+    this.commentsLoading = true;
+    this.apiService.getComments(taskId).subscribe({
+      next: (comments) => {
+        this.detailComments = comments || [];
+        this.commentsLoading = false;
+        if (scrollToBottom) this.scrollCommentsToLatest();
+      },
+      error: () => {
+        this.detailComments = this.apiService.getCachedTaskComments(taskId);
+        this.commentsLoading = false;
+        if (scrollToBottom) this.scrollCommentsToLatest();
+      }
+    });
+  }
+
+  getTaskCommentCount(taskId: number): number {
+    return this.apiService.getTaskCommentCount(taskId);
+  }
+
+  canManageComment(comment: Comment): boolean {
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser) return false;
+    return comment.user_id === currentUser.id || comment.user_id === currentUser.email;
+  }
+
+  postComment(): void {
+    const taskId = this.detailTask?.id;
+    const content = this.newCommentContent.trim();
+    if (!taskId) return;
+    this.commentError = '';
+    if (!content) {
+      this.commentError = 'Comment cannot be empty.';
+      return;
+    }
+    this.commentSaving = true;
+    const request: CreateCommentRequest = { content };
+    this.apiService.createComment(taskId, request).subscribe({
+      next: (comment) => {
+        const exists = this.detailComments.some((existingComment) => String(existingComment.id) === String(comment.id));
+        this.detailComments = exists
+          ? this.detailComments.map((existingComment) => String(existingComment.id) === String(comment.id) ? comment : existingComment)
+          : [...this.detailComments, comment];
+        this.detailComments.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        this.newCommentContent = '';
+        this.commentSaving = false;
+        this.scrollCommentsToLatest();
+      },
+      error: (error) => {
+        this.commentError = error?.error || 'Could not post comment.';
+        this.commentSaving = false;
+      }
+    });
+  }
+
+  startCommentEdit(comment: Comment): void {
+    this.commentError = '';
+    this.editingCommentId = comment.id;
+    this.editingCommentContent = comment.content;
+  }
+
+  cancelCommentEdit(): void {
+    this.editingCommentId = null;
+    this.editingCommentContent = '';
+  }
+
+  saveCommentEdit(comment: Comment): void {
+    const content = this.editingCommentContent.trim();
+    if (!content || !this.detailTask) {
+      this.commentError = 'Comment cannot be empty.';
+      return;
+    }
+    this.commentError = '';
+    this.commentSaving = true;
+    this.apiService.updateComment(comment.id, this.detailTask.id, { content }).subscribe({
+      next: (updatedComment) => {
+        this.detailComments = this.detailComments.map((existingComment) =>
+          String(existingComment.id) === String(comment.id) ? updatedComment : existingComment
+        );
+        this.commentSaving = false;
+        this.cancelCommentEdit();
+      },
+      error: (error) => {
+        this.commentError = error?.error || 'Could not update comment.';
+        this.commentSaving = false;
+      }
+    });
+  }
+
+  confirmDeleteComment(comment: Comment): void {
+    if (!this.detailTask) return;
+    if (!window.confirm('Delete this comment?')) return;
+    this.commentError = '';
+    this.deletingCommentId = comment.id;
+    this.apiService.deleteComment(comment.id, this.detailTask.id).subscribe({
+      next: () => {
+        this.detailComments = this.detailComments.filter((existingComment) => String(existingComment.id) !== String(comment.id));
+        this.deletingCommentId = null;
+        if (String(this.editingCommentId) === String(comment.id)) {
+          this.cancelCommentEdit();
+        }
+      },
+      error: (error) => {
+        this.commentError = error?.error || 'Could not delete comment.';
+        this.deletingCommentId = null;
+      }
+    });
+  }
+
+  formatCommentTimestamp(iso: string): string {
+    return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
+  getCommentInitial(comment: Comment): string {
+    return (comment.author_name || 'U').charAt(0).toUpperCase();
+  }
+
+  private scrollCommentsToLatest(): void {
+    setTimeout(() => {
+      const commentContainer = document.querySelector('.plannerCommentsList') as HTMLElement | null;
+      const latestComment = commentContainer?.querySelector('.plannerCommentCard:last-child') as HTMLElement | null;
+      if (commentContainer) {
+        commentContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        commentContainer.scrollTop = commentContainer.scrollHeight;
+      }
+      if (latestComment) {
+        latestComment.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    });
   }
 
   monthLabel(): string {

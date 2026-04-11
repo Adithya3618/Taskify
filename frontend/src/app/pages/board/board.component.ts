@@ -6,6 +6,7 @@ import { Subscription } from 'rxjs';
 import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { ApiService } from '../../services/api.service';
 import { AddProjectMemberRequest, Project, ProjectMember } from '../../models/project.model';
+import { Comment, CreateCommentRequest } from '../../models/comment.model';
 import { Stage, CreateStageRequest } from '../../models/stage.model';
 import { Task, CreateTaskRequest } from '../../models/task.model';
 import { Label } from '../../models/label.model';
@@ -93,6 +94,7 @@ export class BoardComponent implements OnInit, OnDestroy {
   memberSuccess = '';
   addingMember = false;
   removingMemberId: string | null = null;
+  pendingMemberRemoval: { member: ProjectMember; timeoutId: ReturnType<typeof setTimeout> } | null = null;
   knownUsers: AuthUser[] = [];
 
   /** Delete task confirmation (replaces window.confirm). */
@@ -111,6 +113,14 @@ export class BoardComponent implements OnInit, OnDestroy {
   detailNotes = '';
   /** Done flag — stored in browser only (TaskCompletionStorageService). */
   detailCompleted = false;
+  detailComments: Comment[] = [];
+  commentsLoading = false;
+  newCommentContent = '';
+  commentError = '';
+  commentSaving = false;
+  editingCommentId: number | string | null = null;
+  editingCommentContent = '';
+  deletingCommentId: number | string | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -158,6 +168,9 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.routeSub?.unsubscribe();
+    if (this.pendingMemberRemoval) {
+      clearTimeout(this.pendingMemberRemoval.timeoutId);
+    }
   }
 
   private loadAllBoards() {
@@ -247,6 +260,7 @@ export class BoardComponent implements OnInit, OnDestroy {
       next: (tasks) => {
         stage.tasks = this.taskCompletionStorage.mergeTasks(this.projectId, tasks || []);
         this.sortStageTasks(stage);
+        this.apiService.primeTaskComments((stage.tasks || []).map((task) => task.id));
         // Check for upcoming/overdue deadlines and push notifications
         const withDeadlines = (tasks || [])
           .map(t => ({ id: t.id, title: t.title, deadline: this.parseCardMeta(t.description || '').due }))
@@ -671,6 +685,12 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.detailNotes = parsed.notes;
     this.detailCompleted =
       task.completed ?? this.taskCompletionStorage.getCompleted(this.projectId, task.id);
+    this.newCommentContent = '';
+    this.commentError = '';
+    this.editingCommentId = null;
+    this.editingCommentContent = '';
+    this.deletingCommentId = null;
+    this.loadTaskComments(task.id, true);
   }
 
   // ── Filter ───────────────────────────────────
@@ -883,6 +903,10 @@ export class BoardComponent implements OnInit, OnDestroy {
     return this.isProjectOwner() && member.role !== 'owner';
   }
 
+  getTaskCommentCount(taskId: number): number {
+    return this.apiService.getTaskCommentCount(taskId);
+  }
+
   addMember(user?: AuthUser): void {
     const query = (user?.email || this.addMemberQuery).trim();
     const normalizedQuery = query.toLowerCase();
@@ -940,22 +964,56 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   removeMember(member: ProjectMember): void {
     if (!this.canRemoveMember(member)) return;
+    if (!window.confirm(`Remove ${member.user_name || member.user_email || 'this member'} from the project?`)) {
+      return;
+    }
+
+    if (this.pendingMemberRemoval) {
+      this.finalizePendingMemberRemoval();
+    }
 
     this.memberError = '';
-    this.memberSuccess = '';
+    this.memberSuccess = `${member.user_name || member.user_email || 'Member'} will be removed. Undo if needed.`;
     this.removingMemberId = member.user_id;
 
-    this.apiService.removeProjectMember(this.projectId, member.user_id).subscribe({
+    this.projectMembers = this.sortMembers(
+      this.projectMembers.filter((projectMember) => projectMember.user_id !== member.user_id)
+    );
+    this.apiService.setCachedProjectMembers(this.projectId, this.projectMembers);
+    this.syncProjectMemberCount();
+
+    const timeoutId = setTimeout(() => this.finalizePendingMemberRemoval(), 5000);
+    this.pendingMemberRemoval = { member, timeoutId };
+  }
+
+  undoRemoveMember(): void {
+    if (!this.pendingMemberRemoval) return;
+
+    clearTimeout(this.pendingMemberRemoval.timeoutId);
+    this.projectMembers = this.sortMembers([...this.projectMembers, this.pendingMemberRemoval.member]);
+    this.apiService.setCachedProjectMembers(this.projectId, this.projectMembers);
+    this.syncProjectMemberCount();
+    this.memberSuccess = `${this.pendingMemberRemoval.member.user_name || this.pendingMemberRemoval.member.user_email || 'Member'} restored.`;
+    this.removingMemberId = null;
+    this.pendingMemberRemoval = null;
+    this.loadAllBoards();
+  }
+
+  private finalizePendingMemberRemoval(): void {
+    if (!this.pendingMemberRemoval) return;
+
+    const pendingRemoval = this.pendingMemberRemoval;
+    this.pendingMemberRemoval = null;
+    this.apiService.removeProjectMember(this.projectId, pendingRemoval.member.user_id).subscribe({
       next: () => {
-        this.projectMembers = this.sortMembers(
-          this.projectMembers.filter((projectMember) => projectMember.user_id !== member.user_id)
-        );
-        this.syncProjectMemberCount();
-        this.memberSuccess = `${member.user_name || member.user_email || 'Member'} removed from the project.`;
+        this.memberSuccess = `${pendingRemoval.member.user_name || pendingRemoval.member.user_email || 'Member'} removed from the project.`;
         this.removingMemberId = null;
         this.loadAllBoards();
       },
       error: (error) => {
+        this.projectMembers = this.sortMembers([...this.projectMembers, pendingRemoval.member]);
+        this.apiService.setCachedProjectMembers(this.projectId, this.projectMembers);
+        this.syncProjectMemberCount();
         this.memberError = error?.error?.error || 'Could not remove this member.';
         this.removingMemberId = null;
       }
@@ -997,6 +1055,12 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   closeTaskDetail() {
     this.detailTask = null;
+    this.detailComments = [];
+    this.newCommentContent = '';
+    this.commentError = '';
+    this.editingCommentId = null;
+    this.editingCommentContent = '';
+    this.deletingCommentId = null;
   }
 
   saveTaskDetail() {
@@ -1030,6 +1094,153 @@ export class BoardComponent implements OnInit, OnDestroy {
         task.title = updatedTitle;
         task.description = updatedDescription;
         this.closeTaskDetail();
+      }
+    });
+  }
+
+  loadTaskComments(taskId: number, scrollToBottom = false): void {
+    this.commentsLoading = true;
+    this.apiService.getComments(taskId).subscribe({
+      next: (comments) => {
+        this.detailComments = comments || [];
+        this.commentsLoading = false;
+        if (scrollToBottom) {
+          this.scrollCommentsToLatest();
+        }
+      },
+      error: () => {
+        this.detailComments = this.apiService.getCachedTaskComments(taskId);
+        this.commentsLoading = false;
+        if (scrollToBottom) {
+          this.scrollCommentsToLatest();
+        }
+      }
+    });
+  }
+
+  canManageComment(comment: Comment): boolean {
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser) return false;
+
+    return comment.user_id === currentUser.id || comment.user_id === currentUser.email;
+  }
+
+  postComment(): void {
+    const taskId = this.detailTask?.id;
+    const content = this.newCommentContent.trim();
+    if (!taskId) return;
+
+    this.commentError = '';
+    if (!content) {
+      this.commentError = 'Comment cannot be empty.';
+      return;
+    }
+
+    this.commentSaving = true;
+    const request: CreateCommentRequest = { content };
+
+    this.apiService.createComment(taskId, request).subscribe({
+      next: (comment) => {
+        const exists = this.detailComments.some((existingComment) => String(existingComment.id) === String(comment.id));
+        this.detailComments = exists
+          ? this.detailComments.map((existingComment) =>
+              String(existingComment.id) === String(comment.id) ? comment : existingComment
+            )
+          : [...this.detailComments, comment];
+        this.detailComments.sort(
+          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+        this.newCommentContent = '';
+        this.commentSaving = false;
+        this.scrollCommentsToLatest();
+      },
+      error: (error) => {
+        this.commentError = error?.error || 'Could not post comment.';
+        this.commentSaving = false;
+      }
+    });
+  }
+
+  startCommentEdit(comment: Comment): void {
+    this.commentError = '';
+    this.editingCommentId = comment.id;
+    this.editingCommentContent = comment.content;
+  }
+
+  cancelCommentEdit(): void {
+    this.editingCommentId = null;
+    this.editingCommentContent = '';
+  }
+
+  saveCommentEdit(comment: Comment): void {
+    const content = this.editingCommentContent.trim();
+    if (!content || !this.detailTask) {
+      this.commentError = 'Comment cannot be empty.';
+      return;
+    }
+
+    this.commentError = '';
+    this.commentSaving = true;
+
+    this.apiService.updateComment(comment.id, this.detailTask.id, { content }).subscribe({
+      next: (updatedComment) => {
+        this.detailComments = this.detailComments.map((existingComment) =>
+          String(existingComment.id) === String(comment.id) ? updatedComment : existingComment
+        );
+        this.commentSaving = false;
+        this.cancelCommentEdit();
+      },
+      error: (error) => {
+        this.commentError = error?.error || 'Could not update comment.';
+        this.commentSaving = false;
+      }
+    });
+  }
+
+  confirmDeleteComment(comment: Comment): void {
+    if (!this.detailTask) return;
+    if (!window.confirm('Delete this comment?')) return;
+
+    this.commentError = '';
+    this.deletingCommentId = comment.id;
+    this.apiService.deleteComment(comment.id, this.detailTask.id).subscribe({
+      next: () => {
+        this.detailComments = this.detailComments.filter(
+          (existingComment) => String(existingComment.id) !== String(comment.id)
+        );
+        this.deletingCommentId = null;
+        if (String(this.editingCommentId) === String(comment.id)) {
+          this.cancelCommentEdit();
+        }
+      },
+      error: (error) => {
+        this.commentError = error?.error || 'Could not delete comment.';
+        this.deletingCommentId = null;
+      }
+    });
+  }
+
+  formatCommentTimestamp(iso: string): string {
+    return new Date(iso).toLocaleString(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    });
+  }
+
+  getCommentInitial(comment: Comment): string {
+    return (comment.author_name || 'U').charAt(0).toUpperCase();
+  }
+
+  private scrollCommentsToLatest(): void {
+    setTimeout(() => {
+      const commentContainer = document.querySelector('.commentsList') as HTMLElement | null;
+      const latestComment = commentContainer?.querySelector('.commentCard:last-child') as HTMLElement | null;
+      if (commentContainer) {
+        commentContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        commentContainer.scrollTop = commentContainer.scrollHeight;
+      }
+      if (latestComment) {
+        latestComment.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
     });
   }
