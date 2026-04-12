@@ -475,7 +475,7 @@ go test -v ./internal/testcases/...
 
 ---
 
-## Backend Unit Tests (Go) — 100+ tests *(Sprint 2 — carried forward)*
+## Backend Unit Tests (Go) — Sprint 3 New Tests
 
 All backend tests are in `backend/internal/testcases/` and run with:
 ```bash
@@ -483,7 +483,55 @@ cd backend
 go test -v ./internal/testcases/...
 ```
 
-See [Sprint2.md](Sprint2.md) for the full list of backend test cases.
+See [Sprint2.md](Sprint2.md) for the full list of Sprint 2 backend test cases.
+
+### `comment_test.go` — 17 tests *(Sprint 3 — NEW — Issue #68)*
+
+| Test | Function under test |
+|------|---------------------|
+| `TestCommentService_CreateComment_Success` | `CreateComment()` happy path |
+| `TestCommentService_CreateComment_EmptyContentRejected` | `ErrCommentContentRequired` |
+| `TestCommentService_CreateComment_InvalidTaskRejected` | task ownership check |
+| `TestCommentService_GetCommentsByTask_ReturnsAll` | `GetCommentsByTask()` ordering |
+| `TestCommentService_GetCommentsByTask_EmptyWhenNone` | empty list result |
+| `TestCommentService_UpdateComment_Success` | `UpdateComment()` happy path |
+| `TestCommentService_UpdateComment_EmptyContentRejected` | `ErrCommentContentRequired` on update |
+| `TestCommentService_UpdateComment_OtherUserCannotEdit` | `ErrCommentNotFoundOrAccessDenied` |
+| `TestCommentService_DeleteComment_Success` | `DeleteComment()` removes entry |
+| `TestCommentService_DeleteComment_OtherUserCannotDelete` | access control on delete |
+| `TestCommentService_ContentTrimmed` | whitespace normalization |
+| `TestCommentController_CreateComment_Unauthorized` | 401 without user context |
+| `TestCommentController_GetCommentsByTask_Unauthorized` | 401 without user context |
+| `TestCommentController_UpdateComment_Unauthorized` | 401 without user context |
+| `TestCommentController_DeleteComment_Unauthorized` | 401 without user context |
+| `TestCommentController_CreateComment_EmptyContentReturnsBadRequest` | 400 for blank content |
+| `TestCommentController_CRUD_RoundTrip` | Create → List → Update → Delete → Verify |
+| `TestNewCommentController` | constructor returns non-nil |
+
+### `subtask_test.go` — 20 tests *(Sprint 3 — NEW — Issue #69)*
+
+| Test | Function under test |
+|------|---------------------|
+| `TestSubtaskService_CreateSubtask_Success` | `CreateSubtask()` happy path |
+| `TestSubtaskService_CreateSubtask_EmptyTitleRejected` | `ErrSubtaskTitleRequired` |
+| `TestSubtaskService_CreateSubtask_InvalidTaskRejected` | task ownership check |
+| `TestSubtaskService_GetSubtasksByTask_OrderedByPosition` | ordering by position ASC |
+| `TestSubtaskService_GetSubtasksByTask_EmptyWhenNone` | empty list result |
+| `TestSubtaskService_UpdateSubtask_Title` | title update |
+| `TestSubtaskService_UpdateSubtask_ToggleCompletion` | is_completed toggle |
+| `TestSubtaskService_UpdateSubtask_EmptyTitleRejected` | `ErrSubtaskTitleRequired` on update |
+| `TestSubtaskService_UpdateSubtask_NotFoundReturnsError` | `ErrSubtaskNotFoundOrAccessDenied` |
+| `TestSubtaskService_DeleteSubtask_Success` | delete + position compaction |
+| `TestSubtaskService_DeleteSubtask_NotFoundReturnsError` | `ErrSubtaskNotFoundOrAccessDenied` |
+| `TestSubtaskService_Reorder_MovingSubtask` | position reordering logic |
+| `TestSubtaskService_TitleTrimmed` | whitespace normalization |
+| `TestSubtaskController_CreateSubtask_Unauthorized` | 401 without user context |
+| `TestSubtaskController_GetSubtasksByTask_Unauthorized` | 401 without user context |
+| `TestSubtaskController_UpdateSubtask_Unauthorized` | 401 without user context |
+| `TestSubtaskController_DeleteSubtask_Unauthorized` | 401 without user context |
+| `TestSubtaskController_CreateSubtask_EmptyTitleReturnsBadRequest` | 400 for blank title |
+| `TestSubtaskController_CRUD_RoundTrip` | Create → List → Update → Delete → Verify |
+| `TestNewSubtaskController` | constructor returns non-nil |
 
 ---
 
