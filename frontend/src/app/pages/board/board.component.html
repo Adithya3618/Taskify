@@ -849,6 +849,15 @@
           Members
           <span class="settingsTabBadge">{{ memberCount }}</span>
         </button>
+        <button
+          *ngIf="canViewActivityTab"
+          type="button"
+          class="settingsTab"
+          [class.settingsTabActive]="settingsActiveTab === 'activity'"
+          (click)="setSettingsTab('activity')"
+        >
+          Activity
+        </button>
       </div>
 
       <div class="task-modal-body settingsBody" *ngIf="settingsActiveTab === 'general'">
@@ -943,6 +952,75 @@
                 {{ removingMemberId === member.user_id ? 'Removing...' : 'Remove' }}
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="task-modal-body settingsBody" *ngIf="settingsActiveTab === 'activity' && canViewActivityTab">
+        <div class="activityToolbar">
+          <div class="activityFilterField">
+            <label for="activity-member-filter">Team member</label>
+            <select id="activity-member-filter" [(ngModel)]="activityFilterUserId" (change)="applyActivityFilters()">
+              <option value="">All members</option>
+              <option *ngFor="let member of activityMemberOptions" [value]="member.user_id">
+                {{ member.user_name || member.user_email || member.user_id }}
+              </option>
+            </select>
+          </div>
+
+          <div class="activityFilterField">
+            <label for="activity-date-from">From</label>
+            <input id="activity-date-from" type="date" [(ngModel)]="activityFilterFrom" (change)="applyActivityFilters()" />
+          </div>
+
+          <div class="activityFilterField">
+            <label for="activity-date-to">To</label>
+            <input id="activity-date-to" type="date" [(ngModel)]="activityFilterTo" (change)="applyActivityFilters()" />
+          </div>
+
+          <button type="button" class="btn-modal-ghost activityResetBtn" (click)="resetActivityFilters()">
+            Reset
+          </button>
+        </div>
+
+        <p *ngIf="activityError" class="memberFeedback memberFeedbackError">{{ activityError }}</p>
+
+        <div class="activityPanel">
+          <div class="activityPanelHead">
+            <div>
+              <h4>Project activity</h4>
+              <p>Track the latest updates across this board.</p>
+            </div>
+            <span *ngIf="activityTotal" class="activityCount">{{ activityTotal }} entries</span>
+          </div>
+
+          <div *ngIf="activityLoading" class="memberEmptyState">Loading activity...</div>
+
+          <div *ngIf="!activityLoading && !activityLogs.length" class="activityEmptyState">
+            <strong>No activity logged yet.</strong>
+            <p>Updates from tasks, members, labels, and comments will appear here once they happen.</p>
+          </div>
+
+          <div *ngIf="!activityLoading && activityLogs.length" class="activityList">
+            <div class="activityItem" *ngFor="let activity of activityLogs">
+              <span class="activityIcon" [attr.data-action]="activity.action">{{ getActivityIcon(activity) }}</span>
+              <div class="activityContent">
+                <p>{{ activity.description }}</p>
+                <span>{{ formatActivityTimestamp(activity.created_at) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="activityMore" *ngIf="!activityLoading && activityLogs.length">
+            <button
+              *ngIf="hasMoreActivity"
+              type="button"
+              class="btn-modal-ghost"
+              (click)="loadMoreActivity()"
+              [disabled]="activityLoadingMore"
+            >
+              {{ activityLoadingMore ? 'Loading...' : 'Load more' }}
+            </button>
           </div>
         </div>
       </div>

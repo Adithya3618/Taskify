@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { ApiService } from '../../services/api.service';
+import { ActivityLog } from '../../models/activity.model';
 import { AddProjectMemberRequest, Project, ProjectMember } from '../../models/project.model';
 import { Comment, CreateCommentRequest } from '../../models/comment.model';
 import { Stage, CreateStageRequest } from '../../models/stage.model';
@@ -87,7 +88,7 @@ export class BoardComponent implements OnInit, OnDestroy {
   showShareModal = false;
   shareLinkCopied = false;
   showProjectSettingsModal = false;
-  settingsActiveTab: 'general' | 'members' = 'general';
+  settingsActiveTab: 'general' | 'members' | 'activity' = 'general';
   projectMembers: ProjectMember[] = [];
   membersLoading = false;
   addMemberQuery = '';
@@ -97,6 +98,17 @@ export class BoardComponent implements OnInit, OnDestroy {
   removingMemberId: string | null = null;
   pendingMemberRemoval: { member: ProjectMember; timeoutId: ReturnType<typeof setTimeout> } | null = null;
   knownUsers: AuthUser[] = [];
+  activityLogs: ActivityLog[] = [];
+  activityLoading = false;
+  activityError = '';
+  activityPage = 1;
+  activityLimit = 12;
+  activityTotal = 0;
+  activityHasLoaded = false;
+  activityLoadingMore = false;
+  activityFilterUserId = '';
+  activityFilterFrom = '';
+  activityFilterTo = '';
 
   /** Delete task confirmation (replaces window.confirm). */
   deleteTaskPending: { stageId: number; taskId: number; taskTitle: string } | null = null;
@@ -841,13 +853,16 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.shareLinkCopied = false;
   }
 
-  openProjectSettings(tab: 'general' | 'members' = 'general'): void {
+  openProjectSettings(tab: 'general' | 'members' | 'activity' = 'general'): void {
     this.showProjectSettingsModal = true;
     this.settingsActiveTab = tab;
     this.memberError = '';
     this.memberSuccess = '';
     this.addMemberQuery = '';
     this.loadProjectMembers();
+    if (tab === 'activity' && this.isProjectOwner()) {
+      this.loadActivityLogs(true);
+    }
   }
 
   closeProjectSettings(): void {
@@ -856,12 +871,16 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.memberError = '';
     this.memberSuccess = '';
     this.addMemberQuery = '';
+    this.activityError = '';
   }
 
-  setSettingsTab(tab: 'general' | 'members'): void {
+  setSettingsTab(tab: 'general' | 'members' | 'activity'): void {
     this.settingsActiveTab = tab;
-    if (tab === 'members' && !this.projectMembers.length) {
+    if ((tab === 'members' || tab === 'activity') && !this.projectMembers.length) {
       this.loadProjectMembers();
+    }
+    if (tab === 'activity' && this.isProjectOwner() && !this.activityHasLoaded) {
+      this.loadActivityLogs(true);
     }
   }
 
@@ -903,6 +922,18 @@ export class BoardComponent implements OnInit, OnDestroy {
     return this.projectMembers.length || this.apiService.getProjectMemberCount(this.projectId);
   }
 
+  get canViewActivityTab(): boolean {
+    return this.isProjectOwner();
+  }
+
+  get activityMemberOptions(): ProjectMember[] {
+    return this.projectMembers.filter((member) => !!member.user_id);
+  }
+
+  get hasMoreActivity(): boolean {
+    return this.activityLogs.length < this.activityTotal;
+  }
+
   isProjectOwner(): boolean {
     const currentEmail = this.userEmail.trim().toLowerCase();
     const currentId = this.authService.getCurrentUser()?.id;
@@ -919,6 +950,23 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   canRemoveMember(member: ProjectMember): boolean {
     return this.isProjectOwner() && member.role !== 'owner';
+  }
+
+  applyActivityFilters(): void {
+    if (!this.canViewActivityTab) return;
+    this.loadActivityLogs(true);
+  }
+
+  resetActivityFilters(): void {
+    this.activityFilterUserId = '';
+    this.activityFilterFrom = '';
+    this.activityFilterTo = '';
+    this.loadActivityLogs(true);
+  }
+
+  loadMoreActivity(): void {
+    if (this.activityLoading || this.activityLoadingMore || !this.hasMoreActivity) return;
+    this.loadActivityLogs(false);
   }
 
   getTaskCommentCount(taskId: number): number {
@@ -1377,6 +1425,33 @@ export class BoardComponent implements OnInit, OnDestroy {
     });
   }
 
+  formatActivityTimestamp(iso: string): string {
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const minuteMs = 60 * 1000;
+    const hourMs = 60 * minuteMs;
+    const dayMs = 24 * hourMs;
+
+    if (diffMs < minuteMs) return 'Just now';
+    if (diffMs < hourMs) return `${Math.max(1, Math.floor(diffMs / minuteMs))}m ago`;
+    if (diffMs < dayMs) return `${Math.floor(diffMs / hourMs)}h ago`;
+    if (diffMs < 7 * dayMs) return `${Math.floor(diffMs / dayMs)}d ago`;
+
+    return new Date(iso).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  }
+
+  getActivityIcon(activity: ActivityLog): string {
+    if (activity.action.includes('moved')) return '↔';
+    if (activity.action.includes('comment')) return '◦';
+    if (activity.action.includes('member')) return '+';
+    if (activity.action.includes('label')) return '#';
+    if (activity.action.includes('deleted')) return '−';
+    return '•';
+  }
+
   getCommentInitial(comment: Comment): string {
     return (comment.author_name || 'U').charAt(0).toUpperCase();
   }
@@ -1443,6 +1518,51 @@ export class BoardComponent implements OnInit, OnDestroy {
     if (this.detailTask?.id === taskId) {
       this.detailTask = { ...this.detailTask, ...changes };
     }
+  }
+
+  private loadActivityLogs(reset: boolean): void {
+    if (!this.canViewActivityTab) return;
+
+    const nextPage = reset ? 1 : this.activityPage + 1;
+    this.activityLoading = reset;
+    this.activityLoadingMore = !reset;
+    this.activityError = '';
+
+    this.apiService.getProjectActivity(this.projectId, {
+      page: nextPage,
+      limit: this.activityLimit,
+      user_id: this.activityFilterUserId || undefined,
+      from: this.toActivityBoundary(this.activityFilterFrom, 'start'),
+      to: this.toActivityBoundary(this.activityFilterTo, 'end')
+    }).subscribe({
+      next: (response) => {
+        const incoming = response.data || [];
+        this.activityLogs = reset ? incoming : [...this.activityLogs, ...incoming];
+        this.activityPage = response.page || nextPage;
+        this.activityTotal = response.total || this.activityLogs.length;
+        this.activityHasLoaded = true;
+        this.activityLoading = false;
+        this.activityLoadingMore = false;
+      },
+      error: () => {
+        if (reset) {
+          this.activityLogs = [];
+          this.activityTotal = 0;
+        }
+        this.activityError = 'Could not load activity history.';
+        this.activityHasLoaded = true;
+        this.activityLoading = false;
+        this.activityLoadingMore = false;
+      }
+    });
+  }
+
+  private toActivityBoundary(value: string, boundary: 'start' | 'end'): string | undefined {
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+    return boundary === 'start'
+      ? `${trimmed}T00:00:00.000Z`
+      : `${trimmed}T23:59:59.999Z`;
   }
 
   private scrollCommentsToLatest(): void {

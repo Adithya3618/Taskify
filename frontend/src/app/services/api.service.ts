@@ -3,6 +3,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, catchError, map, of, tap, throwError } from 'rxjs';
 
 import { AddProjectMemberRequest, CreateProjectRequest, Project, ProjectMember } from '../models/project.model';
+import { ActivityLog, ActivityQueryParams } from '../models/activity.model';
 import { Comment, CreateCommentRequest } from '../models/comment.model';
 import { Stage, CreateStageRequest } from '../models/stage.model';
 import { Task, CreateTaskRequest, MoveTaskRequest } from '../models/task.model';
@@ -275,6 +276,20 @@ export class ApiService {
 
   deleteProject(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/projects/${id}`);
+  }
+
+  getProjectActivity(projectId: number, params: ActivityQueryParams = {}): Observable<ApiPaginatedResponse<ActivityLog[]>> {
+    const query = new URLSearchParams();
+    if (params.page) query.set('page', String(params.page));
+    if (params.limit) query.set('limit', String(params.limit));
+    if (params.user_id?.trim()) query.set('user_id', params.user_id.trim());
+    if (params.from?.trim()) query.set('from', params.from.trim());
+    if (params.to?.trim()) query.set('to', params.to.trim());
+
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return this.http.get<ApiPaginatedResponse<ActivityLog[]>>(
+      `${this.baseUrl}/projects/${projectId}/activity${suffix}`
+    );
   }
 
   getProjectMembers(projectId: number): Observable<ProjectMember[]> {

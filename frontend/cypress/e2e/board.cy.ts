@@ -1,7 +1,9 @@
 /// <reference types="cypress" />
 
 import {
+  makeActivity,
   makeComment,
+  makeProjectMember,
   STAGE_ID,
   TASK_ID,
   makeTask,
@@ -643,6 +645,90 @@ describe('Board — task comments', () => {
     cy.wait('@deleteComment');
     cy.contains('.commentCard', 'Follow-up comment').should('not.exist');
     cy.get('.task-comment-meta').first().should('contain', '1');
+  });
+});
+
+describe('Board — project activity', () => {
+  const ownerMember = makeProjectMember(1, 'owner-1', 'Adithya', 'e2e@test.com', 'owner');
+  const teammateMember = makeProjectMember(1, 'member-2', 'Casey Doe', 'casey@test.com', 'member');
+
+  it('shows the Activity tab only for the owner', () => {
+    visitBoard({
+      owners: { '1': 'owner@test.com' },
+      sessionUser: { name: 'Jordan', email: 'member@test.com', id: 'member-3' },
+      cachedProjectMembers: {
+        1: [
+          makeProjectMember(1, 'owner-1', 'Owner User', 'owner@test.com', 'owner'),
+          makeProjectMember(1, 'member-3', 'Jordan', 'member@test.com', 'member'),
+        ],
+      },
+      projectMembers: [
+        makeProjectMember(1, 'owner-1', 'Owner User', 'owner@test.com', 'owner'),
+        makeProjectMember(1, 'member-3', 'Jordan', 'member@test.com', 'member'),
+      ],
+    });
+
+    cy.contains('button.btn-ghost', 'Settings').click();
+    cy.contains('h3', 'Project settings').should('be.visible');
+    cy.contains('.settingsTab', 'Activity').should('not.exist');
+  });
+
+  it('renders newest activity first, filters by member/date, and paginates with load more', () => {
+    visitBoard({
+      projectMembers: [ownerMember, teammateMember],
+      activityByProjectId: {
+        1: [
+          makeActivity(1, 1, "Adithya moved 'Design login' to Done", { userId: 'owner-1', userName: 'Adithya', createdAt: '2026-04-12T14:00:00.000Z' }),
+          makeActivity(1, 2, "Casey added label 'Urgent' to 'Fix bugs'", { userId: 'member-2', userName: 'Casey Doe', action: 'label_assigned', entityType: 'label', createdAt: '2026-04-11T11:00:00.000Z' }),
+          makeActivity(1, 3, "Adithya commented on 'Launch prep'", { userId: 'owner-1', userName: 'Adithya', action: 'comment_added', entityType: 'comment', createdAt: '2026-04-10T09:00:00.000Z' }),
+          makeActivity(1, 4, "Casey created 'Write release notes'", { userId: 'member-2', userName: 'Casey Doe', action: 'task_created', createdAt: '2026-04-09T09:00:00.000Z' }),
+          makeActivity(1, 5, "Adithya updated 'Board polish'", { userId: 'owner-1', userName: 'Adithya', action: 'task_updated', createdAt: '2026-04-08T09:00:00.000Z' }),
+          makeActivity(1, 6, "Casey moved 'Homepage QA' to Doing", { userId: 'member-2', userName: 'Casey Doe', createdAt: '2026-04-07T09:00:00.000Z' }),
+          makeActivity(1, 7, "Adithya removed label 'Blocked'", { userId: 'owner-1', userName: 'Adithya', action: 'label_removed', entityType: 'label', createdAt: '2026-04-06T09:00:00.000Z' }),
+          makeActivity(1, 8, "Casey joined the project", { userId: 'member-2', userName: 'Casey Doe', action: 'member_joined', entityType: 'member', createdAt: '2026-04-05T09:00:00.000Z' }),
+          makeActivity(1, 9, "Adithya added Casey to the board", { userId: 'owner-1', userName: 'Adithya', action: 'member_added', entityType: 'member', createdAt: '2026-04-04T09:00:00.000Z' }),
+          makeActivity(1, 10, "Casey deleted 'Old draft'", { userId: 'member-2', userName: 'Casey Doe', action: 'task_deleted', createdAt: '2026-04-03T09:00:00.000Z' }),
+          makeActivity(1, 11, "Adithya moved 'Sprint wrap-up' to Done", { userId: 'owner-1', userName: 'Adithya', createdAt: '2026-04-02T09:00:00.000Z' }),
+          makeActivity(1, 12, "Casey added a comment to 'Roadmap'", { userId: 'member-2', userName: 'Casey Doe', action: 'comment_added', entityType: 'comment', createdAt: '2026-04-01T09:00:00.000Z' }),
+          makeActivity(1, 13, "Adithya updated 'Retro notes'", { userId: 'owner-1', userName: 'Adithya', action: 'task_updated', createdAt: '2026-03-31T09:00:00.000Z' }),
+        ],
+      },
+    });
+
+    cy.contains('button.btn-ghost', 'Settings').click();
+    cy.contains('.settingsTab', 'Activity').click();
+    cy.get('.activityList .activityItem').should('have.length', 12);
+    cy.get('.activityList .activityItem').first().should('contain', "Adithya moved 'Design login' to Done");
+    cy.get('.activityList .activityItem').last().should('contain', "Casey added a comment to 'Roadmap'");
+
+    cy.get('#activity-member-filter').select('member-2');
+    cy.get('.activityList .activityItem').should('have.length', 6);
+    cy.get('.activityList').should('contain', 'Casey added label');
+    cy.get('.activityList').should('not.contain', "Adithya moved 'Design login' to Done");
+
+    cy.get('#activity-date-from')
+      .invoke('val', '2026-04-05')
+      .trigger('input', { force: true })
+      .trigger('change', { force: true });
+    cy.get('.activityList .activityItem').should('have.length', 4);
+    cy.get('.activityList').should('not.contain', "Casey deleted 'Old draft'");
+
+    cy.contains('.activityToolbar button', 'Reset').click();
+    cy.get('.activityList .activityItem').should('have.length', 12);
+    cy.contains('.activityMore button', 'Load more').click();
+    cy.get('.activityList .activityItem').should('have.length', 13);
+    cy.get('.activityList').should('contain', "Adithya updated 'Retro notes'");
+  });
+
+  it('shows an empty state when no activity has been logged', () => {
+    visitBoard({
+      projectMembers: [ownerMember, teammateMember],
+      activityByProjectId: { 1: [] },
+    });
+
+    cy.contains('button.btn-ghost', 'Settings').click();
+    cy.contains('.settingsTab', 'Activity').click();
+    cy.contains('.activityEmptyState strong', 'No activity logged yet.').should('be.visible');
   });
 });
 
