@@ -154,7 +154,7 @@
         </div>
       </div>
 
-      <div class="filterGroup" *ngIf="projectLabels.length">
+      <div class="filterGroup">
         <span class="filterGroupLabel">Label</span>
         <div class="filterChips">
           <button class="filterChip" [class.active]="filterLabel === ''" (click)="filterLabel = ''">All</button>
@@ -208,7 +208,7 @@
         <span class="label-chip label-chip-add" (click)="openTaskDetail(task, $event)">+ Add label</span>
       </div>
       <div class="task-meta-row" *ngIf="getTaskPriority(task) || getTaskDue(task)">
-        <span *ngIf="getEffectivePriority(task)" class="meta-pill priority-pill" [ngClass]="getPriorityClass(task)"
+        <span *ngIf="getEffectivePriority(task)" class="meta-pill priority-pill priority-badge" [ngClass]="getPriorityClass(task)"
               [title]="getEffectivePriority(task) !== getTaskPriority(task) ? 'Set: ' + getTaskPriority(task) + ' → Escalated due to deadline' : ''">
           {{ getEffectivePriority(task) }}
         </span>
@@ -532,7 +532,7 @@
               </div>
             </div>
 
-            <div *ngIf="projectLabels.length" class="labelSection">
+            <div class="labelSection">
               <span class="labelSectionTitle">Labels</span>
               <div class="labelChipPicker">
                 <div *ngFor="let label of projectLabels"
@@ -711,9 +711,9 @@
 
   <!-- Label Manager Modal -->
   <div *ngIf="showLabelManager" class="task-modal-backdrop" (click)="showLabelManager = false">
-    <div class="task-modal labelModal" (click)="$event.stopPropagation()">
+    <div class="task-modal labelModal labelManagerModal" (click)="$event.stopPropagation()">
       <div class="task-modal-header">
-        <div><h3>Labels</h3><p>Create and manage labels for this board.</p></div>
+        <div><h3>Label Manager</h3><p>Create and manage labels for this board.</p></div>
         <button class="btn-close-modal" (click)="showLabelManager = false">×</button>
       </div>
       <div class="task-modal-body">
@@ -734,7 +734,7 @@
 
         <!-- Existing labels -->
         <div class="labelList" *ngIf="projectLabels.length">
-          <div class="labelListItem" *ngFor="let label of projectLabels">
+          <div class="labelListItem labelRow" *ngFor="let label of projectLabels">
             <span class="labelDot" [style.background]="label.color"></span>
             <span class="labelListName">{{ label.name }}</span>
             <button class="labelDeleteBtn" (click)="deleteLabel(label.id)" title="Delete label">×</button>
