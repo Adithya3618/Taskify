@@ -7,7 +7,7 @@
 | saisreejachava (Sreeja) | #70, #71, #72, #73 | Google OAuth, Task Deadlines & Priority UI, Labels/Tags, Notification Center |
 | nandhan (Jyothi Nandhan Repaka) | #67, #68, #69 | Task Enhancements API, Task Comments API, Subtasks / Checklists API |
 | meghana21-arch (Sai Meghana Barla) | #74, #75, #76, #77 | Project Member Management UI, Task Comments UI, Subtasks/Checklists UI, Activity History UI |
-| *(teammate 4)* | #82–#85 | *(backend/frontend features)* |
+| Adithya3618(Adithya) | #63, #64, #65, #66 | DB Schema & API, Notifications System — Email & In-App, Activity History — DB Schema & API, Labels/Tags — DB Schema & CRUD API| 
 
 ---
 
