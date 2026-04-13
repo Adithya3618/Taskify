@@ -492,7 +492,7 @@
 
   <!-- Task Detail Modal -->
   <div class="task-modal-backdrop" *ngIf="detailTask" (click)="closeTaskDetail()">
-    <div class="task-modal" (click)="$event.stopPropagation()">
+    <div class="task-modal task-detail-modal" (click)="$event.stopPropagation()">
       <div class="task-modal-header">
         <div>
           <h3>Task Details</h3>
@@ -502,195 +502,203 @@
       </div>
 
       <div class="task-modal-body">
-        <label class="task-modal-done-row">
-          <input class="board-checkbox" type="checkbox" [(ngModel)]="detailCompleted" />
-          <span>Mark as completed</span>
-        </label>
+        <div class="task-detail-layout">
+          <div class="task-detail-main">
+            <label class="task-modal-done-row">
+              <input class="board-checkbox" type="checkbox" [(ngModel)]="detailCompleted" />
+              <span>Mark as completed</span>
+            </label>
 
-        <label>Title</label>
-        <input type="text" [(ngModel)]="detailTitle" />
+            <label>Title</label>
+            <input type="text" [(ngModel)]="detailTitle" />
 
-        <label>Description</label>
-        <textarea rows="3" [(ngModel)]="detailDesc"></textarea>
+            <label>Description</label>
+            <textarea rows="3" [(ngModel)]="detailDesc"></textarea>
 
-        <div class="task-modal-grid">
-          <div>
-            <label>Due Date</label>
-            <input type="date" [(ngModel)]="detailDue" />
-          </div>
-          <div>
-            <label>Priority</label>
-            <select [(ngModel)]="detailPriority" [ngClass]="getDetailPriorityClass()">
-              <option value="">None</option>
-              <option value="Low">Low</option>
-              <option value="Medium">Medium</option>
-              <option value="High">High</option>
-              <option value="Urgent">Urgent</option>
-            </select>
-          </div>
-        </div>
-
-        <div *ngIf="projectLabels.length" class="labelSection">
-          <span class="labelSectionTitle">Labels</span>
-          <div class="labelChipPicker">
-            <div *ngFor="let label of projectLabels"
-                 class="labelPickerChip"
-                 [class.selected]="isLabelOnTask(detailTask!.id, label.id)"
-                 [style.border-color]="label.color"
-                 [style.background]="isLabelOnTask(detailTask!.id, label.id) ? label.color : 'transparent'"
-                 [style.color]="isLabelOnTask(detailTask!.id, label.id) ? '#fff' : label.color"
-                 (click)="toggleLabelOnTask(detailTask!.id, label.id)">
-              <span class="labelPickerDot"
-                    *ngIf="!isLabelOnTask(detailTask!.id, label.id)"
-                    [style.background]="label.color"></span>
-              <svg *ngIf="isLabelOnTask(detailTask!.id, label.id)" class="labelPickerCheck" viewBox="0 0 24 24" fill="none">
-                <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              {{ label.name }}
-            </div>
-          </div>
-        </div>
-
-        <label>Notes</label>
-        <textarea rows="4" [(ngModel)]="detailNotes"></textarea>
-
-        <div class="subtaskSection">
-          <div class="subtaskSectionHeader">
-            <div>
-              <label class="subtaskSectionLabel">Checklist</label>
-              <p>Break the task into smaller steps and track progress here.</p>
-            </div>
-            <span class="subtaskSectionMeta" *ngIf="detailSubtasks.length">
-              {{ getDetailSubtaskCompletedCount() }}/{{ detailSubtasks.length }} done
-            </span>
-          </div>
-
-          <p *ngIf="subtaskError" class="memberFeedback memberFeedbackError">{{ subtaskError }}</p>
-
-          <div class="subtaskComposer">
-            <input
-              type="text"
-              [(ngModel)]="newSubtaskTitle"
-              placeholder="Add a checklist item"
-              (keyup.enter)="addSubtask()"
-            />
-            <button
-              type="button"
-              class="btn-modal-primary"
-              (click)="addSubtask()"
-              [disabled]="subtaskSaving || !newSubtaskTitle.trim()"
-            >
-              {{ subtaskSaving ? 'Adding...' : 'Add' }}
-            </button>
-          </div>
-
-          <div *ngIf="subtasksLoading" class="memberEmptyState">Loading checklist...</div>
-
-          <div class="subtaskList" *ngIf="!subtasksLoading && detailSubtasks.length">
-            <div class="subtaskItem" *ngFor="let subtask of detailSubtasks; trackBy: trackBySubtaskId">
-              <label class="subtaskItemMain">
-                <input
-                  class="board-checkbox"
-                  type="checkbox"
-                  [checked]="subtask.is_completed"
-                  (change)="toggleSubtask(subtask, $event)"
-                />
-                <span class="subtaskItemTitle" [class.subtaskItemTitleDone]="subtask.is_completed">{{ subtask.title }}</span>
-              </label>
-              <button
-                type="button"
-                class="subtaskDeleteBtn"
-                (click)="deleteSubtask(subtask)"
-                [disabled]="subtaskDeletingId === subtask.id"
-              >
-                {{ subtaskDeletingId === subtask.id ? 'Deleting...' : 'Delete' }}
-              </button>
-            </div>
-          </div>
-
-          <div *ngIf="!subtasksLoading && !detailSubtasks.length" class="memberEmptyState">
-            No checklist items yet. Add one above to get started.
-          </div>
-        </div>
-
-        <div class="commentSection">
-          <div class="commentSectionHeader">
-            <div>
-              <label class="commentSectionLabel">Comments</label>
-              <p>Ask questions, share updates, and keep task discussion in one place.</p>
-            </div>
-          </div>
-
-          <p *ngIf="commentError" class="memberFeedback memberFeedbackError">{{ commentError }}</p>
-
-          <div class="commentsComposer">
-            <textarea
-              rows="3"
-              [(ngModel)]="newCommentContent"
-              placeholder="Write a comment..."
-            ></textarea>
-            <div class="commentsComposerActions">
-              <button
-                type="button"
-                class="btn-modal-primary"
-                (click)="postComment()"
-                [disabled]="commentSaving || !newCommentContent.trim()"
-              >
-                {{ commentSaving && !editingCommentId ? 'Posting...' : 'Post' }}
-              </button>
-            </div>
-          </div>
-
-          <div class="commentsList">
-            <div *ngIf="commentsLoading" class="memberEmptyState">Loading comments...</div>
-
-            <div *ngIf="!commentsLoading && !detailComments.length" class="memberEmptyState">
-              No comments yet. Start the conversation below.
+            <div class="task-modal-grid">
+              <div>
+                <label>Due Date</label>
+                <input type="date" [(ngModel)]="detailDue" />
+              </div>
+              <div>
+                <label>Priority</label>
+                <select [(ngModel)]="detailPriority" [ngClass]="getDetailPriorityClass()">
+                  <option value="">None</option>
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                  <option value="Urgent">Urgent</option>
+                </select>
+              </div>
             </div>
 
-            <div class="commentCard" *ngFor="let comment of detailComments">
-              <span class="commentAvatar">{{ getCommentInitial(comment) }}</span>
-              <div class="commentBody">
-                <div class="commentMeta">
-                  <strong>{{ comment.author_name }}</strong>
-                  <span>{{ formatCommentTimestamp(comment.updated_at || comment.created_at) }}</span>
+            <div *ngIf="projectLabels.length" class="labelSection">
+              <span class="labelSectionTitle">Labels</span>
+              <div class="labelChipPicker">
+                <div *ngFor="let label of projectLabels"
+                     class="labelPickerChip"
+                     [class.selected]="isLabelOnTask(detailTask!.id, label.id)"
+                     [style.border-color]="label.color"
+                     [style.background]="isLabelOnTask(detailTask!.id, label.id) ? label.color : 'transparent'"
+                     [style.color]="isLabelOnTask(detailTask!.id, label.id) ? '#fff' : label.color"
+                     (click)="toggleLabelOnTask(detailTask!.id, label.id)">
+                  <span class="labelPickerDot"
+                        *ngIf="!isLabelOnTask(detailTask!.id, label.id)"
+                        [style.background]="label.color"></span>
+                  <svg *ngIf="isLabelOnTask(detailTask!.id, label.id)" class="labelPickerCheck" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  {{ label.name }}
                 </div>
+              </div>
+            </div>
 
-                <div *ngIf="editingCommentId !== comment.id; else editCommentForm" class="commentContent">
-                  {{ comment.content }}
+            <label>Notes</label>
+            <textarea rows="4" [(ngModel)]="detailNotes"></textarea>
+          </div>
+
+          <aside class="task-detail-side">
+            <div class="detailSidePanel subtaskSection">
+              <div class="subtaskSectionHeader">
+                <div>
+                  <label class="subtaskSectionLabel">Checklist</label>
+                  <p>Break the task into smaller steps and track progress here.</p>
                 </div>
-
-                <ng-template #editCommentForm>
-                  <div class="commentEditForm">
-                    <textarea rows="3" [(ngModel)]="editingCommentContent"></textarea>
-                    <div class="commentEditActions">
-                      <button
-                        type="button"
-                        class="btn-modal-primary"
-                        (click)="saveCommentEdit(comment)"
-                        [disabled]="commentSaving || !editingCommentContent.trim()"
-                      >
-                        {{ commentSaving ? 'Saving...' : 'Save' }}
-                      </button>
-                      <button type="button" class="btn-modal-ghost" (click)="cancelCommentEdit()">Cancel</button>
-                    </div>
-                  </div>
-                </ng-template>
+                <span class="subtaskSectionMeta" *ngIf="detailSubtasks.length">
+                  {{ getDetailSubtaskCompletedCount() }}/{{ detailSubtasks.length }} done
+                </span>
               </div>
 
-              <div class="commentActions" *ngIf="canManageComment(comment) && editingCommentId !== comment.id">
-                <button type="button" class="commentActionBtn" (click)="startCommentEdit(comment)">Edit</button>
+              <p *ngIf="subtaskError" class="memberFeedback memberFeedbackError">{{ subtaskError }}</p>
+
+              <div class="subtaskComposer">
+                <input
+                  type="text"
+                  [(ngModel)]="newSubtaskTitle"
+                  placeholder="Add a checklist item"
+                  (keyup.enter)="addSubtask()"
+                />
                 <button
                   type="button"
-                  class="commentActionBtn danger"
-                  (click)="confirmDeleteComment(comment)"
-                  [disabled]="deletingCommentId === comment.id"
+                  class="btn-modal-primary"
+                  (click)="addSubtask()"
+                  [disabled]="subtaskSaving || !newSubtaskTitle.trim()"
                 >
-                  {{ deletingCommentId === comment.id ? 'Deleting...' : 'Delete' }}
+                  {{ subtaskSaving ? 'Adding...' : 'Add' }}
                 </button>
               </div>
+
+              <div *ngIf="subtasksLoading" class="memberEmptyState">Loading checklist...</div>
+
+              <div class="subtaskList" *ngIf="!subtasksLoading && detailSubtasks.length">
+                <div class="subtaskItem" *ngFor="let subtask of detailSubtasks; trackBy: trackBySubtaskId" [class.subtaskItemDeleting]="subtaskDeletingId === subtask.id" [class.subtaskItemCompleted]="subtask.is_completed">
+                  <label class="subtaskItemMain">
+                    <span class="subtaskCheckboxRail">
+                      <input
+                        class="board-checkbox"
+                        type="checkbox"
+                        [checked]="subtask.is_completed"
+                        (change)="toggleSubtask(subtask, $event)"
+                      />
+                    </span>
+                    <span class="subtaskItemTitle" [class.subtaskItemTitleDone]="subtask.is_completed">{{ subtask.title }}</span>
+                  </label>
+                  <button
+                    type="button"
+                    class="subtaskDeleteBtn"
+                    (click)="requestDeleteSubtask(subtask)"
+                    [disabled]="subtaskDeletingId === subtask.id"
+                  >
+                    {{ subtaskDeletingId === subtask.id ? 'Deleting...' : 'Delete' }}
+                  </button>
+                </div>
+              </div>
+
+              <div *ngIf="!subtasksLoading && !detailSubtasks.length" class="memberEmptyState">
+                No checklist items yet. Add one above to get started.
+              </div>
             </div>
-          </div>
+
+            <div class="detailSidePanel commentSection">
+              <div class="commentSectionHeader">
+                <div>
+                  <label class="commentSectionLabel">Comments</label>
+                  <p>Ask questions, share updates, and keep task discussion in one place.</p>
+                </div>
+              </div>
+
+              <p *ngIf="commentError" class="memberFeedback memberFeedbackError">{{ commentError }}</p>
+
+              <div class="commentsComposer">
+                <textarea
+                  rows="3"
+                  [(ngModel)]="newCommentContent"
+                  placeholder="Write a comment..."
+                ></textarea>
+                <div class="commentsComposerActions">
+                  <button
+                    type="button"
+                    class="btn-modal-primary"
+                    (click)="postComment()"
+                    [disabled]="commentSaving || !newCommentContent.trim()"
+                  >
+                    {{ commentSaving && !editingCommentId ? 'Posting...' : 'Post' }}
+                  </button>
+                </div>
+              </div>
+
+              <div class="commentsList">
+                <div *ngIf="commentsLoading" class="memberEmptyState">Loading comments...</div>
+
+                <div *ngIf="!commentsLoading && !detailComments.length" class="memberEmptyState">
+                  No comments yet. Start the conversation below.
+                </div>
+
+                <div class="commentCard" *ngFor="let comment of detailComments">
+                  <span class="commentAvatar">{{ getCommentInitial(comment) }}</span>
+                  <div class="commentBody">
+                    <div class="commentMeta">
+                      <strong>{{ comment.author_name }}</strong>
+                      <span>{{ formatCommentTimestamp(comment.updated_at || comment.created_at) }}</span>
+                    </div>
+
+                    <div *ngIf="editingCommentId !== comment.id; else editCommentForm" class="commentContent">
+                      {{ comment.content }}
+                    </div>
+
+                    <ng-template #editCommentForm>
+                      <div class="commentEditForm">
+                        <textarea rows="3" [(ngModel)]="editingCommentContent"></textarea>
+                        <div class="commentEditActions">
+                          <button
+                            type="button"
+                            class="btn-modal-primary"
+                            (click)="saveCommentEdit(comment)"
+                            [disabled]="commentSaving || !editingCommentContent.trim()"
+                          >
+                            {{ commentSaving ? 'Saving...' : 'Save' }}
+                          </button>
+                          <button type="button" class="btn-modal-ghost" (click)="cancelCommentEdit()">Cancel</button>
+                        </div>
+                      </div>
+                    </ng-template>
+                  </div>
+
+                  <div class="commentActions" *ngIf="canManageComment(comment) && editingCommentId !== comment.id">
+                    <button type="button" class="commentActionBtn" (click)="startCommentEdit(comment)">Edit</button>
+                    <button
+                      type="button"
+                      class="commentActionBtn danger"
+                      (click)="confirmDeleteComment(comment)"
+                      [disabled]="deletingCommentId === comment.id"
+                    >
+                      {{ deletingCommentId === comment.id ? 'Deleting...' : 'Delete' }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
 
@@ -772,6 +780,42 @@
       </div>
       <div class="task-modal-footer">
         <button class="btn-modal-ghost" (click)="closeShareModal()">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="task-modal-backdrop" *ngIf="deleteSubtaskPending" (click)="cancelDeleteSubtask()">
+    <div class="task-modal delete-confirm-modal" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="deleteSubtaskTitle">
+      <div class="task-modal-header">
+        <div>
+          <h3 id="deleteSubtaskTitle">Delete checklist item?</h3>
+          <p class="delete-confirm-sub">This step will be removed from the task.</p>
+        </div>
+      </div>
+      <div class="task-modal-body">
+        <p class="delete-confirm-task-name">{{ deleteSubtaskPending!.title }}</p>
+      </div>
+      <div class="task-modal-footer delete-confirm-footer">
+        <button type="button" class="btn-modal-ghost" (click)="cancelDeleteSubtask()">Cancel</button>
+        <button type="button" class="btn-modal-danger" (click)="confirmDeleteSubtask()">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="task-modal-backdrop" *ngIf="deleteCommentPending" (click)="cancelDeleteComment()">
+    <div class="task-modal delete-confirm-modal" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="deleteCommentTitle">
+      <div class="task-modal-header">
+        <div>
+          <h3 id="deleteCommentTitle">Delete comment?</h3>
+          <p class="delete-confirm-sub">This conversation entry will be removed.</p>
+        </div>
+      </div>
+      <div class="task-modal-body">
+        <p class="delete-confirm-task-name">{{ deleteCommentPending!.content }}</p>
+      </div>
+      <div class="task-modal-footer delete-confirm-footer">
+        <button type="button" class="btn-modal-ghost" (click)="cancelDeleteComment()">Cancel</button>
+        <button type="button" class="btn-modal-danger" (click)="executeDeleteComment()">Delete</button>
       </div>
     </div>
   </div>

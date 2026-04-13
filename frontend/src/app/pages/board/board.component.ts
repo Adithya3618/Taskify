@@ -120,6 +120,7 @@ export class BoardComponent implements OnInit, OnDestroy {
   newSubtaskTitle = '';
   subtaskSaving = false;
   subtaskDeletingId: number | null = null;
+  deleteSubtaskPending: Subtask | null = null;
   detailComments: Comment[] = [];
   commentsLoading = false;
   newCommentContent = '';
@@ -128,6 +129,7 @@ export class BoardComponent implements OnInit, OnDestroy {
   editingCommentId: number | string | null = null;
   editingCommentContent = '';
   deletingCommentId: number | string | null = null;
+  deleteCommentPending: Comment | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -698,11 +700,13 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.newSubtaskTitle = '';
     this.subtaskSaving = false;
     this.subtaskDeletingId = null;
+    this.deleteSubtaskPending = null;
     this.newCommentContent = '';
     this.commentError = '';
     this.editingCommentId = null;
     this.editingCommentContent = '';
     this.deletingCommentId = null;
+    this.deleteCommentPending = null;
     this.loadTaskSubtasks(task.id);
     this.loadTaskComments(task.id, true);
   }
@@ -1075,12 +1079,14 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.newSubtaskTitle = '';
     this.subtaskSaving = false;
     this.subtaskDeletingId = null;
+    this.deleteSubtaskPending = null;
     this.detailComments = [];
     this.newCommentContent = '';
     this.commentError = '';
     this.editingCommentId = null;
     this.editingCommentContent = '';
     this.deletingCommentId = null;
+    this.deleteCommentPending = null;
   }
 
   saveTaskDetail() {
@@ -1097,6 +1103,8 @@ export class BoardComponent implements OnInit, OnDestroy {
 
     this.taskCompletionStorage.setCompleted(this.projectId, task.id, this.detailCompleted);
     task.completed = this.detailCompleted;
+    this.updateTaskInStages(task.id, { completed: this.detailCompleted });
+    this.cdr.detectChanges();
 
     this.apiService.updateTask(task.id, {
       title: updatedTitle,
@@ -1106,6 +1114,12 @@ export class BoardComponent implements OnInit, OnDestroy {
       next: (updated) => {
         task.title = updated.title;
         task.description = updated.description;
+        this.updateTaskInStages(task.id, {
+          title: updated.title,
+          description: updated.description,
+          completed: this.detailCompleted
+        });
+        this.cdr.detectChanges();
         this.closeTaskDetail();
       },
       error: (err) => {
@@ -1113,6 +1127,12 @@ export class BoardComponent implements OnInit, OnDestroy {
         // Demo fallback: update locally when backend is unavailable
         task.title = updatedTitle;
         task.description = updatedDescription;
+        this.updateTaskInStages(task.id, {
+          title: updatedTitle,
+          description: updatedDescription,
+          completed: this.detailCompleted
+        });
+        this.cdr.detectChanges();
         this.closeTaskDetail();
       }
     });
@@ -1183,7 +1203,19 @@ export class BoardComponent implements OnInit, OnDestroy {
     });
   }
 
-  deleteSubtask(subtask: Subtask): void {
+  requestDeleteSubtask(subtask: Subtask): void {
+    this.deleteSubtaskPending = subtask;
+  }
+
+  cancelDeleteSubtask(): void {
+    this.deleteSubtaskPending = null;
+  }
+
+  confirmDeleteSubtask(): void {
+    if (!this.deleteSubtaskPending) return;
+    const subtask = this.deleteSubtaskPending;
+    this.deleteSubtaskPending = null;
+
     const previousSubtasks = this.detailSubtasks;
     const updatedSubtasks = this.detailSubtasks
       .filter((item) => item.id !== subtask.id)
@@ -1307,9 +1339,18 @@ export class BoardComponent implements OnInit, OnDestroy {
   }
 
   confirmDeleteComment(comment: Comment): void {
-    if (!this.detailTask) return;
-    if (!window.confirm('Delete this comment?')) return;
+    this.deleteCommentPending = comment;
+  }
 
+  cancelDeleteComment(): void {
+    this.deleteCommentPending = null;
+  }
+
+  executeDeleteComment(): void {
+    if (!this.detailTask || !this.deleteCommentPending) return;
+
+    const comment = this.deleteCommentPending;
+    this.deleteCommentPending = null;
     this.commentError = '';
     this.deletingCommentId = comment.id;
     this.apiService.deleteComment(comment.id, this.detailTask.id).subscribe({
@@ -1388,6 +1429,19 @@ export class BoardComponent implements OnInit, OnDestroy {
         subtask_count: total,
         completed_count: completed
       };
+    }
+  }
+
+  private updateTaskInStages(taskId: number, changes: Partial<Task>): void {
+    this.stages = this.stages.map((stage) => ({
+      ...stage,
+      tasks: (stage.tasks || []).map((existingTask) =>
+        existingTask.id === taskId ? { ...existingTask, ...changes } : existingTask
+      )
+    }));
+
+    if (this.detailTask?.id === taskId) {
+      this.detailTask = { ...this.detailTask, ...changes };
     }
   }
 
