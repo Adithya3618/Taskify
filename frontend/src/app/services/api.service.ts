@@ -32,6 +32,9 @@ export class ApiService {
   private baseUrl = '/api';
   private readonly memberStorePrefix = 'taskify.project.members.v1.';
   private readonly commentStorePrefix = 'taskify.task.comments.v1.';
+  private readonly subtaskStorePrefix = 'taskify.task.subtasks.v1.';
+  private readonly stageStorePrefix = 'taskify.project.stages.v1.';
+  private readonly taskStorePrefix = 'taskify.stage.tasks.v1.';
   private readonly boardOwnersKey = 'taskify.board.owners';
 
   constructor(
@@ -90,6 +93,18 @@ export class ApiService {
     return `${this.commentStorePrefix}${taskId}`;
   }
 
+  private subtaskStoreKey(taskId: number): string {
+    return `${this.subtaskStorePrefix}${taskId}`;
+  }
+
+  private stageStoreKey(projectId: number): string {
+    return `${this.stageStorePrefix}${projectId}`;
+  }
+
+  private taskStoreKey(stageId: number): string {
+    return `${this.taskStorePrefix}${stageId}`;
+  }
+
   getCachedTaskComments(taskId: number): Comment[] {
     const raw = localStorage.getItem(this.commentStoreKey(taskId));
     if (!raw) return [];
@@ -122,6 +137,54 @@ export class ApiService {
 
   private saveCachedTaskComments(taskId: number, comments: Comment[]): void {
     localStorage.setItem(this.commentStoreKey(taskId), JSON.stringify(comments));
+  }
+
+  getCachedTaskSubtasks(taskId: number): Subtask[] {
+    const raw = localStorage.getItem(this.subtaskStoreKey(taskId));
+    if (!raw) return [];
+
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private saveCachedTaskSubtasks(taskId: number, subtasks: Subtask[]): void {
+    localStorage.setItem(this.subtaskStoreKey(taskId), JSON.stringify(subtasks));
+  }
+
+  getCachedStages(projectId: number): Stage[] {
+    const raw = localStorage.getItem(this.stageStoreKey(projectId));
+    if (!raw) return [];
+
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private saveCachedStages(projectId: number, stages: Stage[]): void {
+    localStorage.setItem(this.stageStoreKey(projectId), JSON.stringify(stages));
+  }
+
+  getCachedTasks(stageId: number): Task[] {
+    const raw = localStorage.getItem(this.taskStoreKey(stageId));
+    if (!raw) return [];
+
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private saveCachedTasks(stageId: number, tasks: Task[]): void {
+    localStorage.setItem(this.taskStoreKey(stageId), JSON.stringify(tasks));
   }
 
   private getBoardOwnerEmail(projectId: number): string {
@@ -278,6 +341,90 @@ export class ApiService {
     return this.http.delete<void>(`${this.baseUrl}/projects/${id}`);
   }
 
+  private normalizeSubtask(taskId: number, subtask: Partial<Subtask>): Subtask {
+    return {
+      id: Number(subtask.id ?? Date.now()),
+      task_id: subtask.task_id ?? taskId,
+      title: subtask.title?.trim() || '',
+      is_completed: !!subtask.is_completed,
+      position: subtask.position ?? 0,
+      created_at: subtask.created_at || new Date().toISOString(),
+      updated_at: subtask.updated_at || subtask.created_at || new Date().toISOString(),
+    };
+  }
+
+  private mergeSubtasks(taskId: number, existingSubtasks: Subtask[], nextSubtasks: Subtask[]): Subtask[] {
+    const byKey = new Map<number, Subtask>();
+
+    [...existingSubtasks, ...nextSubtasks]
+      .map((subtask) => this.normalizeSubtask(taskId, subtask))
+      .forEach((subtask) => {
+        byKey.set(subtask.id, subtask);
+      });
+
+    return [...byKey.values()].sort((a, b) => {
+      const positionDiff = a.position - b.position;
+      return positionDiff !== 0 ? positionDiff : a.id - b.id;
+    });
+  }
+
+  private normalizeStage(projectId: number, stage: Partial<Stage>): Stage {
+    return {
+      id: Number(stage.id ?? Date.now()),
+      project_id: stage.project_id ?? projectId,
+      name: stage.name?.trim() || 'Untitled list',
+      position: stage.position ?? 0,
+      created_at: stage.created_at || new Date().toISOString(),
+      updated_at: stage.updated_at || stage.created_at || new Date().toISOString(),
+      tasks: stage.tasks ?? [],
+    };
+  }
+
+  private mergeStages(projectId: number, existingStages: Stage[], nextStages: Stage[]): Stage[] {
+    const byId = new Map<number, Stage>();
+    [...existingStages, ...nextStages]
+      .map((stage) => this.normalizeStage(projectId, stage))
+      .forEach((stage) => {
+        const previous = byId.get(stage.id);
+        byId.set(stage.id, previous ? { ...previous, ...stage } : stage);
+      });
+
+    return [...byId.values()].sort((a, b) => {
+      const positionDiff = a.position - b.position;
+      return positionDiff !== 0 ? positionDiff : a.id - b.id;
+    });
+  }
+
+  private normalizeTask(stageId: number, task: Partial<Task>): Task {
+    return {
+      id: Number(task.id ?? Date.now()),
+      stage_id: task.stage_id ?? stageId,
+      title: task.title?.trim() || 'Untitled task',
+      description: task.description || '',
+      position: task.position ?? 0,
+      subtask_count: task.subtask_count ?? 0,
+      completed_count: task.completed_count ?? 0,
+      completed: task.completed,
+      created_at: task.created_at || new Date().toISOString(),
+      updated_at: task.updated_at || task.created_at || new Date().toISOString(),
+    };
+  }
+
+  private mergeTasks(stageId: number, existingTasks: Task[], nextTasks: Task[]): Task[] {
+    const byId = new Map<number, Task>();
+    [...existingTasks, ...nextTasks]
+      .map((task) => this.normalizeTask(stageId, task))
+      .forEach((task) => {
+        const previous = byId.get(task.id);
+        byId.set(task.id, previous ? { ...previous, ...task } : task);
+      });
+
+    return [...byId.values()].sort((a, b) => {
+      const positionDiff = a.position - b.position;
+      return positionDiff !== 0 ? positionDiff : a.id - b.id;
+    });
+  }
+
   getProjectActivity(projectId: number, params: ActivityQueryParams = {}): Observable<ApiPaginatedResponse<ActivityLog[]>> {
     const query = new URLSearchParams();
     if (params.page) query.set('page', String(params.page));
@@ -394,87 +541,323 @@ export class ApiService {
 
   // ---------------- Stages ----------------
   getStages(projectId: number): Observable<Stage[]> {
-    return this.http.get<Stage[]>(`${this.baseUrl}/projects/${projectId}/stages`);
+    const cachedStages = this.getCachedStages(projectId);
+    return this.http.get<Stage[] | ApiSuccessResponse<Stage[]>>(`${this.baseUrl}/projects/${projectId}/stages`).pipe(
+      this.unwrapSuccess<Stage[]>(),
+      map((stages) => this.mergeStages(projectId, cachedStages, stages || [])),
+      tap((stages) => this.saveCachedStages(projectId, stages)),
+      catchError(() => of(cachedStages))
+    );
   }
 
   createStage(projectId: number, request: CreateStageRequest): Observable<Stage> {
-    return this.http.post<Stage>(
+    const cachedStages = this.getCachedStages(projectId);
+    const fallbackStage = this.normalizeStage(projectId, {
+      id: Date.now(),
+      project_id: projectId,
+      name: request.name,
+      position: request.position,
+    });
+
+    return this.http.post<Stage | ApiSuccessResponse<Stage>>(
       `${this.baseUrl}/projects/${projectId}/stages`,
       request,
       { headers: this.jsonHeaders() }
+    ).pipe(
+      this.unwrapSuccess<Stage>(),
+      map((stage) => this.normalizeStage(projectId, stage || fallbackStage)),
+      tap((stage) => this.saveCachedStages(projectId, this.mergeStages(projectId, cachedStages, [stage]))),
+      catchError(() => {
+        this.saveCachedStages(projectId, this.mergeStages(projectId, cachedStages, [fallbackStage]));
+        return of(fallbackStage);
+      })
     );
   }
 
   updateStage(id: number, request: { name: string; position: number }): Observable<Stage> {
-    return this.http.put<Stage>(
+    const cachedEntry = Object.entries(localStorage)
+      .find(([key, value]) => key.startsWith(this.stageStorePrefix) && String(value).includes(`"id":${id}`));
+    const projectId = cachedEntry ? Number(cachedEntry[0].replace(this.stageStorePrefix, '')) : 0;
+    const cachedStages = projectId ? this.getCachedStages(projectId) : [];
+    const existingStage = cachedStages.find((stage) => stage.id === id);
+    const fallbackStage = this.normalizeStage(projectId || existingStage?.project_id || 0, {
+      ...existingStage,
+      id,
+      name: request.name,
+      position: request.position,
+      updated_at: new Date().toISOString(),
+    });
+
+    return this.http.put<Stage | ApiSuccessResponse<Stage>>(
       `${this.baseUrl}/stages/${id}`,
       request,
       { headers: this.jsonHeaders() }
+    ).pipe(
+      this.unwrapSuccess<Stage>(),
+      map((stage) => this.normalizeStage(projectId || fallbackStage.project_id, stage || fallbackStage)),
+      tap((stage) => {
+        const targetProjectId = stage.project_id || projectId || fallbackStage.project_id;
+        this.saveCachedStages(targetProjectId, this.mergeStages(targetProjectId, this.getCachedStages(targetProjectId), [stage]));
+      }),
+      catchError(() => {
+        if (projectId || fallbackStage.project_id) {
+          const targetProjectId = projectId || fallbackStage.project_id;
+          this.saveCachedStages(targetProjectId, this.mergeStages(targetProjectId, cachedStages, [fallbackStage]));
+        }
+        return of(fallbackStage);
+      })
     );
   }
 
   deleteStage(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/stages/${id}`);
+    const cachedEntry = Object.entries(localStorage)
+      .find(([key, value]) => key.startsWith(this.stageStorePrefix) && String(value).includes(`"id":${id}`));
+    const projectId = cachedEntry ? Number(cachedEntry[0].replace(this.stageStorePrefix, '')) : 0;
+    const cachedStages = projectId ? this.getCachedStages(projectId) : [];
+    const nextStages = cachedStages.filter((stage) => stage.id !== id).map((stage, index) => ({ ...stage, position: index }));
+
+    return this.http.delete<void>(`${this.baseUrl}/stages/${id}`).pipe(
+      tap(() => {
+        if (projectId) this.saveCachedStages(projectId, nextStages);
+        localStorage.removeItem(this.taskStoreKey(id));
+      }),
+      catchError(() => {
+        if (projectId) this.saveCachedStages(projectId, nextStages);
+        localStorage.removeItem(this.taskStoreKey(id));
+        return of(void 0);
+      }),
+      map(() => void 0)
+    );
   }
 
   // ---------------- Tasks ----------------
   getTasks(projectId: number, stageId: number): Observable<Task[]> {
-  return this.http.get<Task[]>(
-    `${this.baseUrl}/projects/${projectId}/stages/${stageId}/tasks`
-  );
-}
+    const cachedTasks = this.getCachedTasks(stageId);
+    return this.http.get<Task[] | ApiSuccessResponse<Task[]>>(
+      `${this.baseUrl}/projects/${projectId}/stages/${stageId}/tasks`
+    ).pipe(
+      this.unwrapSuccess<Task[]>(),
+      map((tasks) => this.mergeTasks(stageId, cachedTasks, tasks || [])),
+      tap((tasks) => this.saveCachedTasks(stageId, tasks)),
+      catchError(() => of(cachedTasks))
+    );
+  }
 
-createTask(projectId: number, stageId: number, request: CreateTaskRequest): Observable<Task> {
-  return this.http.post<Task>(
-    `${this.baseUrl}/projects/${projectId}/stages/${stageId}/tasks`,
-    request,
-    { headers: this.jsonHeaders() }
-  );
-}
+  createTask(projectId: number, stageId: number, request: CreateTaskRequest): Observable<Task> {
+    const cachedTasks = this.getCachedTasks(stageId);
+    const fallbackTask = this.normalizeTask(stageId, {
+      id: Date.now(),
+      stage_id: stageId,
+      title: request.title,
+      description: request.description,
+      position: request.position,
+    });
+
+    return this.http.post<Task | ApiSuccessResponse<Task>>(
+      `${this.baseUrl}/projects/${projectId}/stages/${stageId}/tasks`,
+      request,
+      { headers: this.jsonHeaders() }
+    ).pipe(
+      this.unwrapSuccess<Task>(),
+      map((task) => this.normalizeTask(stageId, task || fallbackTask)),
+      tap((task) => this.saveCachedTasks(stageId, this.mergeTasks(stageId, cachedTasks, [task]))),
+      catchError(() => {
+        this.saveCachedTasks(stageId, this.mergeTasks(stageId, cachedTasks, [fallbackTask]));
+        return of(fallbackTask);
+      })
+    );
+  }
 
   updateTask(id: number, request: { title: string; description: string; position: number }): Observable<Task> {
-    return this.http.put<Task>(
+    const cachedEntry = Object.entries(localStorage)
+      .find(([key, value]) => key.startsWith(this.taskStorePrefix) && String(value).includes(`"id":${id}`));
+    const stageId = cachedEntry ? Number(cachedEntry[0].replace(this.taskStorePrefix, '')) : 0;
+    const cachedTasks = stageId ? this.getCachedTasks(stageId) : [];
+    const existingTask = cachedTasks.find((task) => task.id === id);
+    const fallbackTask = this.normalizeTask(stageId || existingTask?.stage_id || 0, {
+      ...existingTask,
+      id,
+      title: request.title,
+      description: request.description,
+      position: request.position,
+      updated_at: new Date().toISOString(),
+    });
+
+    return this.http.put<Task | ApiSuccessResponse<Task>>(
       `${this.baseUrl}/tasks/${id}`,
       request,
       { headers: this.jsonHeaders() }
+    ).pipe(
+      this.unwrapSuccess<Task>(),
+      map((task) => this.normalizeTask(stageId || fallbackTask.stage_id, task || fallbackTask)),
+      tap((task) => {
+        const targetStageId = task.stage_id || stageId || fallbackTask.stage_id;
+        this.saveCachedTasks(targetStageId, this.mergeTasks(targetStageId, this.getCachedTasks(targetStageId), [task]));
+      }),
+      catchError(() => {
+        if (stageId || fallbackTask.stage_id) {
+          const targetStageId = stageId || fallbackTask.stage_id;
+          this.saveCachedTasks(targetStageId, this.mergeTasks(targetStageId, cachedTasks, [fallbackTask]));
+        }
+        return of(fallbackTask);
+      })
     );
   }
 
   moveTask(id: number, request: MoveTaskRequest): Observable<Task> {
-    return this.http.put<Task>(
+    return this.http.put<Task | ApiSuccessResponse<Task>>(
       `${this.baseUrl}/tasks/${id}/move`,
       request,
       { headers: this.jsonHeaders() }
+    ).pipe(
+      this.unwrapSuccess<Task>(),
+      tap((task) => {
+        const allTaskEntries = Object.keys(localStorage).filter((key) => key.startsWith(this.taskStorePrefix));
+        allTaskEntries.forEach((key) => {
+          const sid = Number(key.replace(this.taskStorePrefix, ''));
+          const filtered = this.getCachedTasks(sid).filter((existingTask) => existingTask.id !== id);
+          this.saveCachedTasks(sid, filtered.map((existingTask, index) => ({ ...existingTask, position: index })));
+        });
+
+        const targetStageId = task.stage_id || request.newStageId;
+        const targetTasks = this.getCachedTasks(targetStageId);
+        const normalizedTask = this.normalizeTask(targetStageId, task);
+        this.saveCachedTasks(targetStageId, this.mergeTasks(targetStageId, targetTasks, [normalizedTask]));
+      })
     );
   }
 
   deleteTask(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/tasks/${id}`);
+    const cachedEntry = Object.entries(localStorage)
+      .find(([key, value]) => key.startsWith(this.taskStorePrefix) && String(value).includes(`"id":${id}`));
+    const stageId = cachedEntry ? Number(cachedEntry[0].replace(this.taskStorePrefix, '')) : 0;
+    const cachedTasks = stageId ? this.getCachedTasks(stageId) : [];
+    const nextTasks = cachedTasks.filter((task) => task.id !== id).map((task, index) => ({ ...task, position: index }));
+
+    return this.http.delete<void>(`${this.baseUrl}/tasks/${id}`).pipe(
+      tap(() => {
+        if (stageId) this.saveCachedTasks(stageId, nextTasks);
+      }),
+      catchError(() => {
+        if (stageId) this.saveCachedTasks(stageId, nextTasks);
+        return of(void 0);
+      }),
+      map(() => void 0)
+    );
   }
 
   // ---------------- Subtasks ----------------
   getSubtasks(taskId: number): Observable<Subtask[]> {
-    return this.http.get<Subtask[]>(`${this.baseUrl}/tasks/${taskId}/subtasks`);
+    const cachedSubtasks = this.getCachedTaskSubtasks(taskId);
+    return this.http.get<Subtask[] | ApiSuccessResponse<Subtask[]>>(
+      `${this.baseUrl}/tasks/${taskId}/subtasks`
+    ).pipe(
+      this.unwrapSuccess<Subtask[]>(),
+      map((subtasks) => this.mergeSubtasks(taskId, cachedSubtasks, subtasks || [])),
+      tap((subtasks) => this.saveCachedTaskSubtasks(taskId, subtasks)),
+      catchError(() => of(cachedSubtasks))
+    );
   }
 
   createSubtask(taskId: number, request: CreateSubtaskRequest): Observable<Subtask> {
-    return this.http.post<Subtask>(
+    const cachedSubtasks = this.getCachedTaskSubtasks(taskId);
+    const fallbackSubtask = this.normalizeSubtask(taskId, {
+      id: Date.now(),
+      task_id: taskId,
+      title: request.title,
+      is_completed: false,
+      position: request.position ?? cachedSubtasks.length,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    return this.http.post<Subtask | ApiSuccessResponse<Subtask>>(
       `${this.baseUrl}/tasks/${taskId}/subtasks`,
       request,
       { headers: this.jsonHeaders() }
+    ).pipe(
+      this.unwrapSuccess<Subtask>(),
+      map((subtask) => this.normalizeSubtask(taskId, subtask || fallbackSubtask)),
+      tap((subtask) => {
+        this.saveCachedTaskSubtasks(
+          taskId,
+          this.mergeSubtasks(taskId, cachedSubtasks, [subtask])
+        );
+      }),
+      catchError(() => {
+        this.saveCachedTaskSubtasks(
+          taskId,
+          this.mergeSubtasks(taskId, cachedSubtasks, [fallbackSubtask])
+        );
+        return of(fallbackSubtask);
+      })
     );
   }
 
   updateSubtask(id: number, request: UpdateSubtaskRequest): Observable<Subtask> {
-    return this.http.patch<Subtask>(
+    const cachedEntry = Object.entries(localStorage)
+      .find(([key, _value]) => key.startsWith(this.subtaskStorePrefix) && String(_value).includes(`"id":${id}`));
+    const taskId = cachedEntry ? Number(cachedEntry[0].replace(this.subtaskStorePrefix, '')) : 0;
+    const cachedSubtasks = taskId ? this.getCachedTaskSubtasks(taskId) : [];
+    const existingSubtask = cachedSubtasks.find((subtask) => subtask.id === id);
+    const fallbackSubtask = this.normalizeSubtask(taskId || existingSubtask?.task_id || 0, {
+      ...existingSubtask,
+      ...request,
+      id,
+      updated_at: new Date().toISOString(),
+    });
+
+    return this.http.patch<Subtask | ApiSuccessResponse<Subtask>>(
       `${this.baseUrl}/subtasks/${id}`,
       request,
       { headers: this.jsonHeaders() }
+    ).pipe(
+      this.unwrapSuccess<Subtask>(),
+      map((subtask) => this.normalizeSubtask(taskId || fallbackSubtask.task_id, subtask || fallbackSubtask)),
+      tap((subtask) => {
+        const targetTaskId = subtask.task_id || taskId || fallbackSubtask.task_id;
+        const current = this.getCachedTaskSubtasks(targetTaskId);
+        this.saveCachedTaskSubtasks(
+          targetTaskId,
+          this.mergeSubtasks(targetTaskId, current, [subtask])
+        );
+      }),
+      catchError(() => {
+        if (taskId || fallbackSubtask.task_id) {
+          const targetTaskId = taskId || fallbackSubtask.task_id;
+          this.saveCachedTaskSubtasks(
+            targetTaskId,
+            this.mergeSubtasks(targetTaskId, cachedSubtasks, [fallbackSubtask])
+          );
+        }
+        return of(fallbackSubtask);
+      })
     );
   }
 
   deleteSubtask(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/subtasks/${id}`);
+    const cachedEntry = Object.entries(localStorage)
+      .find(([key, value]) => key.startsWith(this.subtaskStorePrefix) && String(value).includes(`"id":${id}`));
+    const taskId = cachedEntry ? Number(cachedEntry[0].replace(this.subtaskStorePrefix, '')) : 0;
+    const cachedSubtasks = taskId ? this.getCachedTaskSubtasks(taskId) : [];
+    const nextSubtasks = cachedSubtasks
+      .filter((subtask) => subtask.id !== id)
+      .map((subtask, index) => ({ ...subtask, position: index }));
+
+    return this.http.delete<void | ApiSuccessResponse<null>>(`${this.baseUrl}/subtasks/${id}`).pipe(
+      tap(() => {
+        if (taskId) {
+          this.saveCachedTaskSubtasks(taskId, nextSubtasks);
+        }
+      }),
+      map(() => void 0),
+      catchError(() => {
+        if (taskId) {
+          this.saveCachedTaskSubtasks(taskId, nextSubtasks);
+        }
+        return of(void 0);
+      })
+    );
   }
 
   // ---------------- Comments ----------------
