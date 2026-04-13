@@ -42,11 +42,15 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	// Initialize business services
 	projectService := projectServices.NewProjectService(db.DB)
 	stageService := projectServices.NewStageService(db.DB)
-	taskService := projectServices.NewTaskService(db.DB)
-	commentService := projectServices.NewCommentService(db.DB)
-	subtaskService := projectServices.NewSubtaskService(db.DB)
 	messageService := projectServices.NewMessageService(db.DB)
 	projectMemberService := projectServices.NewProjectMemberService(db.DB)
+	activityService := projectServices.NewActivityService(db.DB, projectMemberService)
+	taskService := projectServices.NewTaskService(db.DB, activityService)
+	commentService := projectServices.NewCommentService(db.DB)
+	subtaskService := projectServices.NewSubtaskService(db.DB)
+	labelService := projectServices.NewLabelService(db.DB, projectMemberService, activityService)
+	taskLabelService := projectServices.NewTaskLabelService(db.DB, projectMemberService, activityService)
+	notificationService := projectServices.NewNotificationService(db.DB, emailService)
 
 	// Initialize controllers
 	projectController := controllers.NewProjectController(projectService)
@@ -56,6 +60,13 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	subtaskController := controllers.NewSubtaskController(subtaskService)
 	messageController := controllers.NewMessageController(messageService)
 	projectMemberController := controllers.NewProjectMemberController(projectMemberService)
+	activityController := controllers.NewActivityController(activityService)
+	labelController := controllers.NewLabelController(labelService)
+	taskLabelController := controllers.NewTaskLabelController(taskLabelService)
+	notificationController := controllers.NewNotificationController(notificationService)
+
+	// Start deadline checker background job (runs every 15 minutes)
+	notificationService.StartDeadlineChecker(15 * time.Minute)
 
 	// Create JWT middleware
 	jwtMiddleware := authmiddleware.JWTAuthMiddleware(jwtService)
@@ -137,6 +148,33 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	protected.HandleFunc("/projects/{projectId}/messages", messageController.GetMessagesByProject).Methods("GET")
 	protected.HandleFunc("/projects/{projectId}/messages/recent", messageController.GetRecentMessages).Methods("GET")
 	protected.HandleFunc("/messages/{id}", messageController.DeleteMessage).Methods("DELETE")
+
+	// Activity routes (protected with project access check)
+	activityRoutes := api.PathPrefix("/projects/{id}/activity").Subrouter()
+	activityRoutes.Use(jwtMiddleware)
+	activityRoutes.Use(projectAccessMiddleware)
+	activityRoutes.HandleFunc("", activityController.GetActivity).Methods("GET")
+	activityRoutes.HandleFunc("/recent", activityController.GetRecentActivity).Methods("GET")
+
+	// Label routes (protected with project access check)
+	labelRoutes := api.PathPrefix("/projects/{id}/labels").Subrouter()
+	labelRoutes.Use(jwtMiddleware)
+	labelRoutes.Use(projectAccessMiddleware)
+	labelRoutes.HandleFunc("", labelController.CreateLabel).Methods("POST")
+	labelRoutes.HandleFunc("", labelController.GetLabels).Methods("GET")
+
+	// Single label route (protected)
+	protected.HandleFunc("/labels/{id}", labelController.DeleteLabel).Methods("DELETE")
+
+	// Task label routes (protected)
+	protected.HandleFunc("/tasks/{id}/labels", taskLabelController.AssignLabel).Methods("POST")
+	protected.HandleFunc("/tasks/{id}/labels", taskLabelController.GetTaskLabels).Methods("GET")
+	protected.HandleFunc("/tasks/{id}/labels/{labelId}", taskLabelController.RemoveLabel).Methods("DELETE")
+
+	// Notification routes (protected)
+	protected.HandleFunc("/notifications", notificationController.GetNotifications).Methods("GET")
+	protected.HandleFunc("/notifications/read-all", notificationController.MarkAllAsRead).Methods("PATCH")
+	protected.HandleFunc("/notifications/{id}/read", notificationController.MarkAsRead).Methods("PATCH")
 
 	// Health check endpoint (public)
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
