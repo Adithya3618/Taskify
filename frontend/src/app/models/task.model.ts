@@ -4,6 +4,8 @@ export interface Task {
   title: string;
   description: string;
   position: number;
+  subtask_count?: number;
+  completed_count?: number;
   /** Client-only; persisted via TaskCompletionStorageService (localStorage). */
   completed?: boolean;
   created_at: string;

@@ -2,7 +2,9 @@
 
 import {
   STAGE_ID,
+  TASK_ID,
   makeTask,
+  makeSubtask,
   taskDescriptionWithMeta,
   visitBoard,
   isoNow,
@@ -523,6 +525,65 @@ describe('Board — top bar', () => {
 });
 
 // ── Empty board ──────────────────────────────────────────────────────────────
+
+describe('Board — checklist subtasks', () => {
+  beforeEach(() =>
+    visitBoard({
+      subtasksByTaskId: {
+        [TASK_ID]: [
+          makeSubtask(TASK_ID, 7101, 'Draft outline'),
+          makeSubtask(TASK_ID, 7102, 'Review copy', true, 1),
+        ],
+      },
+    })
+  );
+
+  it('shows checklist items in order and renders progress on the task card', () => {
+    cy.get('.task-card').first().within(() => {
+      cy.get('.task-subtask-progress-text').should('contain', '1/2 done');
+    });
+
+    cy.get('.task-card .task-content').first().click();
+    cy.get('.subtaskItemTitle').eq(0).should('contain', 'Draft outline');
+    cy.get('.subtaskItemTitle').eq(1).should('contain', 'Review copy');
+  });
+
+  it('adds a checklist item from the task detail modal', () => {
+    cy.get('.task-card .task-content').first().click();
+    cy.get('.subtaskComposer input').type('Ship release notes{enter}');
+    cy.wait('@createSubtask').its('request.body.title').should('eq', 'Ship release notes');
+    cy.get('.subtaskItemTitle').should('contain', 'Ship release notes');
+    cy.get('.task-subtask-progress-text').first().should('contain', '1/3 done');
+  });
+
+  it('toggles a checklist item without refreshing and updates progress immediately', () => {
+    cy.get('.task-card .task-content').first().click();
+    cy.contains('.subtaskItem', 'Draft outline').find('input[type="checkbox"]').check({ force: true });
+    cy.wait('@updateSubtask').its('request.body.is_completed').should('eq', true);
+    cy.contains('.subtaskItem', 'Draft outline').find('.subtaskItemTitle').should('have.class', 'subtaskItemTitleDone');
+    cy.get('.task-subtask-progress-text').first().should('contain', '2/2 done');
+  });
+
+  it('deletes a checklist item and shrinks the progress summary', () => {
+    cy.get('.task-card .task-content').first().click();
+    cy.contains('.subtaskItem', 'Review copy').contains('button', 'Delete').click();
+    cy.wait('@deleteSubtask');
+    cy.contains('.subtaskItem', 'Review copy').should('not.exist');
+    cy.get('.task-subtask-progress-text').first().should('contain', '0/1 done');
+  });
+
+  it('keeps checklist changes visible after switching to planner', () => {
+    cy.get('.task-card .task-content').first().click();
+    cy.get('.subtaskComposer input').type('Planner sync item');
+    cy.contains('.subtaskComposer button', 'Add').click();
+    cy.wait('@createSubtask');
+
+    cy.get('nav.viewTabs a.viewTab').contains('Planner').click();
+    cy.get('#planner-nodue-toggle').click();
+    cy.contains('.planner-task-title', 'Test task').click();
+    cy.get('.plannerSubtaskItemTitle').should('contain', 'Planner sync item');
+  });
+});
 
 describe('Board — empty list', () => {
   it('shows no tasks when a stage has no tasks', () => {

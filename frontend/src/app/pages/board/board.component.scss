@@ -1247,6 +1247,35 @@
   display: block;
 }
 
+.task-subtask-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.task-subtask-progress-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.24);
+  overflow: hidden;
+}
+
+.task-subtask-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #0ea5e9, #22c55e);
+}
+
+.task-subtask-progress-text {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+}
+
 .undoToast {
   position: fixed;
   right: 20px;
@@ -1404,6 +1433,106 @@
 }
 
 .commentActionBtn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.subtaskSection {
+  margin-top: 10px;
+}
+
+.subtaskSectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.subtaskSectionLabel {
+  display: block !important;
+  margin-bottom: 4px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  color: var(--text-1) !important;
+}
+
+.subtaskSectionHeader p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.subtaskSectionMeta {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0ea5e9;
+}
+
+.subtaskComposer {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.subtaskComposer input {
+  flex: 1;
+  margin-bottom: 0 !important;
+}
+
+.subtaskList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.subtaskItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 12px;
+}
+
+.subtaskItemMain {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+  cursor: pointer;
+}
+
+.subtaskItemTitle {
+  color: var(--text-1);
+  font-size: 14px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.subtaskItemTitleDone {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.subtaskDeleteBtn {
+  border: none;
+  background: transparent;
+  color: #f87171;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 4px 2px;
+}
+
+.subtaskDeleteBtn:disabled {
   opacity: 0.65;
   cursor: wait;
 }
@@ -1619,5 +1748,11 @@
   .memberRemoveBtn,
   .memberSearchAction {
     margin-left: 0;
+  }
+
+  .subtaskComposer,
+  .subtaskItem {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

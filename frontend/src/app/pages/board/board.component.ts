@@ -10,6 +10,7 @@ import { Comment, CreateCommentRequest } from '../../models/comment.model';
 import { Stage, CreateStageRequest } from '../../models/stage.model';
 import { Task, CreateTaskRequest } from '../../models/task.model';
 import { Label } from '../../models/label.model';
+import { Subtask } from '../../models/subtask.model';
 import { AuthService, AuthUser } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
 import { TaskCompletionStorageService } from '../../services/task-completion-storage.service';
@@ -113,6 +114,12 @@ export class BoardComponent implements OnInit, OnDestroy {
   detailNotes = '';
   /** Done flag — stored in browser only (TaskCompletionStorageService). */
   detailCompleted = false;
+  detailSubtasks: Subtask[] = [];
+  subtasksLoading = false;
+  subtaskError = '';
+  newSubtaskTitle = '';
+  subtaskSaving = false;
+  subtaskDeletingId: number | null = null;
   detailComments: Comment[] = [];
   commentsLoading = false;
   newCommentContent = '';
@@ -685,11 +692,18 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.detailNotes = parsed.notes;
     this.detailCompleted =
       task.completed ?? this.taskCompletionStorage.getCompleted(this.projectId, task.id);
+    this.detailSubtasks = [];
+    this.subtasksLoading = false;
+    this.subtaskError = '';
+    this.newSubtaskTitle = '';
+    this.subtaskSaving = false;
+    this.subtaskDeletingId = null;
     this.newCommentContent = '';
     this.commentError = '';
     this.editingCommentId = null;
     this.editingCommentContent = '';
     this.deletingCommentId = null;
+    this.loadTaskSubtasks(task.id);
     this.loadTaskComments(task.id, true);
   }
 
@@ -1055,6 +1069,12 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   closeTaskDetail() {
     this.detailTask = null;
+    this.detailSubtasks = [];
+    this.subtasksLoading = false;
+    this.subtaskError = '';
+    this.newSubtaskTitle = '';
+    this.subtaskSaving = false;
+    this.subtaskDeletingId = null;
     this.detailComments = [];
     this.newCommentContent = '';
     this.commentError = '';
@@ -1094,6 +1114,95 @@ export class BoardComponent implements OnInit, OnDestroy {
         task.title = updatedTitle;
         task.description = updatedDescription;
         this.closeTaskDetail();
+      }
+    });
+  }
+
+  loadTaskSubtasks(taskId: number): void {
+    this.subtasksLoading = true;
+    this.subtaskError = '';
+    this.apiService.getSubtasks(taskId).subscribe({
+      next: (subtasks) => {
+        this.detailSubtasks = this.sortSubtasks(subtasks || []);
+        this.syncTaskSubtaskCounts(taskId, this.detailSubtasks);
+        this.subtasksLoading = false;
+      },
+      error: () => {
+        this.detailSubtasks = [];
+        this.subtaskError = 'Could not load checklist items.';
+        this.subtasksLoading = false;
+      }
+    });
+  }
+
+  addSubtask(): void {
+    const taskId = this.detailTask?.id;
+    const title = this.newSubtaskTitle.trim();
+    if (!taskId || !title) return;
+
+    this.subtaskSaving = true;
+    this.subtaskError = '';
+    this.apiService.createSubtask(taskId, { title }).subscribe({
+      next: (subtask) => {
+        this.detailSubtasks = this.sortSubtasks([...this.detailSubtasks, subtask]);
+        this.syncTaskSubtaskCounts(taskId, this.detailSubtasks);
+        this.newSubtaskTitle = '';
+        this.subtaskSaving = false;
+      },
+      error: () => {
+        this.subtaskError = 'Could not add checklist item.';
+        this.subtaskSaving = false;
+      }
+    });
+  }
+
+  toggleSubtask(subtask: Subtask, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const nextCompleted = input.checked;
+    const previousSubtasks = this.detailSubtasks;
+    const updatedSubtasks = this.detailSubtasks.map((item) =>
+      item.id === subtask.id ? { ...item, is_completed: nextCompleted } : item
+    );
+
+    this.detailSubtasks = updatedSubtasks;
+    this.syncTaskSubtaskCounts(subtask.task_id, updatedSubtasks);
+    this.subtaskError = '';
+
+    this.apiService.updateSubtask(subtask.id, { is_completed: nextCompleted }).subscribe({
+      next: (updated) => {
+        this.detailSubtasks = this.sortSubtasks(
+          updatedSubtasks.map((item) => (item.id === updated.id ? updated : item))
+        );
+        this.syncTaskSubtaskCounts(subtask.task_id, this.detailSubtasks);
+      },
+      error: () => {
+        this.detailSubtasks = previousSubtasks;
+        this.syncTaskSubtaskCounts(subtask.task_id, previousSubtasks);
+        this.subtaskError = 'Could not update checklist item.';
+      }
+    });
+  }
+
+  deleteSubtask(subtask: Subtask): void {
+    const previousSubtasks = this.detailSubtasks;
+    const updatedSubtasks = this.detailSubtasks
+      .filter((item) => item.id !== subtask.id)
+      .map((item, index) => ({ ...item, position: index }));
+
+    this.subtaskDeletingId = subtask.id;
+    this.subtaskError = '';
+    this.detailSubtasks = updatedSubtasks;
+    this.syncTaskSubtaskCounts(subtask.task_id, updatedSubtasks);
+
+    this.apiService.deleteSubtask(subtask.id).subscribe({
+      next: () => {
+        this.subtaskDeletingId = null;
+      },
+      error: () => {
+        this.detailSubtasks = previousSubtasks;
+        this.syncTaskSubtaskCounts(subtask.task_id, previousSubtasks);
+        this.subtaskDeletingId = null;
+        this.subtaskError = 'Could not delete checklist item.';
       }
     });
   }
@@ -1229,6 +1338,57 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   getCommentInitial(comment: Comment): string {
     return (comment.author_name || 'U').charAt(0).toUpperCase();
+  }
+
+  trackBySubtaskId(_index: number, subtask: Subtask): number {
+    return subtask.id;
+  }
+
+  getTaskSubtaskCount(task: Task): number {
+    return task.subtask_count ?? 0;
+  }
+
+  getTaskCompletedSubtaskCount(task: Task): number {
+    return task.completed_count ?? 0;
+  }
+
+  getTaskSubtaskProgress(task: Task): number {
+    const total = this.getTaskSubtaskCount(task);
+    if (!total) return 0;
+    return Math.round((this.getTaskCompletedSubtaskCount(task) / total) * 100);
+  }
+
+  getDetailSubtaskCompletedCount(): number {
+    return this.detailSubtasks.filter((subtask) => subtask.is_completed).length;
+  }
+
+  private sortSubtasks(subtasks: Subtask[]): Subtask[] {
+    return [...subtasks].sort((a, b) => {
+      const positionDiff = a.position - b.position;
+      return positionDiff !== 0 ? positionDiff : a.id - b.id;
+    });
+  }
+
+  private syncTaskSubtaskCounts(taskId: number, subtasks: Subtask[]): void {
+    const total = subtasks.length;
+    const completed = subtasks.filter((subtask) => subtask.is_completed).length;
+
+    this.stages = this.stages.map((stage) => ({
+      ...stage,
+      tasks: (stage.tasks || []).map((task) =>
+        task.id === taskId
+          ? { ...task, subtask_count: total, completed_count: completed }
+          : task
+      )
+    }));
+
+    if (this.detailTask?.id === taskId) {
+      this.detailTask = {
+        ...this.detailTask,
+        subtask_count: total,
+        completed_count: completed
+      };
+    }
   }
 
   private scrollCommentsToLatest(): void {

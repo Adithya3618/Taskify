@@ -214,6 +214,12 @@
         </span>
         <span *ngIf="getTaskDue(task)" class="task-due-text" [ngClass]="getDueDateClass(task)">{{ formatTaskDueDisplay(task) }}</span>
       </div>
+      <div class="task-subtask-progress" *ngIf="getTaskSubtaskCount(task)">
+        <div class="task-subtask-progress-bar" aria-hidden="true">
+          <span class="task-subtask-progress-fill" [style.width.%]="getTaskSubtaskProgress(task)"></span>
+        </div>
+        <span class="task-subtask-progress-text">{{ getTaskCompletedSubtaskCount(task) }}/{{ getTaskSubtaskCount(task) }} done</span>
+      </div>
       <div class="task-comment-meta">
         <svg class="task-comment-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H7l-4 3v-5.5A8.5 8.5 0 1 1 21 11.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -547,6 +553,65 @@
 
         <label>Notes</label>
         <textarea rows="4" [(ngModel)]="detailNotes"></textarea>
+
+        <div class="subtaskSection">
+          <div class="subtaskSectionHeader">
+            <div>
+              <label class="subtaskSectionLabel">Checklist</label>
+              <p>Break the task into smaller steps and track progress here.</p>
+            </div>
+            <span class="subtaskSectionMeta" *ngIf="detailSubtasks.length">
+              {{ getDetailSubtaskCompletedCount() }}/{{ detailSubtasks.length }} done
+            </span>
+          </div>
+
+          <p *ngIf="subtaskError" class="memberFeedback memberFeedbackError">{{ subtaskError }}</p>
+
+          <div class="subtaskComposer">
+            <input
+              type="text"
+              [(ngModel)]="newSubtaskTitle"
+              placeholder="Add a checklist item"
+              (keyup.enter)="addSubtask()"
+            />
+            <button
+              type="button"
+              class="btn-modal-primary"
+              (click)="addSubtask()"
+              [disabled]="subtaskSaving || !newSubtaskTitle.trim()"
+            >
+              {{ subtaskSaving ? 'Adding...' : 'Add' }}
+            </button>
+          </div>
+
+          <div *ngIf="subtasksLoading" class="memberEmptyState">Loading checklist...</div>
+
+          <div class="subtaskList" *ngIf="!subtasksLoading && detailSubtasks.length">
+            <div class="subtaskItem" *ngFor="let subtask of detailSubtasks; trackBy: trackBySubtaskId">
+              <label class="subtaskItemMain">
+                <input
+                  class="board-checkbox"
+                  type="checkbox"
+                  [checked]="subtask.is_completed"
+                  (change)="toggleSubtask(subtask, $event)"
+                />
+                <span class="subtaskItemTitle" [class.subtaskItemTitleDone]="subtask.is_completed">{{ subtask.title }}</span>
+              </label>
+              <button
+                type="button"
+                class="subtaskDeleteBtn"
+                (click)="deleteSubtask(subtask)"
+                [disabled]="subtaskDeletingId === subtask.id"
+              >
+                {{ subtaskDeletingId === subtask.id ? 'Deleting...' : 'Delete' }}
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="!subtasksLoading && !detailSubtasks.length" class="memberEmptyState">
+            No checklist items yet. Add one above to get started.
+          </div>
+        </div>
 
         <div class="commentSection">
           <div class="commentSectionHeader">

@@ -36,6 +36,8 @@ export type BoardStubOptions = {
   projectId?: number;
   /** Tasks per stage id (default: one empty task on stage 100, none on 101). */
   tasksByStageId?: Record<number, unknown[]>;
+  /** Subtasks per task id. */
+  subtasksByTaskId?: Record<number, unknown[]>;
   /** Override stage list for project `projectId` (default: To Do + Doing). */
   stages?: unknown[];
   /** GET /api/projects — for board switcher (default: []). */
@@ -70,6 +72,8 @@ const defaultTask = (id: number, stageId: number, title: string, description: st
   title,
   description,
   position: 0,
+  subtask_count: 0,
+  completed_count: 0,
   completed: false,
   created_at: isoNow(),
   updated_at: isoNow(),
@@ -89,7 +93,21 @@ export function makeTask(
     title,
     description,
     position,
+    subtask_count: 0,
+    completed_count: 0,
     completed: false,
+    created_at: isoNow(),
+    updated_at: isoNow(),
+  };
+}
+
+export function makeSubtask(taskId: number, id: number, title: string, isCompleted = false, position = 0) {
+  return {
+    id,
+    task_id: taskId,
+    title,
+    is_completed: isCompleted,
+    position,
     created_at: isoNow(),
     updated_at: isoNow(),
   };
@@ -120,18 +138,59 @@ export function registerBoardApiStubs(opts: BoardStubOptions = {}) {
     });
   }
 
+  const subtasksByTaskId: Record<number, any[]> = {};
+  Object.values(tasksByStageId).forEach((tasks) => {
+    (tasks as any[]).forEach((task) => {
+      subtasksByTaskId[Number(task.id)] = [];
+    });
+  });
+  if (opts.subtasksByTaskId) {
+    Object.keys(opts.subtasksByTaskId).forEach((k) => {
+      const id = Number(k);
+      subtasksByTaskId[id] = [...((opts.subtasksByTaskId?.[id] as any[]) || [])];
+    });
+  }
+
   const projectsList = opts.projectsList ?? [];
 
   let nextCreateTaskId = 9000;
   let nextCreateStageId = 8000;
+  let nextCreateSubtaskId = 12000;
+
+  const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
+
+  const findTask = (taskId: number): any | undefined => {
+    for (const tasks of Object.values(tasksByStageId)) {
+      const task = (tasks as any[]).find((item) => Number(item.id) === taskId);
+      if (task) return task;
+    }
+    return undefined;
+  };
+
+  const syncTaskCounts = (taskId: number) => {
+    const task = findTask(taskId);
+    if (!task) return;
+    const subtasks = subtasksByTaskId[taskId] || [];
+    task.subtask_count = subtasks.length;
+    task.completed_count = subtasks.filter((subtask) => !!subtask.is_completed).length;
+  };
+
+  Object.keys(subtasksByTaskId).forEach((taskId) => syncTaskCounts(Number(taskId)));
 
   cy.intercept('GET', '**/api/**', (req) => {
     const path = new URL(req.url).pathname.replace(/\/$/, '');
 
+    const subtasksMatch = path.match(/^\/api\/tasks\/(\d+)\/subtasks$/);
+    if (subtasksMatch) {
+      const taskId = Number(subtasksMatch[1]);
+      req.reply(clone((subtasksByTaskId[taskId] || []).sort((a, b) => a.position - b.position)));
+      return;
+    }
+
     const tasksMatch = path.match(/^\/api\/projects\/(\d+)\/stages\/(\d+)\/tasks$/);
     if (tasksMatch) {
       const sid = Number(tasksMatch[2]);
-      req.reply(tasksByStageId[sid] ?? []);
+      req.reply(clone(tasksByStageId[sid] ?? []));
       return;
     }
 
@@ -167,16 +226,25 @@ export function registerBoardApiStubs(opts: BoardStubOptions = {}) {
     const url = req.url;
     const m = url.match(/\/api\/tasks\/(\d+)/);
     const id = m ? Number(m[1]) : TASK_ID;
+    const existingTask = findTask(id);
+    if (existingTask) {
+      existingTask.title = req.body.title;
+      existingTask.description = req.body.description;
+      existingTask.position = req.body.position ?? existingTask.position ?? 0;
+      existingTask.updated_at = isoNow();
+    }
     req.reply({
       statusCode: 200,
       body: {
         id,
-        stage_id: STAGE_ID,
+        stage_id: existingTask?.stage_id ?? STAGE_ID,
         title: req.body.title,
         description: req.body.description,
-        position: req.body.position ?? 0,
+        position: req.body.position ?? existingTask?.position ?? 0,
+        subtask_count: existingTask?.subtask_count ?? 0,
+        completed_count: existingTask?.completed_count ?? 0,
         completed: false,
-        created_at: isoNow(),
+        created_at: existingTask?.created_at ?? isoNow(),
         updated_at: isoNow(),
       },
     });
@@ -186,20 +254,89 @@ export function registerBoardApiStubs(opts: BoardStubOptions = {}) {
     const m = req.url.match(/\/projects\/(\d+)\/stages\/(\d+)\/tasks/);
     const sid = m ? Number(m[2]) : STAGE_ID;
     nextCreateTaskId += 1;
+    const createdTask = {
+      id: nextCreateTaskId,
+      stage_id: sid,
+      title: req.body.title,
+      description: req.body.description ?? '',
+      position: req.body.position ?? 0,
+      subtask_count: 0,
+      completed_count: 0,
+      completed: false,
+      created_at: isoNow(),
+      updated_at: isoNow(),
+    };
+    if (!tasksByStageId[sid]) tasksByStageId[sid] = [];
+    (tasksByStageId[sid] as any[]).push(createdTask);
+    subtasksByTaskId[nextCreateTaskId] = [];
     req.reply({
       statusCode: 201,
-      body: {
-        id: nextCreateTaskId,
-        stage_id: sid,
-        title: req.body.title,
-        description: req.body.description ?? '',
-        position: req.body.position ?? 0,
-        completed: false,
-        created_at: isoNow(),
-        updated_at: isoNow(),
-      },
+      body: clone(createdTask),
     });
   }).as('createTask');
+
+  cy.intercept('POST', '**/api/tasks/*/subtasks', (req) => {
+    const m = req.url.match(/\/api\/tasks\/(\d+)\/subtasks/);
+    const taskId = m ? Number(m[1]) : TASK_ID;
+    const existing = subtasksByTaskId[taskId] || [];
+    nextCreateSubtaskId += 1;
+    const createdSubtask = {
+      id: nextCreateSubtaskId,
+      task_id: taskId,
+      title: req.body.title,
+      is_completed: false,
+      position: req.body.position ?? existing.length,
+      created_at: isoNow(),
+      updated_at: isoNow(),
+    };
+    subtasksByTaskId[taskId] = [...existing, createdSubtask]
+      .sort((a, b) => a.position - b.position)
+      .map((subtask, index) => ({ ...subtask, position: index }));
+    syncTaskCounts(taskId);
+    req.reply({ statusCode: 201, body: clone(createdSubtask) });
+  }).as('createSubtask');
+
+  cy.intercept('PATCH', '**/api/subtasks/*', (req) => {
+    const m = req.url.match(/\/api\/subtasks\/(\d+)/);
+    const subtaskId = m ? Number(m[1]) : 0;
+    let updatedSubtask: any = null;
+
+    Object.keys(subtasksByTaskId).forEach((taskIdKey) => {
+      const taskId = Number(taskIdKey);
+      subtasksByTaskId[taskId] = (subtasksByTaskId[taskId] || []).map((subtask) => {
+        if (Number(subtask.id) !== subtaskId) return subtask;
+        updatedSubtask = {
+          ...subtask,
+          ...req.body,
+          updated_at: isoNow(),
+        };
+        return updatedSubtask;
+      });
+      if (updatedSubtask) {
+        subtasksByTaskId[taskId] = subtasksByTaskId[taskId]
+          .sort((a, b) => a.position - b.position)
+          .map((subtask, index) => ({ ...subtask, position: index }));
+        syncTaskCounts(taskId);
+      }
+    });
+
+    req.reply({ statusCode: 200, body: clone(updatedSubtask) });
+  }).as('updateSubtask');
+
+  cy.intercept('DELETE', '**/api/subtasks/*', (req) => {
+    const m = req.url.match(/\/api\/subtasks\/(\d+)/);
+    const subtaskId = m ? Number(m[1]) : 0;
+
+    Object.keys(subtasksByTaskId).forEach((taskIdKey) => {
+      const taskId = Number(taskIdKey);
+      subtasksByTaskId[taskId] = (subtasksByTaskId[taskId] || [])
+        .filter((subtask) => Number(subtask.id) !== subtaskId)
+        .map((subtask, index) => ({ ...subtask, position: index }));
+      syncTaskCounts(taskId);
+    });
+
+    req.reply({ statusCode: 204, body: null });
+  }).as('deleteSubtask');
 
   cy.intercept('POST', '**/api/projects/*/stages', (req) => {
     const m = req.url.match(/\/projects\/(\d+)\/stages$/);
@@ -246,6 +383,7 @@ export function visitPlanner(opts: VisitBoardOptions = {}) {
   const stubOpts: BoardStubOptions = {
     projectId: opts.projectId,
     tasksByStageId: opts.tasksByStageId,
+    subtasksByTaskId: opts.subtasksByTaskId,
     stages: opts.stages,
     projectsList: opts.projectsList,
   };
