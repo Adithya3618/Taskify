@@ -22,14 +22,19 @@ export const isoNow = () => new Date().toISOString();
 
 export function seedBoardAuth(
   win: Cypress.AUTWindow,
-  owners: Record<string, string> = { '1': 'e2e@test.com', '2': 'e2e@test.com' }
+  owners: Record<string, string> = { '1': 'e2e@test.com', '2': 'e2e@test.com' },
+  sessionUser: { name: string; email: string; id?: string } = { name: 'E2E User', email: 'e2e@test.com' },
+  cachedProjectMembers?: Record<number, unknown[]>
 ) {
   win.localStorage.setItem('taskify.auth.token', 'e2e-token');
   win.localStorage.setItem(
     'taskify.auth.session',
-    JSON.stringify({ name: 'E2E User', email: 'e2e@test.com' })
+    JSON.stringify(sessionUser)
   );
   win.localStorage.setItem('taskify.board.owners', JSON.stringify(owners));
+  Object.entries(cachedProjectMembers || {}).forEach(([projectId, members]) => {
+    win.localStorage.setItem(`taskify.project.members.v1.${projectId}`, JSON.stringify(members));
+  });
 }
 
 export type BoardStubOptions = {
@@ -40,6 +45,16 @@ export type BoardStubOptions = {
   subtasksByTaskId?: Record<number, unknown[]>;
   /** Comments per task id. */
   commentsByTaskId?: Record<number, unknown[]>;
+  /** Activity logs per project id. */
+  activityByProjectId?: Record<number, unknown[]>;
+  /** Project members. */
+  projectMembers?: unknown[];
+  /** Owner email map for local access checks. */
+  owners?: Record<string, string>;
+  /** Logged-in session user. */
+  sessionUser?: { name: string; email: string; id?: string };
+  /** Cached members stored before the page loads. */
+  cachedProjectMembers?: Record<number, unknown[]>;
   /** Override stage list for project `projectId` (default: To Do + Doing). */
   stages?: unknown[];
   /** GET /api/projects — for board switcher (default: []). */
@@ -127,6 +142,43 @@ export function makeComment(taskId: number, id: number | string, content: string
   };
 }
 
+export function makeProjectMember(
+  projectId: number,
+  userId: string,
+  name: string,
+  email: string,
+  role: 'owner' | 'member' = 'member'
+) {
+  return {
+    id: Number(String(userId).replace(/\D/g, '').slice(0, 6)) || undefined,
+    project_id: projectId,
+    user_id: userId,
+    user_name: name,
+    user_email: email,
+    role,
+    joined_at: isoNow(),
+  };
+}
+
+export function makeActivity(
+  projectId: number,
+  id: number,
+  description: string,
+  opts: { userId?: string; userName?: string; action?: string; entityType?: string; createdAt?: string } = {}
+) {
+  return {
+    id,
+    project_id: projectId,
+    user_id: opts.userId ?? 'owner-1',
+    user_name: opts.userName ?? 'Adithya',
+    action: opts.action ?? 'task_moved',
+    entity_type: opts.entityType ?? 'task',
+    entity_id: id,
+    description,
+    created_at: opts.createdAt ?? isoNow(),
+  };
+}
+
 /**
  * Registers HTTP stubs for board E2E. Call once per visit, before `cy.visit`.
  */
@@ -174,6 +226,13 @@ export function registerBoardApiStubs(opts: BoardStubOptions = {}) {
   }
 
   const projectsList = opts.projectsList ?? [];
+  const projectMembers = opts.projectMembers ?? [
+    makeProjectMember(projectId, 'owner-1', 'E2E User', 'e2e@test.com', 'owner'),
+    makeProjectMember(projectId, 'member-2', 'Casey Doe', 'casey@test.com', 'member'),
+  ];
+  const activityByProjectId: Record<number, any[]> = {
+    [projectId]: [...((opts.activityByProjectId?.[projectId] as any[]) || [])],
+  };
 
   let nextCreateTaskId = 9000;
   let nextCreateStageId = 8000;
@@ -245,6 +304,46 @@ export function registerBoardApiStubs(opts: BoardStubOptions = {}) {
 
     if (path === '/api/projects') {
       req.reply(projectsList);
+      return;
+    }
+
+    const membersMatch = path.match(/^\/api\/projects\/(\d+)\/members$/);
+    if (membersMatch) {
+      req.reply(clone(projectMembers));
+      return;
+    }
+
+    const activityMatch = path.match(/^\/api\/projects\/(\d+)\/activity$/);
+    if (activityMatch) {
+      const pid = Number(activityMatch[1]);
+      const source = [...(activityByProjectId[pid] || [])].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      const page = Number(req.query.page || 1);
+      const limit = Number(req.query.limit || 20);
+      const userId = String(req.query.user_id || '');
+      const from = String(req.query.from || '');
+      const to = String(req.query.to || '');
+
+      let filtered = source;
+      if (userId) {
+        filtered = filtered.filter((entry) => String(entry.user_id) === userId);
+      }
+      if (from) {
+        filtered = filtered.filter((entry) => new Date(entry.created_at).getTime() >= new Date(from).getTime());
+      }
+      if (to) {
+        filtered = filtered.filter((entry) => new Date(entry.created_at).getTime() <= new Date(to).getTime());
+      }
+
+      const offset = (page - 1) * limit;
+      req.reply({
+        success: true,
+        data: clone(filtered.slice(offset, offset + limit)),
+        page,
+        limit,
+        total: filtered.length,
+      });
       return;
     }
 
@@ -376,7 +475,7 @@ export function registerBoardApiStubs(opts: BoardStubOptions = {}) {
     const createdComment = {
       id: nextCreateCommentId,
       task_id: taskId,
-      user_id: 'e2e-user',
+      user_id: 'e2e@test.com',
       author_name: 'E2E User',
       content: req.body.content,
       created_at: isoNow(),
@@ -450,7 +549,7 @@ export function visitBoard(opts: VisitBoardOptions = {}) {
   const pid = stubOpts.projectId ?? PROJECT_ID;
   cy.visit(`/board/${pid}`, {
     onBeforeLoad(win) {
-      seedBoardAuth(win);
+      seedBoardAuth(win, stubOpts.owners, stubOpts.sessionUser, stubOpts.cachedProjectMembers);
     },
   });
   cy.get('.board-content', { timeout: 15000 }).should('be.visible');
@@ -468,6 +567,11 @@ export function visitPlanner(opts: VisitBoardOptions = {}) {
     tasksByStageId: opts.tasksByStageId,
     subtasksByTaskId: opts.subtasksByTaskId,
     commentsByTaskId: opts.commentsByTaskId,
+    activityByProjectId: opts.activityByProjectId,
+    projectMembers: opts.projectMembers,
+    owners: opts.owners,
+    sessionUser: opts.sessionUser,
+    cachedProjectMembers: opts.cachedProjectMembers,
     stages: opts.stages,
     projectsList: opts.projectsList,
   };
@@ -475,7 +579,7 @@ export function visitPlanner(opts: VisitBoardOptions = {}) {
   const pid = stubOpts.projectId ?? PROJECT_ID;
   cy.visit(`/board/${pid}/planner`, {
     onBeforeLoad(win) {
-      seedBoardAuth(win);
+      seedBoardAuth(win, stubOpts.owners, stubOpts.sessionUser, stubOpts.cachedProjectMembers);
     },
   });
   cy.get('.planner-main', { timeout: 15000 }).should('be.visible');
