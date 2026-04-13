@@ -85,10 +85,6 @@ export class ApiService {
     localStorage.setItem(this.memberStoreKey(projectId), JSON.stringify(members));
   }
 
-  setCachedProjectMembers(projectId: number, members: ProjectMember[]): void {
-    this.saveCachedProjectMembers(projectId, members);
-  }
-
   private commentStoreKey(taskId: number): string {
     return `${this.commentStorePrefix}${taskId}`;
   }
@@ -125,20 +121,6 @@ export class ApiService {
 
   private saveCachedTaskComments(taskId: number, comments: Comment[]): void {
     localStorage.setItem(this.commentStoreKey(taskId), JSON.stringify(comments));
-  }
-
-  getTaskCommentCount(taskId: number): number {
-    return this.getCachedTaskComments(taskId).length;
-  }
-
-  primeTaskComments(taskIds: number[]): void {
-    taskIds.forEach((taskId) => {
-      if (this.getCachedTaskComments(taskId).length > 0) return;
-      this.getComments(taskId).subscribe({
-        next: () => {},
-        error: () => {}
-      });
-    });
   }
 
   private getBoardOwnerEmail(projectId: number): string {
