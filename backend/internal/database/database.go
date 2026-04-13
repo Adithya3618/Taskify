@@ -200,6 +200,20 @@ func (db *DB) createTables() error {
 	)
 	`
 
+	// Create notifications table
+	notificationsTable := `
+	CREATE TABLE IF NOT EXISTS notifications (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id TEXT NOT NULL,
+		type TEXT NOT NULL,
+		message TEXT NOT NULL,
+		is_read INTEGER DEFAULT 0,
+		related_entity_type TEXT,
+		related_entity_id INTEGER,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	)
+	`
+
 	tables := []string{
 		projectsTable,
 		projectMembersTable,
@@ -212,6 +226,7 @@ func (db *DB) createTables() error {
 		projectInvitesTable,
 		labelsTable,
 		taskLabelsTable,
+		notificationsTable,
 	}
 
 	for _, table := range tables {
@@ -254,6 +269,10 @@ func (db *DB) createTables() error {
 		// Task label indexes
 		"CREATE INDEX IF NOT EXISTS idx_task_labels_task ON task_labels(task_id)",
 		"CREATE INDEX IF NOT EXISTS idx_task_labels_label ON task_labels(label_id)",
+		// Notification indexes
+		"CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id)",
+		"CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, is_read)",
+		"CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications(user_id, created_at DESC)",
 	}
 
 	for _, index := range indexes {

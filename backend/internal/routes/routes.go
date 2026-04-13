@@ -50,6 +50,7 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	subtaskService := projectServices.NewSubtaskService(db.DB)
 	labelService := projectServices.NewLabelService(db.DB, projectMemberService, activityService)
 	taskLabelService := projectServices.NewTaskLabelService(db.DB, projectMemberService, activityService)
+	notificationService := projectServices.NewNotificationService(db.DB, emailService)
 
 	// Initialize controllers
 	projectController := controllers.NewProjectController(projectService)
@@ -62,6 +63,10 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	activityController := controllers.NewActivityController(activityService)
 	labelController := controllers.NewLabelController(labelService)
 	taskLabelController := controllers.NewTaskLabelController(taskLabelService)
+	notificationController := controllers.NewNotificationController(notificationService)
+
+	// Start deadline checker background job (runs every 15 minutes)
+	notificationService.StartDeadlineChecker(15 * time.Minute)
 
 	// Create JWT middleware
 	jwtMiddleware := authmiddleware.JWTAuthMiddleware(jwtService)
@@ -165,6 +170,11 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	protected.HandleFunc("/tasks/{id}/labels", taskLabelController.AssignLabel).Methods("POST")
 	protected.HandleFunc("/tasks/{id}/labels", taskLabelController.GetTaskLabels).Methods("GET")
 	protected.HandleFunc("/tasks/{id}/labels/{labelId}", taskLabelController.RemoveLabel).Methods("DELETE")
+
+	// Notification routes (protected)
+	protected.HandleFunc("/notifications", notificationController.GetNotifications).Methods("GET")
+	protected.HandleFunc("/notifications/read-all", notificationController.MarkAllAsRead).Methods("PATCH")
+	protected.HandleFunc("/notifications/{id}/read", notificationController.MarkAsRead).Methods("PATCH")
 
 	// Health check endpoint (public)
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {

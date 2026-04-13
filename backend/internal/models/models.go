@@ -231,3 +231,49 @@ type TaskLabelResponse struct {
 	TaskID  int64 `json:"task_id"`
 	LabelID int64 `json:"label_id"`
 }
+
+// NotificationType represents the type of notification
+type NotificationType string
+
+// Notification types
+const (
+	NotificationMemberAdded   NotificationType = "member_added"
+	NotificationTaskAssigned  NotificationType = "task_assigned"
+	NotificationDeadlineNear  NotificationType = "deadline_near"
+	NotificationTaskCompleted NotificationType = "task_completed"
+	NotificationCommentAdded  NotificationType = "comment_added"
+)
+
+// Notification represents a user notification
+type Notification struct {
+	ID                int64            `json:"id"`
+	UserID            string           `json:"user_id"`
+	Type              NotificationType `json:"type"`
+	Message           string           `json:"message"`
+	IsRead            bool             `json:"is_read"`
+	RelatedEntityType string           `json:"related_entity_type,omitempty"`
+	RelatedEntityID   int64            `json:"related_entity_id,omitempty"`
+	CreatedAt         time.Time        `json:"created_at"`
+}
+
+// NotificationResponse is the paginated response for notifications
+type NotificationResponse struct {
+	ID                int64  `json:"id"`
+	UserID            string `json:"user_id"`
+	Type              string `json:"type"`
+	Message           string `json:"message"`
+	IsRead            bool   `json:"is_read"`
+	RelatedEntityType string `json:"related_entity_type,omitempty"`
+	RelatedEntityID   int64  `json:"related_entity_id,omitempty"`
+	CreatedAt         string `json:"created_at,omitempty"`
+}
+
+// NotificationListResponse is the paginated list response
+type NotificationListResponse struct {
+	Success     bool                   `json:"success"`
+	Data        []NotificationResponse `json:"data"`
+	UnreadCount int64                  `json:"unread_count"`
+	Page        int                    `json:"page"`
+	Limit       int                    `json:"limit"`
+	Total       int64                  `json:"total"`
+}

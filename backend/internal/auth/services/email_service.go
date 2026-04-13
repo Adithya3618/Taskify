@@ -56,3 +56,26 @@ func (s *EmailService) SendOTP(toEmail, otp string) error {
 
 	return nil
 }
+
+// SendNotification sends a generic notification email
+func (s *EmailService) SendNotification(toEmail, subject, body string) error {
+	auth := smtp.PlainAuth("", s.email, s.password, s.host)
+
+	fullBody := fmt.Sprintf(
+		"Hello,\n\n%s\n\nThis is an automated notification from Taskify.\n\nBest regards,\nTaskify Team",
+		body,
+	)
+
+	msg := fmt.Sprintf(
+		"From: Taskify <%s>\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=\"UTF-8\"\r\n\r\n%s",
+		s.email, toEmail, subject, fullBody,
+	)
+
+	addr := fmt.Sprintf("%s:%s", s.host, s.port)
+	err := smtp.SendMail(addr, auth, s.email, []string{toEmail}, []byte(msg))
+	if err != nil {
+		return fmt.Errorf("failed to send notification email: %v", err)
+	}
+
+	return nil
+}
