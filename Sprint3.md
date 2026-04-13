@@ -5,9 +5,6 @@
 | Developer | GitHub Issue | Feature |
 |-----------|-------------|---------|
 | saisreejachava (Sreeja) | #70, #71, #72, #73 | Google OAuth, Task Deadlines & Priority UI, Labels/Tags, Notification Center |
-| *(teammate 2)* | #74–#77 | *(backend features)* |
-| *(teammate 3)* | #78–#81 | *(backend/frontend features)* |
-| *(teammate 4)* | #82–#85 | *(backend/frontend features)* |
 
 ---
 

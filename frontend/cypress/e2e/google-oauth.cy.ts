@@ -109,6 +109,6 @@ describe('Google OAuth — Callback page', () => {
   it('redirects to /boards after handling a token in the callback URL', () => {
     cy.visit('/auth/google/callback?token=fake-jwt&name=Alice&email=alice%40example.com&id=42');
     cy.url().should('include', '/boards');
-    expect(localStorage.getItem('taskify.auth.token')).to.eq('fake-jwt');
+    cy.window().its('localStorage').invoke('getItem', 'taskify.auth.token').should('eq', 'fake-jwt');
   });
 });

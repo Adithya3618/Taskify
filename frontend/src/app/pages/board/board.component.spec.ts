@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ActivatedRoute, Router } from '@angular/router';
+import { RouterTestingModule } from '@angular/router/testing';
 import { of, Subject } from 'rxjs';
 import { BoardComponent } from './board.component';
 import { ApiService } from '../../services/api.service';
@@ -38,7 +39,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
 
 describe('BoardComponent', () => {
   let component: BoardComponent;
-  let routerSpy: jasmine.SpyObj<Router>;
+  let navigateSpy: jasmine.Spy;
   let authSpy: jasmine.SpyObj<AuthService>;
   let apiSpy: jasmine.SpyObj<ApiService>;
   let paramsSubject: Subject<{ id: string }>;
@@ -49,7 +50,6 @@ describe('BoardComponent', () => {
     localStorage.setItem('taskify.board.owners', JSON.stringify({ '1': 'alice@example.com' }));
 
     paramsSubject = new Subject();
-    routerSpy = jasmine.createSpyObj('Router', ['navigate']);
     authSpy   = jasmine.createSpyObj('AuthService', ['getCurrentUser']);
     apiSpy    = jasmine.createSpyObj('ApiService', [
       'getProject', 'getStages', 'getTasks', 'getProjects',
@@ -61,9 +61,8 @@ describe('BoardComponent', () => {
     apiSpy.getProjects.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
-      imports: [BoardComponent, HttpClientTestingModule],
+      imports: [BoardComponent, HttpClientTestingModule, RouterTestingModule.withRoutes([])],
       providers: [
-        { provide: Router, useValue: routerSpy },
         { provide: AuthService, useValue: authSpy },
         { provide: ApiService, useValue: apiSpy },
         { provide: ActivatedRoute, useValue: { params: paramsSubject.asObservable() } },
@@ -73,6 +72,7 @@ describe('BoardComponent', () => {
 
     const fixture = TestBed.createComponent(BoardComponent);
     component = fixture.componentInstance;
+    navigateSpy = spyOn(TestBed.inject(Router), 'navigate');
 
     // Trigger ngOnInit then emit a route param
     fixture.detectChanges();
@@ -81,7 +81,7 @@ describe('BoardComponent', () => {
 
   afterEach(() => {
     localStorage.clear();
-    component.ngOnDestroy();
+    component?.ngOnDestroy();
   });
 
   // ── toggleFilterPanel ────────────────────────────────────
@@ -202,13 +202,13 @@ describe('BoardComponent', () => {
   it('switchBoard() should navigate to the new board', () => {
     component.projectId = 1;
     component.switchBoard(2);
-    expect(routerSpy.navigate).toHaveBeenCalledWith(['/board', 2]);
+    expect(navigateSpy).toHaveBeenCalledWith(['/board', 2]);
   });
 
   it('switchBoard() should not navigate when selecting the current board', () => {
     component.projectId = 1;
     component.switchBoard(1);
-    expect(routerSpy.navigate).not.toHaveBeenCalled();
+    expect(navigateSpy).not.toHaveBeenCalled();
   });
 
   it('switchBoard() should close the board switcher', () => {
@@ -220,6 +220,6 @@ describe('BoardComponent', () => {
   // ── goBack ──────────────────────────────────────────────
   it('goBack() should navigate to /boards', () => {
     component.goBack();
-    expect(routerSpy.navigate).toHaveBeenCalledWith(['/boards']);
+    expect(navigateSpy).toHaveBeenCalledWith(['/boards']);
   });
 });
