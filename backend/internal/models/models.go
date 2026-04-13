@@ -58,6 +58,8 @@ const (
 	ActivityTaskMoved    ActivityAction = "task_moved"
 
 	// Label actions
+	ActivityLabelCreated  ActivityAction = "label_created"
+	ActivityLabelDeleted  ActivityAction = "label_deleted"
 	ActivityLabelAssigned ActivityAction = "label_assigned"
 	ActivityLabelRemoved  ActivityAction = "label_removed"
 
@@ -196,4 +198,36 @@ type Message struct {
 	SenderName string    `json:"sender_name"`
 	Content    string    `json:"content"`
 	CreatedAt  time.Time `json:"created_at"`
+}
+
+// Label represents a label/tag for tasks within a project
+type Label struct {
+	ID        int64     `json:"id"`
+	ProjectID int64     `json:"project_id"`
+	Name      string    `json:"name"`
+	Color     string    `json:"color"`
+	CreatedBy string    `json:"created_by"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// TaskLabel represents the join table between tasks and labels
+type TaskLabel struct {
+	TaskID  int64 `json:"task_id"`
+	LabelID int64 `json:"label_id"`
+}
+
+// LabelResponse is the API response for label data
+type LabelResponse struct {
+	ID        int64  `json:"id"`
+	ProjectID int64  `json:"project_id"`
+	Name      string `json:"name"`
+	Color     string `json:"color"`
+	CreatedBy string `json:"created_by"`
+	CreatedAt string `json:"created_at,omitempty"`
+}
+
+// TaskLabelResponse is the API response for task-label assignments
+type TaskLabelResponse struct {
+	TaskID  int64 `json:"task_id"`
+	LabelID int64 `json:"label_id"`
 }
