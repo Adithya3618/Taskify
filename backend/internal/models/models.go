@@ -32,27 +32,75 @@ type ProjectMemberResponse struct {
 	JoinedAt  time.Time         `json:"joined_at"`
 }
 
-// ActivityLogType represents the type of activity
-type ActivityLogType string
+// ActivityAction represents the type of activity action
+type ActivityAction string
 
+// EntityType represents the type of entity being acted upon
+type EntityType string
+
+// Activity action constants
 const (
-	ActivityMemberAdded    ActivityLogType = "member_added"
-	ActivityMemberRemoved  ActivityLogType = "member_removed"
-	ActivityProjectCreated ActivityLogType = "project_created"
-	ActivityProjectDeleted ActivityLogType = "project_deleted"
+	// Project actions
+	ActivityProjectCreated ActivityAction = "project_created"
+	ActivityProjectUpdated ActivityAction = "project_updated"
+	ActivityProjectDeleted ActivityAction = "project_deleted"
+
+	// Member actions
+	ActivityMemberAdded   ActivityAction = "member_added"
+	ActivityMemberRemoved ActivityAction = "member_removed"
+	ActivityMemberJoined  ActivityAction = "member_joined"
+
+	// Task actions
+	ActivityTaskCreated  ActivityAction = "task_created"
+	ActivityTaskUpdated  ActivityAction = "task_updated"
+	ActivityTaskDeleted  ActivityAction = "task_deleted"
+	ActivityTaskAssigned ActivityAction = "task_assigned"
+	ActivityTaskMoved    ActivityAction = "task_moved"
+
+	// Label actions
+	ActivityLabelAssigned ActivityAction = "label_assigned"
+	ActivityLabelRemoved  ActivityAction = "label_removed"
+
+	// Comment actions
+	ActivityCommentAdded   ActivityAction = "comment_added"
+	ActivityCommentDeleted ActivityAction = "comment_deleted"
+)
+
+// Entity types
+const (
+	EntityProject EntityType = "project"
+	EntityTask    EntityType = "task"
+	EntityMember  EntityType = "member"
+	EntityLabel   EntityType = "label"
+	EntityComment EntityType = "comment"
+	EntityStage   EntityType = "stage"
 )
 
 // ActivityLog represents an activity log entry
 type ActivityLog struct {
-	ID         int64           `json:"id"`
-	ProjectID  int64           `json:"project_id"`
-	UserID     string          `json:"user_id"`
-	Action     ActivityLogType `json:"action"`
-	TargetUser string          `json:"target_user,omitempty"`
-	Details    string          `json:"details,omitempty"`
-	IPAddress  string          `json:"ip_address,omitempty"`
-	UserAgent  string          `json:"user_agent,omitempty"`
-	CreatedAt  time.Time       `json:"created_at"`
+	ID          int64          `json:"id"`
+	ProjectID   int64          `json:"project_id"`
+	UserID      string         `json:"user_id"`
+	UserName    string         `json:"user_name,omitempty"`
+	Action      ActivityAction `json:"action"`
+	EntityType  EntityType     `json:"entity_type"`
+	EntityID    int64          `json:"entity_id,omitempty"`
+	Description string         `json:"description"`
+	Details     string         `json:"details,omitempty"`
+	CreatedAt   time.Time      `json:"created_at"`
+}
+
+// ActivityLogResponse is the response for activity log
+type ActivityLogResponse struct {
+	ID          int64          `json:"id"`
+	ProjectID   int64          `json:"project_id"`
+	UserID      string         `json:"user_id"`
+	UserName    string         `json:"user_name,omitempty"`
+	Action      ActivityAction `json:"action"`
+	EntityType  EntityType     `json:"entity_type"`
+	EntityID    int64          `json:"entity_id,omitempty"`
+	Description string         `json:"description"`
+	CreatedAt   time.Time      `json:"created_at"`
 }
 
 // Permission constants for project access
