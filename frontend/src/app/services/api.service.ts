@@ -6,6 +6,7 @@ import { AddProjectMemberRequest, CreateProjectRequest, Project, ProjectMember }
 import { Comment, CreateCommentRequest } from '../models/comment.model';
 import { Stage, CreateStageRequest } from '../models/stage.model';
 import { Task, CreateTaskRequest, MoveTaskRequest } from '../models/task.model';
+import { CreateSubtaskRequest, Subtask, UpdateSubtaskRequest } from '../models/subtask.model';
 import { Message, CreateMessageRequest } from '../models/message.model';
 import { AuthService, AuthUser } from './auth.service';
 
@@ -84,6 +85,10 @@ export class ApiService {
     localStorage.setItem(this.memberStoreKey(projectId), JSON.stringify(members));
   }
 
+  setCachedProjectMembers(projectId: number, members: ProjectMember[]): void {
+    this.saveCachedProjectMembers(projectId, members);
+  }
+
   private commentStoreKey(taskId: number): string {
     return `${this.commentStorePrefix}${taskId}`;
   }
@@ -120,6 +125,20 @@ export class ApiService {
 
   private saveCachedTaskComments(taskId: number, comments: Comment[]): void {
     localStorage.setItem(this.commentStoreKey(taskId), JSON.stringify(comments));
+  }
+
+  getTaskCommentCount(taskId: number): number {
+    return this.getCachedTaskComments(taskId).length;
+  }
+
+  primeTaskComments(taskIds: number[]): void {
+    taskIds.forEach((taskId) => {
+      if (this.getCachedTaskComments(taskId).length > 0) return;
+      this.getComments(taskId).subscribe({
+        next: () => {},
+        error: () => {}
+      });
+    });
   }
 
   private getBoardOwnerEmail(projectId: number): string {
@@ -434,6 +453,31 @@ createTask(projectId: number, stageId: number, request: CreateTaskRequest): Obse
 
   deleteTask(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/tasks/${id}`);
+  }
+
+  // ---------------- Subtasks ----------------
+  getSubtasks(taskId: number): Observable<Subtask[]> {
+    return this.http.get<Subtask[]>(`${this.baseUrl}/tasks/${taskId}/subtasks`);
+  }
+
+  createSubtask(taskId: number, request: CreateSubtaskRequest): Observable<Subtask> {
+    return this.http.post<Subtask>(
+      `${this.baseUrl}/tasks/${taskId}/subtasks`,
+      request,
+      { headers: this.jsonHeaders() }
+    );
+  }
+
+  updateSubtask(id: number, request: UpdateSubtaskRequest): Observable<Subtask> {
+    return this.http.patch<Subtask>(
+      `${this.baseUrl}/subtasks/${id}`,
+      request,
+      { headers: this.jsonHeaders() }
+    );
+  }
+
+  deleteSubtask(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/subtasks/${id}`);
   }
 
   // ---------------- Comments ----------------

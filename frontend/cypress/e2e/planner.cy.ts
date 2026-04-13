@@ -3,7 +3,9 @@
 import {
   PROJECT_ID,
   STAGE_ID,
+  TASK_ID,
   makeTask,
+  makeSubtask,
   taskDescriptionWithMeta,
   visitBoard,
   visitPlanner,
@@ -136,5 +138,25 @@ describe('Planner — add task from calendar', () => {
     cy.get('#addTaskTitle').contains('Add task');
     cy.contains('.btn-close-modal', '×').click();
     cy.get('#addTaskTitle').should('not.exist');
+  });
+});
+
+describe('Planner â€” checklist subtasks', () => {
+  it('shows and updates checklist items inside the planner task modal', () => {
+    visitPlanner({
+      subtasksByTaskId: {
+        [TASK_ID]: [
+          makeSubtask(TASK_ID, 9101, 'First step'),
+          makeSubtask(TASK_ID, 9102, 'Second step', true, 1),
+        ],
+      },
+    });
+
+    cy.get('#planner-nodue-toggle').click();
+    cy.contains('.planner-task-title', 'Test task').click();
+    cy.get('.plannerSubtaskItemTitle').eq(0).should('contain', 'First step');
+    cy.contains('.plannerSubtaskItem', 'First step').find('input[type="checkbox"]').check({ force: true });
+    cy.wait('@updateSubtask').its('request.body.is_completed').should('eq', true);
+    cy.get('.plannerSubtaskSectionMeta').should('contain', '2/2 done');
   });
 });
