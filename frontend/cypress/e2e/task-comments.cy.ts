@@ -125,7 +125,8 @@ describe('Task comments', () => {
       },
     });
 
-    cy.contains('.planner-grid .planner-task-title', 'Test task')
+    cy.get('#planner-scheduled-toggle').click();
+    cy.contains('.planner-scheduled-list .planner-task-title', 'Test task')
       .closest('.planner-task-chip')
       .find('.planner-task-comment-meta')
       .first()
@@ -191,7 +192,8 @@ describe('Task comments', () => {
     cy.wait('@createComment').its('request.body.content').should('eq', 'New planner comment');
     cy.contains('.plannerCommentCard', 'New planner comment').should('be.visible');
     cy.get('.btn-close-modal').click();
-    cy.contains('.planner-grid .planner-task-title', 'Test task')
+    cy.get('#planner-scheduled-toggle').click();
+    cy.contains('.planner-scheduled-list .planner-task-title', 'Test task')
       .closest('.planner-task-chip')
       .find('.planner-task-comment-meta')
       .first()
