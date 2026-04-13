@@ -105,7 +105,7 @@
     <div class="sectionHead">
       <div>
         <h2>Your Boards</h2>
-        <p class="muted">Showing boards created by {{ userDisplayName }}.</p>
+        <p class="muted">Showing boards you can access, {{ userDisplayName }}.</p>
       </div>
       <div class="sectionRight">
         <div class="status">
@@ -168,6 +168,10 @@
           </div>
           <div class="title">{{ project.name }}</div>
           <div class="desc">{{ project.description || 'No description yet' }}</div>
+          <div class="memberMeta">
+            <span class="memberMetaIcon">Members</span>
+            <span>{{ project.member_count || 1 }}</span>
+          </div>
         </div>
       </button>
 

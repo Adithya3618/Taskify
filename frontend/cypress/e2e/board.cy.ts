@@ -1,8 +1,13 @@
 /// <reference types="cypress" />
 
 import {
+  makeActivity,
+  makeComment,
+  makeProjectMember,
   STAGE_ID,
+  TASK_ID,
   makeTask,
+  makeSubtask,
   taskDescriptionWithMeta,
   visitBoard,
   isoNow,
@@ -66,6 +71,7 @@ describe('Board — task checkbox (detail modal)', () => {
     cy.contains('.task-modal button', 'Save').click();
     cy.wait('@updateTask');
     cy.get('.task-modal').should('not.exist');
+    cy.get('.task-card .task-check input[type="checkbox"]').first().should('be.checked');
     cy.get('.task-card').first().should('have.class', 'task-completed');
   });
 });
@@ -264,7 +270,7 @@ describe('Board — filter panel', () => {
 
   it('Priority Critical chip can be selected', () => {
     openFilterPanel();
-    clickFilterChip('Priority', 'Critical');
+    clickFilterChip('Priority', 'Urgent');
     cy.contains('.filterGroupLabel', 'Priority')
       .parent()
       .find('.filterChip.chip-critical')
@@ -428,7 +434,7 @@ describe('Board — task detail modal', () => {
 
   it('saves notes in description payload', () => {
     cy.get('.task-card .task-content').first().click();
-    cy.get('.task-modal textarea').last().type('My notes');
+    cy.get('.task-detail-main textarea').last().type('My notes');
     cy.contains('.task-modal button', 'Save').click();
     cy.wait('@updateTask').its('request.body.description').should('include', 'notes:My notes');
   });
@@ -523,6 +529,208 @@ describe('Board — top bar', () => {
 });
 
 // ── Empty board ──────────────────────────────────────────────────────────────
+
+describe('Board — checklist subtasks', () => {
+  beforeEach(() =>
+    visitBoard({
+      subtasksByTaskId: {
+        [TASK_ID]: [
+          makeSubtask(TASK_ID, 7101, 'Draft outline'),
+          makeSubtask(TASK_ID, 7102, 'Review copy', true, 1),
+        ],
+      },
+    })
+  );
+
+  it('shows checklist items in order and renders progress on the task card', () => {
+    cy.get('.task-card').first().within(() => {
+      cy.get('.task-subtask-progress-text').should('contain', '1/2 done');
+    });
+
+    cy.get('.task-card .task-content').first().click();
+    cy.get('.subtaskItemTitle').eq(0).should('contain', 'Draft outline');
+    cy.get('.subtaskItemTitle').eq(1).should('contain', 'Review copy');
+  });
+
+  it('adds a checklist item from the task detail modal', () => {
+    cy.get('.task-card .task-content').first().click();
+    cy.get('.subtaskComposer input').type('Ship release notes{enter}');
+    cy.wait('@createSubtask').its('request.body.title').should('eq', 'Ship release notes');
+    cy.get('.subtaskItemTitle').should('contain', 'Ship release notes');
+    cy.get('.task-subtask-progress-text').first().should('contain', '1/3 done');
+  });
+
+  it('toggles a checklist item without refreshing and updates progress immediately', () => {
+    cy.get('.task-card .task-content').first().click();
+    cy.contains('.subtaskItem', 'Draft outline').find('input[type="checkbox"]').check({ force: true });
+    cy.wait('@updateSubtask').its('request.body.is_completed').should('eq', true);
+    cy.contains('.subtaskItem', 'Draft outline').find('.subtaskItemTitle').should('have.class', 'subtaskItemTitleDone');
+    cy.get('.task-subtask-progress-text').first().should('contain', '2/2 done');
+  });
+
+  it('deletes a checklist item and shrinks the progress summary', () => {
+    cy.get('.task-card .task-content').first().click();
+    cy.contains('.subtaskItem', 'Review copy').contains('button', 'Delete').click();
+    cy.contains('.delete-confirm-modal h3', 'Delete checklist item?').should('be.visible');
+    cy.contains('.delete-confirm-modal button', 'Delete').click();
+    cy.wait('@deleteSubtask');
+    cy.contains('.subtaskItem', 'Review copy').should('not.exist');
+    cy.get('.task-subtask-progress-text').first().should('contain', '0/1 done');
+  });
+
+  it('keeps a checklist item when delete is cancelled', () => {
+    cy.get('.task-card .task-content').first().click();
+    cy.contains('.subtaskItem', 'Review copy').contains('button', 'Delete').click();
+    cy.contains('.delete-confirm-modal button', 'Cancel').click();
+    cy.get('.delete-confirm-modal').should('not.exist');
+    cy.contains('.subtaskItem', 'Review copy').should('exist');
+  });
+
+  it('keeps checklist changes visible after switching to planner', () => {
+    cy.get('.task-card .task-content').first().click();
+    cy.get('.subtaskComposer input').type('Planner sync item');
+    cy.contains('.subtaskComposer button', 'Add').click();
+    cy.wait('@createSubtask');
+    cy.get('.task-modal .btn-close-modal').click();
+    cy.get('nav.viewTabs a.viewTab').contains('Planner').click({ force: true });
+    cy.get('#planner-nodue-toggle').click();
+    cy.contains('.planner-task-title', 'Test task').click();
+    cy.get('.plannerSubtaskItemTitle').should('contain', 'Planner sync item');
+  });
+});
+
+describe('Board — task comments', () => {
+  beforeEach(() =>
+    visitBoard({
+      commentsByTaskId: {
+        [TASK_ID]: [
+          makeComment(TASK_ID, 9101, 'Initial note'),
+          makeComment(TASK_ID, 9102, 'Follow-up comment'),
+        ],
+      },
+    })
+  );
+
+  it('posts a comment from task details', () => {
+    cy.get('.task-card .task-content').first().click();
+    cy.get('.commentsComposer textarea').type('Fresh update from Cypress');
+    cy.contains('.commentsComposer button', 'Post').click();
+    cy.wait('@createComment').its('request.body.content').should('eq', 'Fresh update from Cypress');
+    cy.contains('.commentCard', 'Fresh update from Cypress').should('be.visible');
+    cy.get('.task-comment-meta').first().should('contain', '3');
+  });
+
+  it('edits an existing comment', () => {
+    cy.get('.task-card .task-content').first().click();
+    cy.contains('.commentCard', 'Initial note').contains('button', 'Edit').click();
+    cy.get('.commentEditForm textarea').clear().type('Updated note copy');
+    cy.contains('.commentEditActions button', 'Save').click();
+    cy.wait('@updateComment').its('request.body.content').should('eq', 'Updated note copy');
+    cy.contains('.commentCard', 'Updated note copy').should('be.visible');
+  });
+
+  it('cancels comment deletion from the confirm modal', () => {
+    cy.get('.task-card .task-content').first().click();
+    cy.contains('.commentCard', 'Follow-up comment').contains('button', 'Delete').click();
+    cy.contains('.delete-confirm-modal h3', 'Delete comment?').should('be.visible');
+    cy.contains('.delete-confirm-modal button', 'Cancel').click();
+    cy.get('.delete-confirm-modal').should('not.exist');
+    cy.contains('.commentCard', 'Follow-up comment').should('exist');
+  });
+
+  it('deletes a comment after confirming', () => {
+    cy.get('.task-card .task-content').first().click();
+    cy.contains('.commentCard', 'Follow-up comment').contains('button', 'Delete').click();
+    cy.contains('.delete-confirm-modal button', 'Delete').click();
+    cy.wait('@deleteComment');
+    cy.contains('.commentCard', 'Follow-up comment').should('not.exist');
+    cy.get('.task-comment-meta').first().should('contain', '1');
+  });
+});
+
+describe('Board — project activity', () => {
+  const ownerMember = makeProjectMember(1, 'owner-1', 'Adithya', 'e2e@test.com', 'owner');
+  const teammateMember = makeProjectMember(1, 'member-2', 'Casey Doe', 'casey@test.com', 'member');
+
+  it('shows the Activity tab only for the owner', () => {
+    visitBoard({
+      owners: { '1': 'owner@test.com' },
+      sessionUser: { name: 'Jordan', email: 'member@test.com', id: 'member-3' },
+      cachedProjectMembers: {
+        1: [
+          makeProjectMember(1, 'owner-1', 'Owner User', 'owner@test.com', 'owner'),
+          makeProjectMember(1, 'member-3', 'Jordan', 'member@test.com', 'member'),
+        ],
+      },
+      projectMembers: [
+        makeProjectMember(1, 'owner-1', 'Owner User', 'owner@test.com', 'owner'),
+        makeProjectMember(1, 'member-3', 'Jordan', 'member@test.com', 'member'),
+      ],
+    });
+
+    cy.contains('button.btn-ghost', 'Settings').click();
+    cy.contains('h3', 'Project settings').should('be.visible');
+    cy.contains('.settingsTab', 'Activity').should('not.exist');
+  });
+
+  it('renders newest activity first, filters by member/date, and paginates with load more', () => {
+    visitBoard({
+      projectMembers: [ownerMember, teammateMember],
+      activityByProjectId: {
+        1: [
+          makeActivity(1, 1, "Adithya moved 'Design login' to Done", { userId: 'owner-1', userName: 'Adithya', createdAt: '2026-04-12T14:00:00.000Z' }),
+          makeActivity(1, 2, "Casey added label 'Urgent' to 'Fix bugs'", { userId: 'member-2', userName: 'Casey Doe', action: 'label_assigned', entityType: 'label', createdAt: '2026-04-11T11:00:00.000Z' }),
+          makeActivity(1, 3, "Adithya commented on 'Launch prep'", { userId: 'owner-1', userName: 'Adithya', action: 'comment_added', entityType: 'comment', createdAt: '2026-04-10T09:00:00.000Z' }),
+          makeActivity(1, 4, "Casey created 'Write release notes'", { userId: 'member-2', userName: 'Casey Doe', action: 'task_created', createdAt: '2026-04-09T09:00:00.000Z' }),
+          makeActivity(1, 5, "Adithya updated 'Board polish'", { userId: 'owner-1', userName: 'Adithya', action: 'task_updated', createdAt: '2026-04-08T09:00:00.000Z' }),
+          makeActivity(1, 6, "Casey moved 'Homepage QA' to Doing", { userId: 'member-2', userName: 'Casey Doe', createdAt: '2026-04-07T09:00:00.000Z' }),
+          makeActivity(1, 7, "Adithya removed label 'Blocked'", { userId: 'owner-1', userName: 'Adithya', action: 'label_removed', entityType: 'label', createdAt: '2026-04-06T09:00:00.000Z' }),
+          makeActivity(1, 8, "Casey joined the project", { userId: 'member-2', userName: 'Casey Doe', action: 'member_joined', entityType: 'member', createdAt: '2026-04-05T09:00:00.000Z' }),
+          makeActivity(1, 9, "Adithya added Casey to the board", { userId: 'owner-1', userName: 'Adithya', action: 'member_added', entityType: 'member', createdAt: '2026-04-04T09:00:00.000Z' }),
+          makeActivity(1, 10, "Casey deleted 'Old draft'", { userId: 'member-2', userName: 'Casey Doe', action: 'task_deleted', createdAt: '2026-04-03T09:00:00.000Z' }),
+          makeActivity(1, 11, "Adithya moved 'Sprint wrap-up' to Done", { userId: 'owner-1', userName: 'Adithya', createdAt: '2026-04-02T09:00:00.000Z' }),
+          makeActivity(1, 12, "Casey added a comment to 'Roadmap'", { userId: 'member-2', userName: 'Casey Doe', action: 'comment_added', entityType: 'comment', createdAt: '2026-04-01T09:00:00.000Z' }),
+          makeActivity(1, 13, "Adithya updated 'Retro notes'", { userId: 'owner-1', userName: 'Adithya', action: 'task_updated', createdAt: '2026-03-31T09:00:00.000Z' }),
+        ],
+      },
+    });
+
+    cy.contains('button.btn-ghost', 'Settings').click();
+    cy.contains('.settingsTab', 'Activity').click();
+    cy.get('.activityList .activityItem').should('have.length', 12);
+    cy.get('.activityList .activityItem').first().should('contain', "Adithya moved 'Design login' to Done");
+    cy.get('.activityList .activityItem').last().should('contain', "Casey added a comment to 'Roadmap'");
+
+    cy.get('#activity-member-filter').select('member-2');
+    cy.get('.activityList .activityItem').should('have.length', 6);
+    cy.get('.activityList').should('contain', 'Casey added label');
+    cy.get('.activityList').should('not.contain', "Adithya moved 'Design login' to Done");
+
+    cy.get('#activity-date-from')
+      .invoke('val', '2026-04-05')
+      .trigger('input', { force: true })
+      .trigger('change', { force: true });
+    cy.get('.activityList .activityItem').should('have.length', 4);
+    cy.get('.activityList').should('not.contain', "Casey deleted 'Old draft'");
+
+    cy.contains('.activityToolbar button', 'Reset').click();
+    cy.get('.activityList .activityItem').should('have.length', 12);
+    cy.contains('.activityMore button', 'Load more').click();
+    cy.get('.activityList .activityItem').should('have.length', 13);
+    cy.get('.activityList').should('contain', "Adithya updated 'Retro notes'");
+  });
+
+  it('shows an empty state when no activity has been logged', () => {
+    visitBoard({
+      projectMembers: [ownerMember, teammateMember],
+      activityByProjectId: { 1: [] },
+    });
+
+    cy.contains('button.btn-ghost', 'Settings').click();
+    cy.contains('.settingsTab', 'Activity').click();
+    cy.contains('.activityEmptyState strong', 'No activity logged yet.').should('be.visible');
+  });
+});
 
 describe('Board — empty list', () => {
   it('shows no tasks when a stage has no tasks', () => {

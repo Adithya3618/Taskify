@@ -1319,6 +1319,21 @@
   text-align: left;
 }
 
+.planner-task-comment-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: rgba(15, 23, 42, 0.6);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.planner-task-comment-icon {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+
 [data-theme='light'] .planner-task-chip {
   background: rgba(255, 255, 255, 0.55);
   border-color: rgba(255, 255, 255, 0.65);
@@ -1574,9 +1589,274 @@
   color: #166534;
 }
 
+.plannerCommentSection {
+  margin-top: 10px;
+}
+
+.plannerCommentSectionHeader {
+  margin-bottom: 10px;
+}
+
+.plannerCommentSectionLabel {
+  display: block !important;
+  margin-bottom: 4px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  color: var(--text-1) !important;
+}
+
+.plannerCommentSectionHeader p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.plannerCommentFeedback {
+  margin: 0 0 12px;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.plannerCommentFeedbackError {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.plannerCommentsComposer {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 12px;
+  margin-bottom: 14px;
+}
+
+.plannerCommentsComposer textarea,
+.plannerCommentEditForm textarea {
+  margin-bottom: 0 !important;
+}
+
+.plannerCommentsComposerActions,
+.plannerCommentEditActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.plannerCommentsList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.plannerCommentEmptyState {
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.plannerCommentCard {
+  display: flex;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 12px;
+}
+
+.plannerCommentAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #22c55e, #0ea5e9);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.plannerCommentBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.plannerCommentMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.plannerCommentMeta strong {
+  color: var(--text-1);
+  font-size: 14px;
+}
+
+.plannerCommentMeta span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.plannerCommentContent {
+  white-space: pre-wrap;
+  color: var(--text-2);
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+.plannerCommentActions {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.plannerCommentActionBtn {
+  border: none;
+  background: transparent;
+  color: #818cf8;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 4px 2px;
+}
+
+.plannerCommentActionBtn.danger {
+  color: #f87171;
+}
+
+.plannerCommentActionBtn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.plannerSubtaskSection {
+  margin-top: 10px;
+}
+
+.plannerSubtaskSectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.plannerSubtaskSectionLabel {
+  display: block !important;
+  margin-bottom: 4px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  color: var(--text-1) !important;
+}
+
+.plannerSubtaskSectionHeader p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.plannerSubtaskSectionMeta {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0ea5e9;
+}
+
+.plannerSubtaskComposer {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.plannerSubtaskComposer input {
+  flex: 1;
+  margin-bottom: 0 !important;
+}
+
+.plannerSubtaskList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.plannerSubtaskItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 12px;
+}
+
+.plannerSubtaskItemMain {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+  cursor: pointer;
+}
+
+.plannerSubtaskItemTitle {
+  color: var(--text-1);
+  font-size: 14px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.plannerSubtaskItemTitleDone {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.plannerSubtaskDeleteBtn {
+  border: none;
+  background: transparent;
+  color: #f87171;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 4px 2px;
+}
+
+.plannerSubtaskDeleteBtn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
 @media (max-width: 640px) {
   .task-modal-grid {
     grid-template-columns: 1fr;
+  }
+
+  .plannerCommentCard {
+    flex-direction: column;
+  }
+
+  .plannerSubtaskComposer,
+  .plannerSubtaskItem {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 

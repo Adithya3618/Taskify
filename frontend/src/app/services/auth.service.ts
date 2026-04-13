@@ -33,6 +33,7 @@ export interface ResetPasswordResponse {
 export class AuthService {
   private readonly tokenKey = 'taskify.auth.token';
   private readonly sessionKey = 'taskify.auth.session';
+  private readonly knownUsersKey = 'taskify.auth.known-users';
   private readonly apiUrl = 'api/auth';
 
   constructor(private http: HttpClient) {}
@@ -125,6 +126,7 @@ export class AuthService {
 
   private setSession(user: AuthUser): void {
     localStorage.setItem(this.sessionKey, JSON.stringify(user));
+    this.rememberKnownUser(user);
   }
 
   updateCurrentUser(patch: Partial<AuthUser>): AuthUser | null {
@@ -133,6 +135,41 @@ export class AuthService {
     const updated: AuthUser = { ...current, ...patch };
     this.setSession(updated);
     return updated;
+  }
+
+  getKnownUsers(): AuthUser[] {
+    const raw = localStorage.getItem(this.knownUsersKey);
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private rememberKnownUser(user: AuthUser): void {
+    const email = user.email?.trim().toLowerCase();
+    if (!email) return;
+
+    const knownUsers = this.getKnownUsers();
+    const existingIndex = knownUsers.findIndex(
+      (knownUser) => knownUser.email.trim().toLowerCase() === email
+    );
+
+    const nextUser: AuthUser = {
+      ...knownUsers[existingIndex],
+      ...user,
+      email
+    };
+
+    if (existingIndex >= 0) {
+      knownUsers[existingIndex] = nextUser;
+    } else {
+      knownUsers.push(nextUser);
+    }
+
+    localStorage.setItem(this.knownUsersKey, JSON.stringify(knownUsers));
   }
 
   isAuthenticated(): boolean {

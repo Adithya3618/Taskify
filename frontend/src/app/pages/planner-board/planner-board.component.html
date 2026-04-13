@@ -225,6 +225,24 @@
                       <span class="planner-task-meta" *ngIf="getTaskPriority(task)">
                         <span class="meta-pill priority-pill" [ngClass]="getPriorityClass(task)">{{ getTaskPriority(task) }}</span>
                       </span>
+                      <span class="planner-task-comment-meta">
+                        <svg class="planner-task-comment-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H7l-4 3v-5.5A8.5 8.5 0 1 1 21 11.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>{{ getTaskCommentCount(task.id) }}</span>
+                      </span>
+                      <span class="planner-task-comment-meta">
+                        <svg class="planner-task-comment-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H7l-4 3v-5.5A8.5 8.5 0 1 1 21 11.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>{{ getTaskCommentCount(task.id) }}</span>
+                      </span>
+                      <span class="planner-task-comment-meta">
+                        <svg class="planner-task-comment-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H7l-4 3v-5.5A8.5 8.5 0 1 1 21 11.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>{{ getTaskCommentCount(task.id) }}</span>
+                      </span>
                       <span class="planner-task-stage">{{ task.stageName }}</span>
                     </button>
                   </div>
@@ -440,6 +458,136 @@
 
       <label>Notes</label>
       <textarea rows="4" [(ngModel)]="detailNotes"></textarea>
+
+      <div class="plannerSubtaskSection">
+        <div class="plannerSubtaskSectionHeader">
+          <div>
+            <label class="plannerSubtaskSectionLabel">Checklist</label>
+            <p>Break the task into smaller steps and keep progress in sync with the board.</p>
+          </div>
+          <span class="plannerSubtaskSectionMeta" *ngIf="detailSubtasks.length">
+            {{ getDetailSubtaskCompletedCount() }}/{{ detailSubtasks.length }} done
+          </span>
+        </div>
+
+        <p *ngIf="subtaskError" class="plannerCommentFeedback plannerCommentFeedbackError">{{ subtaskError }}</p>
+
+        <div class="plannerSubtaskComposer">
+          <input
+            type="text"
+            [(ngModel)]="newSubtaskTitle"
+            placeholder="Add a checklist item"
+            (keyup.enter)="addSubtask()"
+          />
+          <button
+            type="button"
+            class="btn-modal-primary"
+            (click)="addSubtask()"
+            [disabled]="subtaskSaving || !newSubtaskTitle.trim()"
+          >
+            {{ subtaskSaving ? 'Adding...' : 'Add' }}
+          </button>
+        </div>
+
+        <div *ngIf="subtasksLoading" class="plannerCommentEmptyState">Loading checklist...</div>
+
+        <div class="plannerSubtaskList" *ngIf="!subtasksLoading && detailSubtasks.length">
+          <div class="plannerSubtaskItem" *ngFor="let subtask of detailSubtasks; trackBy: trackBySubtaskId">
+            <label class="plannerSubtaskItemMain">
+              <input
+                class="board-checkbox"
+                type="checkbox"
+                [checked]="subtask.is_completed"
+                (change)="toggleSubtask(subtask, $event)"
+              />
+              <span class="plannerSubtaskItemTitle" [class.plannerSubtaskItemTitleDone]="subtask.is_completed">{{ subtask.title }}</span>
+            </label>
+            <button
+              type="button"
+              class="plannerSubtaskDeleteBtn"
+              (click)="deleteSubtask(subtask)"
+              [disabled]="subtaskDeletingId === subtask.id"
+            >
+              {{ subtaskDeletingId === subtask.id ? 'Deleting...' : 'Delete' }}
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="!subtasksLoading && !detailSubtasks.length" class="plannerCommentEmptyState">
+          No checklist items yet. Add one above to get started.
+        </div>
+      </div>
+
+      <div class="plannerCommentSection">
+        <div class="plannerCommentSectionHeader">
+          <label class="plannerCommentSectionLabel">Comments</label>
+          <p>Discuss the task here and keep updates in one place.</p>
+        </div>
+
+        <p *ngIf="commentError" class="plannerCommentFeedback plannerCommentFeedbackError">{{ commentError }}</p>
+
+        <div class="plannerCommentsComposer">
+          <textarea rows="3" [(ngModel)]="newCommentContent" placeholder="Write a comment..."></textarea>
+          <div class="plannerCommentsComposerActions">
+            <button
+              type="button"
+              class="btn-modal-primary"
+              (click)="postComment()"
+              [disabled]="commentSaving || !newCommentContent.trim()"
+            >
+              {{ commentSaving && !editingCommentId ? 'Posting...' : 'Post' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="plannerCommentsList">
+          <div *ngIf="commentsLoading" class="plannerCommentEmptyState">Loading comments...</div>
+          <div *ngIf="!commentsLoading && !detailComments.length" class="plannerCommentEmptyState">No comments yet. Start the conversation below.</div>
+
+          <div class="plannerCommentCard" *ngFor="let comment of detailComments">
+            <span class="plannerCommentAvatar">{{ getCommentInitial(comment) }}</span>
+            <div class="plannerCommentBody">
+              <div class="plannerCommentMeta">
+                <strong>{{ comment.author_name }}</strong>
+                <span>{{ formatCommentTimestamp(comment.updated_at || comment.created_at) }}</span>
+              </div>
+
+              <div *ngIf="editingCommentId !== comment.id; else plannerEditCommentForm" class="plannerCommentContent">
+                {{ comment.content }}
+              </div>
+
+              <ng-template #plannerEditCommentForm>
+                <div class="plannerCommentEditForm">
+                  <textarea rows="3" [(ngModel)]="editingCommentContent"></textarea>
+                  <div class="plannerCommentEditActions">
+                    <button
+                      type="button"
+                      class="btn-modal-primary"
+                      (click)="saveCommentEdit(comment)"
+                      [disabled]="commentSaving || !editingCommentContent.trim()"
+                    >
+                      {{ commentSaving ? 'Saving...' : 'Save' }}
+                    </button>
+                    <button type="button" class="btn-modal-ghost" (click)="cancelCommentEdit()">Cancel</button>
+                  </div>
+                </div>
+              </ng-template>
+            </div>
+
+            <div class="plannerCommentActions" *ngIf="canManageComment(comment) && editingCommentId !== comment.id">
+              <button type="button" class="plannerCommentActionBtn" (click)="startCommentEdit(comment)">Edit</button>
+              <button
+                type="button"
+                class="plannerCommentActionBtn danger"
+                (click)="confirmDeleteComment(comment)"
+                [disabled]="deletingCommentId === comment.id"
+              >
+                {{ deletingCommentId === comment.id ? 'Deleting...' : 'Delete' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="task-modal-footer">

@@ -47,7 +47,7 @@ func TestProject_Structure(t *testing.T) {
 	now := time.Now()
 	project := coretests.Project{
 		ID:          1,
-		UserID:      "user-123",
+		OwnerID:     "user-123",
 		Name:        "My Project",
 		Description: "Project description",
 		CreatedAt:   now,
