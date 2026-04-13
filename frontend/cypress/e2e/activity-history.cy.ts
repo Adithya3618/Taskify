@@ -147,8 +147,14 @@ describe('Activity history', () => {
     visitBoardWithActivity();
     openActivityTab();
     cy.get('#activity-member-filter').select('member-2');
-    cy.get('#activity-date-from').type('2026-04-05');
-    cy.get('#activity-date-to').type('2026-04-09');
+    cy.get('#activity-date-from')
+      .invoke('val', '2026-04-05')
+      .trigger('input', { force: true })
+      .trigger('change', { force: true });
+    cy.get('#activity-date-to')
+      .invoke('val', '2026-04-09')
+      .trigger('input', { force: true })
+      .trigger('change', { force: true });
     cy.contains('.activityToolbar button', 'Reset').click();
     cy.get('#activity-member-filter').should('have.value', '');
     cy.get('#activity-date-from').should('have.value', '');
