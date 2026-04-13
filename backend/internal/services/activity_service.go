@@ -189,6 +189,34 @@ func (s *ActivityService) LogTaskMoved(projectID int64, actorID, actorName strin
 	)
 }
 
+// LogLabelCreated logs when a label is created
+func (s *ActivityService) LogLabelCreated(projectID int64, actorID, actorName string, labelID int64, labelName string) {
+	s.LogActivity(
+		projectID,
+		actorID,
+		actorName,
+		models.ActivityLabelCreated,
+		models.EntityLabel,
+		labelID,
+		fmt.Sprintf("%s created label '%s'", actorName, labelName),
+		fmt.Sprintf(`{"label_id": %d, "label_name": "%s"}`, labelID, labelName),
+	)
+}
+
+// LogLabelDeleted logs when a label is deleted
+func (s *ActivityService) LogLabelDeleted(projectID int64, actorID, actorName string, labelID int64, labelName string) {
+	s.LogActivity(
+		projectID,
+		actorID,
+		actorName,
+		models.ActivityLabelDeleted,
+		models.EntityLabel,
+		labelID,
+		fmt.Sprintf("%s deleted label '%s'", actorName, labelName),
+		fmt.Sprintf(`{"label_id": %d, "label_name": "%s"}`, labelID, labelName),
+	)
+}
+
 // LogLabelAssigned logs when a label is assigned to a task
 func (s *ActivityService) LogLabelAssigned(projectID int64, actorID, actorName string, taskID int64, taskTitle, labelName string) {
 	s.LogActivity(

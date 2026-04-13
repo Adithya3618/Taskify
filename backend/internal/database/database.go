@@ -174,6 +174,32 @@ func (db *DB) createTables() error {
 	)
 	`
 
+	// Create labels table
+	labelsTable := `
+	CREATE TABLE IF NOT EXISTS labels (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		project_id INTEGER NOT NULL,
+		name TEXT NOT NULL,
+		color TEXT DEFAULT '#808080',
+		created_by TEXT NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+		UNIQUE(project_id, name)
+	)
+	`
+
+	// Create task_labels join table
+	taskLabelsTable := `
+	CREATE TABLE IF NOT EXISTS task_labels (
+		task_id INTEGER NOT NULL,
+		label_id INTEGER NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		PRIMARY KEY (task_id, label_id),
+		FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+		FOREIGN KEY (label_id) REFERENCES labels(id) ON DELETE CASCADE
+	)
+	`
+
 	tables := []string{
 		projectsTable,
 		projectMembersTable,
@@ -184,6 +210,8 @@ func (db *DB) createTables() error {
 		subtasksTable,
 		activityLogsTable,
 		projectInvitesTable,
+		labelsTable,
+		taskLabelsTable,
 	}
 
 	for _, table := range tables {
@@ -220,6 +248,12 @@ func (db *DB) createTables() error {
 		"CREATE INDEX IF NOT EXISTS idx_project_invites_project ON project_invites(project_id)",
 		"CREATE INDEX IF NOT EXISTS idx_project_invites_id ON project_invites(id)",
 		"CREATE INDEX IF NOT EXISTS idx_project_invites_status ON project_invites(status)",
+		// Label indexes
+		"CREATE INDEX IF NOT EXISTS idx_labels_project ON labels(project_id)",
+		"CREATE INDEX IF NOT EXISTS idx_labels_name ON labels(name)",
+		// Task label indexes
+		"CREATE INDEX IF NOT EXISTS idx_task_labels_task ON task_labels(task_id)",
+		"CREATE INDEX IF NOT EXISTS idx_task_labels_label ON task_labels(label_id)",
 	}
 
 	for _, index := range indexes {

@@ -76,6 +76,10 @@ export class ApiService {
     }
   }
 
+  setCachedProjectMembers(projectId: number, members: ProjectMember[]): void {
+    this.saveCachedProjectMembers(projectId, members);
+  }
+
   private saveCachedProjectMembers(projectId: number, members: ProjectMember[]): void {
     localStorage.setItem(this.memberStoreKey(projectId), JSON.stringify(members));
   }
@@ -94,6 +98,24 @@ export class ApiService {
     } catch {
       return [];
     }
+  }
+
+  getTaskCommentCount(taskId: number): number {
+    return this.getCachedTaskComments(taskId).length;
+  }
+
+  primeTaskComments(taskIds: number[]): void {
+    // Prefetch comments for all tasks
+    taskIds.forEach(taskId => {
+      this.http.get<Comment[]>(`${this.baseUrl}/tasks/${taskId}/comments`).subscribe({
+        next: (comments) => {
+          const existing = this.getCachedTaskComments(taskId);
+          const merged = this.mergeComments(taskId, comments, existing);
+          this.saveCachedTaskComments(taskId, merged);
+        },
+        error: () => {} // Silently fail for priming
+      });
+    });
   }
 
   private saveCachedTaskComments(taskId: number, comments: Comment[]): void {

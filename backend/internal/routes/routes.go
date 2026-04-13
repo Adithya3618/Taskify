@@ -42,11 +42,14 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	// Initialize business services
 	projectService := projectServices.NewProjectService(db.DB)
 	stageService := projectServices.NewStageService(db.DB)
-	taskService := projectServices.NewTaskService(db.DB)
 	messageService := projectServices.NewMessageService(db.DB)
 	projectMemberService := projectServices.NewProjectMemberService(db.DB)
 	activityService := projectServices.NewActivityService(db.DB, projectMemberService)
 	taskService := projectServices.NewTaskService(db.DB, activityService)
+	commentService := projectServices.NewCommentService(db.DB)
+	subtaskService := projectServices.NewSubtaskService(db.DB)
+	labelService := projectServices.NewLabelService(db.DB, projectMemberService, activityService)
+	taskLabelService := projectServices.NewTaskLabelService(db.DB, projectMemberService, activityService)
 
 	// Initialize controllers
 	projectController := controllers.NewProjectController(projectService)
@@ -57,6 +60,8 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	messageController := controllers.NewMessageController(messageService)
 	projectMemberController := controllers.NewProjectMemberController(projectMemberService)
 	activityController := controllers.NewActivityController(activityService)
+	labelController := controllers.NewLabelController(labelService)
+	taskLabelController := controllers.NewTaskLabelController(taskLabelService)
 
 	// Create JWT middleware
 	jwtMiddleware := authmiddleware.JWTAuthMiddleware(jwtService)
@@ -145,6 +150,21 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	activityRoutes.Use(projectAccessMiddleware)
 	activityRoutes.HandleFunc("", activityController.GetActivity).Methods("GET")
 	activityRoutes.HandleFunc("/recent", activityController.GetRecentActivity).Methods("GET")
+
+	// Label routes (protected with project access check)
+	labelRoutes := api.PathPrefix("/projects/{id}/labels").Subrouter()
+	labelRoutes.Use(jwtMiddleware)
+	labelRoutes.Use(projectAccessMiddleware)
+	labelRoutes.HandleFunc("", labelController.CreateLabel).Methods("POST")
+	labelRoutes.HandleFunc("", labelController.GetLabels).Methods("GET")
+
+	// Single label route (protected)
+	protected.HandleFunc("/labels/{id}", labelController.DeleteLabel).Methods("DELETE")
+
+	// Task label routes (protected)
+	protected.HandleFunc("/tasks/{id}/labels", taskLabelController.AssignLabel).Methods("POST")
+	protected.HandleFunc("/tasks/{id}/labels", taskLabelController.GetTaskLabels).Methods("GET")
+	protected.HandleFunc("/tasks/{id}/labels/{labelId}", taskLabelController.RemoveLabel).Methods("DELETE")
 
 	// Health check endpoint (public)
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
