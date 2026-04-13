@@ -1672,7 +1672,9 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   getPriorityClass(task: Task): string {
     const priority = this.getEffectivePriority(task).toLowerCase();
-    if (priority === 'urgent' || priority === 'critical' || priority === 'high' || priority === 'highest') return 'priority-high';
+    if (priority === 'urgent') return 'priority-high priority-urgent chip-urgent';
+    if (priority === 'critical') return 'priority-high priority-critical chip-critical';
+    if (priority === 'high' || priority === 'highest') return 'priority-high';
     if (priority === 'medium' || priority === 'mid') return 'priority-mid';
     if (priority === 'low' || priority === 'lowest') return 'priority-low';
     return 'priority-none';

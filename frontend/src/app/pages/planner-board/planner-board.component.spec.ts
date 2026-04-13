@@ -77,6 +77,9 @@ describe('PlannerBoardComponent', () => {
       'getProjects',
       'createTask',
       'updateTask',
+      'userHasProjectAccess',
+      'primeTaskComments',
+      'getTaskCommentCount',
     ]);
     taskStorageSpy = jasmine.createSpyObj('TaskCompletionStorageService', ['getCompleted', 'setCompleted']);
     taskStorageSpy.getCompleted.and.returnValue(false);
@@ -117,6 +120,8 @@ describe('PlannerBoardComponent', () => {
       return of([]);
     });
     apiSpy.getProjects.and.returnValue(of([]));
+    apiSpy.userHasProjectAccess.and.returnValue(true);
+    apiSpy.getTaskCommentCount.and.returnValue(0);
     const stubTask: Task = {
       id: 99,
       stage_id: 1,
