@@ -242,6 +242,7 @@ export function registerBoardApiStubs(opts: BoardStubOptions = {}) {
   }
 
   const projectsList = opts.projectsList ?? [];
+  const knownUsers = (opts.knownUsers ?? []) as Array<{ id?: string; name?: string; email?: string }>;
   const projectMembers = (opts.projectMembers ?? [
     makeProjectMember(projectId, 'owner-1', 'E2E User', 'e2e@test.com', 'owner'),
     makeProjectMember(projectId, 'member-2', 'Casey Doe', 'casey@test.com', 'member'),
@@ -541,10 +542,14 @@ export function registerBoardApiStubs(opts: BoardStubOptions = {}) {
     const pid = m ? Number(m[1]) : projectId;
     const email = String(req.body.email || '').trim().toLowerCase();
     const userId = String(req.body.user_id || email || `member-${Date.now()}`);
+    const matchedKnownUser = knownUsers.find((user) => {
+      const knownEmail = String(user.email || '').trim().toLowerCase();
+      return (!!email && knownEmail === email) || (!!req.body.user_id && user.id === req.body.user_id);
+    });
     const createdMember = makeProjectMember(
       pid,
       userId,
-      String(req.body.name || email || 'Team member'),
+      String(req.body.name || matchedKnownUser?.name || email || 'Team member'),
       email,
       'member'
     );
