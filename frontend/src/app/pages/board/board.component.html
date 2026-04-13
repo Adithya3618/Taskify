@@ -139,7 +139,7 @@
           <button class="filterChip chip-low"      [class.active]="filterPriority === 'Low'"      (click)="filterPriority = 'Low'">Low</button>
           <button class="filterChip chip-mid"      [class.active]="filterPriority === 'Medium'"   (click)="filterPriority = 'Medium'">Medium</button>
           <button class="filterChip chip-high"     [class.active]="filterPriority === 'High'"     (click)="filterPriority = 'High'">High</button>
-          <button class="filterChip chip-critical" [class.active]="filterPriority === 'Critical'" (click)="filterPriority = 'Critical'">Critical</button>
+          <button class="filterChip chip-critical" [class.active]="filterPriority === 'Urgent'" (click)="filterPriority = 'Urgent'">Urgent</button>
         </div>
       </div>
 
@@ -391,7 +391,7 @@
                 <option value="Low">Low</option>
                 <option value="Medium">Medium</option>
                 <option value="High">High</option>
-                <option value="Critical">Critical</option>
+                <option value="Urgent">Urgent</option>
               </select>
             </div>
             <div *ngIf="projectLabels.length" class="newTaskLabelPicker">
@@ -527,7 +527,7 @@
                   <option value="Low">Low</option>
                   <option value="Medium">Medium</option>
                   <option value="High">High</option>
-                  <option value="Critical">Critical</option>
+                  <option value="Urgent">Urgent</option>
                 </select>
               </div>
             </div>

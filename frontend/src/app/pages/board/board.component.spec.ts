@@ -50,15 +50,19 @@ describe('BoardComponent', () => {
     localStorage.setItem('taskify.board.owners', JSON.stringify({ '1': 'alice@example.com' }));
 
     paramsSubject = new Subject();
-    authSpy   = jasmine.createSpyObj('AuthService', ['getCurrentUser']);
+    authSpy   = jasmine.createSpyObj('AuthService', ['getCurrentUser', 'getKnownUsers']);
     apiSpy    = jasmine.createSpyObj('ApiService', [
-      'getProject', 'getStages', 'getTasks', 'getProjects',
+      'getProject', 'getStages', 'getTasks', 'getProjects', 'userHasProjectAccess', 'seedProjectOwner', 'primeTaskComments', 'getProjectMemberCount', 'getTaskCommentCount',
     ]);
 
     authSpy.getCurrentUser.and.returnValue(mockUser);
+    authSpy.getKnownUsers.and.returnValue([mockUser]);
     apiSpy.getProject.and.returnValue(of({ id: 1, name: 'Board 1', description: '', created_at: '', updated_at: '' }));
     apiSpy.getStages.and.returnValue(of([]));
     apiSpy.getProjects.and.returnValue(of([]));
+    apiSpy.userHasProjectAccess.and.returnValue(true);
+    apiSpy.getProjectMemberCount.and.returnValue(1);
+    apiSpy.getTaskCommentCount.and.returnValue(0);
 
     await TestBed.configureTestingModule({
       imports: [BoardComponent, HttpClientTestingModule, RouterTestingModule.withRoutes([])],
