@@ -454,27 +454,37 @@ createTask(projectId: number, stageId: number, request: CreateTaskRequest): Obse
 
   // ---------------- Subtasks ----------------
   getSubtasks(taskId: number): Observable<Subtask[]> {
-    return this.http.get<Subtask[]>(`${this.baseUrl}/tasks/${taskId}/subtasks`);
+    return this.http.get<Subtask[] | ApiSuccessResponse<Subtask[]>>(
+      `${this.baseUrl}/tasks/${taskId}/subtasks`
+    ).pipe(
+      this.unwrapSuccess<Subtask[]>()
+    );
   }
 
   createSubtask(taskId: number, request: CreateSubtaskRequest): Observable<Subtask> {
-    return this.http.post<Subtask>(
+    return this.http.post<Subtask | ApiSuccessResponse<Subtask>>(
       `${this.baseUrl}/tasks/${taskId}/subtasks`,
       request,
       { headers: this.jsonHeaders() }
+    ).pipe(
+      this.unwrapSuccess<Subtask>()
     );
   }
 
   updateSubtask(id: number, request: UpdateSubtaskRequest): Observable<Subtask> {
-    return this.http.patch<Subtask>(
+    return this.http.patch<Subtask | ApiSuccessResponse<Subtask>>(
       `${this.baseUrl}/subtasks/${id}`,
       request,
       { headers: this.jsonHeaders() }
+    ).pipe(
+      this.unwrapSuccess<Subtask>()
     );
   }
 
   deleteSubtask(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/subtasks/${id}`);
+    return this.http.delete<void | ApiSuccessResponse<null>>(`${this.baseUrl}/subtasks/${id}`).pipe(
+      map(() => void 0)
+    );
   }
 
   // ---------------- Comments ----------------
