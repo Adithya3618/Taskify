@@ -789,5 +789,134 @@ Key backend work merged for Sprint 3:
 - Subtasks / checklist schema, ordering logic, and CRUD API
 - Merge-conflict resolution in `backend/internal/database/database.go` to preserve both Sprint 3 backend feature sets
 
+---
+
+## Additional Work Completed — (User's Contributions)
+
+### 1. Label System Implementation
+
+Backend implementation of a complete Labels/Tags system for tasks within projects:
+
+- **Database Schema**: Created `labels` table (project-scoped with name, color, created_by, created_at) and `task_labels` join table with proper foreign keys and indexes
+- **Models**: Added `Label`, `TaskLabel`, `LabelResponse`, and `TaskLabelResponse` structs to `models.go`
+- **Repository Layer**: Implemented `LabelRepository` with CRUD operations for labels and `TaskLabelRepository` for task-label assignments
+- **Service Layer**: Created `LabelService` and `TaskLabelService` with business logic, validation, and activity logging
+- **Controller & Routes**: Added `LabelController` and `TaskLabelController` with endpoints for managing labels and assigning/removing labels from tasks
+- **Activity Logging**: Integrated with `ActivityService` to log `label_created`, `label_deleted`, `label_assigned`, and `label_removed` events
+
+**Reference**: [`plans/label_system_implementation.md`](plans/label_system_implementation.md)
+
+---
+
+### 2. Notifications System Implementation
+
+Backend notifications system providing real-time and email notifications for important project events:
+
+- **Database Schema**: Created `notifications` table with user_id, type, message, is_read, related_entity_type, related_entity_id, and created_at fields with optimized indexes
+- **Repository**: Implemented `NotificationRepository` with CreateNotification, GetUserNotifications, MarkAsRead, MarkAllAsRead, GetUnreadCount, and duplicate prevention methods
+- **Service**: Created `NotificationService` with NotifyMemberAdded, NotifyTaskAssigned, NotifyDeadlineNear methods plus paginated retrieval and read management
+- **Controller**: Added `NotificationController` with GET `/api/notifications`, PATCH `/api/notifications/:id/read`, and PATCH `/api/notifications/read-all` endpoints
+- **Background Job**: Implemented `StartDeadlineChecker()` with 15-minute interval for automatic deadline reminder notifications
+- **Email Integration**: Non-blocking email notifications via async channel pattern
+
+**Reference**: [`plans/notifications_system_implementation.md`](plans/notifications_system_implementation.md)
+
+---
+
+### 3. Activity History Async/Event-Based Extension
+
+Extended the Activity History system to use an asynchronous, event-driven architecture:
+
+- **Event Types**: Created `ActivityEvent` struct with ProjectID, UserID, UserName, Action, EntityType, EntityID, and Details fields
+- **Event Bus**: Implemented buffered channel-based `EventBus` with configurable buffer size for non-blocking event publishing
+- **Worker Pool**: Added concurrent worker pool pattern with WaitGroup for graceful shutdown
+- **Event Handler**: Created `ActivityEventHandler` that processes events and delegates to `ActivityService`
+- **Performance Benefits**: Eliminates latency impact on main requests, preserves database connection pool, prevents error propagation, and improves scalability under high load
+
+**Reference**: [`Taskify/backend/docs/ACTIVITY_HISTORY_BONUS.md`](Taskify/backend/docs/ACTIVITY_HISTORY_BONUS.md)
+
+---
+
+### 4. Project Members MVP-Ready Improvements
+
+Production-quality improvements to the Project Members feature:
+
+- **Single Source of Truth**: `project_members` is the authoritative source for ownership; `projects.owner_id` is synced from it
+- **Transaction Safety**: All critical operations (AddMember, RemoveMember) wrapped in transactions with `FOR UPDATE` locks
+- **Middleware with Role Injection**: `ProjectAccessMiddleware` and `OwnerOnlyMiddleware` inject role into context for handlers
+- **Pagination**: `GetMembers` supports `?page=1&limit=20` with total count in response
+- **Standardized Errors**: Consistent JSON response format with `success`, `error`, and `code` fields
+- **Audit Trail**: Automatic logging to `activity_logs` table for member_added and member_removed events
+- **Permission Helpers**: Role-based `CanEditProject()` and `CanManageMembers()` functions
+- **Proper Indexing**: Optimized indexes for membership checks, user queries, and activity logs
+
+**Reference**: [`Taskify/backend/docs/PROJECT_MEMBERS_BONUS.md`](Taskify/backend/docs/PROJECT_MEMBERS_BONUS.md)
+
+---
+
+### Test Cases Written for These Features
+
+Comprehensive unit tests were created in the [`Taskify/backend/internal/testcases/`](Taskify/backend/internal/testcases/) directory to verify the implementation of all 4 features:
+
+#### 1. Label System Tests — [`label_service_test.go`](Taskify/backend/internal/testcases/label_service_test.go) (18 test cases)
+
+| Test | Description |
+|------|-------------|
+| `TestNewLabelService` | Verifies LabelService initialization |
+| `TestLabelRepository_CreateLabel_Success` | Tests successful label creation |
+| `TestLabelRepository_CreateLabel_DefaultColor` | Tests default color assignment |
+| `TestLabelRepository_CreateLabel_DuplicateName` | Tests duplicate name prevention |
+| `TestLabelRepository_GetLabelByID` | Tests fetching a single label |
+| `TestLabelRepository_GetLabelsByProject` | Tests fetching all project labels |
+| `TestLabelRepository_DeleteLabel` | Tests label deletion |
+| `TestTaskLabelRepository` | Tests task-label assignment and removal |
+| `TestTaskLabelRepository_GetTaskIDsByLabel` | Tests finding tasks by label |
+| `TestLabelService_NoProjectAccess` | Tests access denial for non-members |
+
+#### 2. Notifications System Tests — [`notification_service_test.go`](Taskify/backend/internal/testcases/notification_service_test.go) (18 test cases)
+
+| Test | Description |
+|------|-------------|
+| `TestNewNotificationService` | Verifies NotificationService initialization |
+| `TestNotificationRepository_CreateNotification` | Tests notification creation |
+| `TestNotificationRepository_GetUserNotifications` | Tests paginated notification retrieval |
+| `TestNotificationRepository_MarkAsRead` | Tests marking single notification as read |
+| `TestNotificationRepository_MarkAsRead_WrongUser` | Tests access control for mark as read |
+| `TestNotificationRepository_MarkAllAsRead` | Tests bulk mark as read |
+| `TestNotificationRepository_GetUnreadCount` | Tests unread count tracking |
+| `TestNotificationRepository_CheckDuplicateDeadlineNotification` | Tests duplicate prevention |
+| `TestNotificationService_NotifyMemberAdded_SelfNotification` | Tests self-notification prevention |
+| `TestNotificationService_NotifyTaskAssigned_SelfNotification` | Tests self-notification prevention |
+
+#### 3. Activity History Tests — [`activity_service_test.go`](Taskify/backend/internal/testcases/activity_service_test.go) (14 test cases)
+
+| Test | Description |
+|------|-------------|
+| `TestNewActivityService` | Verifies ActivityService initialization |
+| `TestActivityRepository_CreateActivityLog` | Tests activity log creation |
+| `TestActivityRepository_GetActivityLogsByProject` | Tests project activity retrieval |
+| `TestActivityRepository_GetActivityLogsByProject_Pagination` | Tests pagination |
+| `TestActivityRepository_GetActivityLogsByProject_DateFilter` | Tests date range filtering |
+| `TestActivityService_LogActivity` | Tests central activity logging |
+| `TestActivityService_LogLabelCreated/Deleted/Assigned/Removed` | Tests label activity logging |
+| `TestActivityRepository_ConcurrentLogging` | Tests concurrent/event-based logging |
+
+#### 4. Project Members Tests — [`project_member_service_test.go`](Taskify/backend/internal/testcases/project_member_service_test.go) (18 test cases)
+
+| Test | Description |
+|------|-------------|
+| `TestNewProjectMemberServicePM` | Verifies ProjectMemberService initialization |
+| `TestProjectMemberRepository_AddMember` | Tests member addition |
+| `TestProjectMemberRepository_AddMember_Duplicate` | Tests duplicate prevention |
+| `TestProjectMemberRepository_RemoveMember` | Tests member removal |
+| `TestProjectMemberRepository_RemoveMember_CannotRemoveOwner` | Tests owner protection |
+| `TestProjectMemberRepository_IsOwner` | Tests ownership check |
+| `TestProjectMemberRepository_IsMember` | Tests membership check |
+| `TestProjectMemberRepository_GetMembersPaginated` | Tests paginated member retrieval |
+| `TestProjectMemberService_CreateInvite` | Tests invite creation |
+| `TestProjectMemberService_AcceptInviteByID` | Tests invite acceptance |
+| `TestProjectMember_CanEditProject/CanManageMembers` | Tests permission helpers |
+| `TestInvite_Expiry` | Tests invite expiration |
+
 
 
