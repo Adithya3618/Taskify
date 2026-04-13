@@ -23,7 +23,9 @@ func TestTaskService_CreateTask_BackwardCompatibleWithoutEnhancements(t *testing
 	defer db.Close()
 
 	stageID := seedTaskEnhancementStage(t, db, "user-1")
-	service := services.NewTaskService(db)
+	pmSvc := services.NewProjectMemberService(db)
+	activitySvc := services.NewActivityService(db, pmSvc)
+	service := services.NewTaskService(db, activitySvc)
 
 	task, err := service.CreateTask("user-1", stageID, "Task", "desc", 0, services.TaskAttributes{})
 	if err != nil {
@@ -46,7 +48,9 @@ func TestTaskService_CreateUpdateAndReadEnhancements(t *testing.T) {
 	defer db.Close()
 
 	stageID := seedTaskEnhancementStage(t, db, "user-1")
-	service := services.NewTaskService(db)
+	pmSvc := services.NewProjectMemberService(db)
+	activitySvc := services.NewActivityService(db, pmSvc)
+	service := services.NewTaskService(db, activitySvc)
 
 	initialDeadline := time.Date(2026, 4, 20, 15, 0, 0, 0, time.UTC)
 	initialPriority := "high"
@@ -106,7 +110,9 @@ func TestTaskService_InvalidPriorityRejected(t *testing.T) {
 	defer db.Close()
 
 	stageID := seedTaskEnhancementStage(t, db, "user-1")
-	service := services.NewTaskService(db)
+	pmSvc := services.NewProjectMemberService(db)
+	activitySvc := services.NewActivityService(db, pmSvc)
+	service := services.NewTaskService(db, activitySvc)
 	invalidPriority := "critical"
 
 	_, err := service.CreateTask("user-1", stageID, "Task", "desc", 0, services.TaskAttributes{
@@ -125,7 +131,9 @@ func TestTaskController_InvalidPriorityReturnsBadRequest(t *testing.T) {
 	defer db.Close()
 
 	stageID := seedTaskEnhancementStage(t, db, "user-1")
-	service := services.NewTaskService(db)
+	pmSvc := services.NewProjectMemberService(db)
+	activitySvc := services.NewActivityService(db, pmSvc)
+	service := services.NewTaskService(db, activitySvc)
 	controller := controllers.NewTaskController(service)
 
 	t.Run("create rejects invalid priority", func(t *testing.T) {
@@ -169,7 +177,9 @@ func TestTaskController_EnhancementRoundTripAndBackwardCompatibleUpdate(t *testi
 	defer db.Close()
 
 	stageID := seedTaskEnhancementStage(t, db, "user-1")
-	service := services.NewTaskService(db)
+	pmSvc := services.NewProjectMemberService(db)
+	activitySvc := services.NewActivityService(db, pmSvc)
+	service := services.NewTaskService(db, activitySvc)
 	controller := controllers.NewTaskController(service)
 
 	createDeadline := "2026-06-10T12:30:00Z"

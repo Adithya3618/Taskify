@@ -21,7 +21,7 @@ func TestNewStageService(t *testing.T) {
 }
 
 func TestNewTaskService(t *testing.T) {
-	svc := services.NewTaskService(nil)
+	svc := services.NewTaskService(nil, nil)
 	if svc == nil {
 		t.Error("NewTaskService() should not return nil")
 	}
