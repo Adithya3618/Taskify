@@ -6,7 +6,7 @@
 |-----------|-------------|---------|
 | saisreejachava (Sreeja) | #70, #71, #72, #73 | Google OAuth, Task Deadlines & Priority UI, Labels/Tags, Notification Center |
 | nandhan (Jyothi Nandhan Repaka) | #67, #68, #69 | Task Enhancements API, Task Comments API, Subtasks / Checklists API |
-| *(teammate 3)* | #78–#81 | *(backend/frontend features)* |
+| meghana21-arch (Sai Meghana Barla) | #74, #75, #76, #77 | Project Member Management UI, Task Comments UI, Subtasks/Checklists UI, Activity History UI |
 | *(teammate 4)* | #82–#85 | *(backend/frontend features)* |
 
 ---
@@ -202,6 +202,89 @@
 - `backend/internal/services/subtask_service.go`
 - `backend/internal/routes/routes.go`
 - `backend/internal/testcases/task_enhancements_test.go`
+
+---
+
+## Frontend Work Completed — Sai Meghana Barla (meghana21-arch)
+
+### Issue #74 — Project Member Management UI
+
+- Added a dedicated **Members** tab inside the project settings modal so member management stays within the existing board/project workflow
+- Implemented **search / invite by name or email** with an **Add Member** action:
+  - supports searching known users already available in the frontend session
+  - also accepts direct email entry for invites when no cached match is available
+- Rendered the current project member roster with:
+  - avatar / initials fallback
+  - display name
+  - email
+  - role badge
+- Added **owner-only remove controls** so only the project owner can remove members from the project
+- Added a **confirmation step before member deletion** and a short **Undo window** after removal so accidental deletes can be reversed
+- Added **member count** to the project card on the home page so project access size is visible at a glance
+- Updated the frontend member service / API integration layer to:
+  - fetch project members
+  - add members
+  - remove members
+  - merge backend responses with cached frontend member state so the member list still appears after page refresh even when backend persistence is incomplete
+- Added duplicate-member validation so inviting a user who is already in the project shows a clear inline error instead of silently duplicating the row
+- Member add / remove flows update the UI immediately without requiring a manual refresh
+
+---
+
+### Issue #75 — Task Comments UI
+
+- Added a **comments section at the bottom of the task detail modal** on the board view
+- Mirrored the same comment experience into the **planner task detail modal** so comments behave consistently across both task surfaces
+- Added a **textarea composer** with a **Post** button for creating new comments
+- Prevented empty submissions by trimming whitespace and disabling / rejecting blank comment content on the frontend
+- Rendered comment entries with:
+  - author avatar
+  - author name
+  - comment body
+  - relative / formatted timestamp
+- Added **author-only edit and delete actions** so only the person who wrote a comment can modify it
+- Implemented **inline editing** with Save / Cancel actions
+- Added **delete confirmation** before removing a comment
+- Added **auto-scroll to the latest comment** when the task detail opens and when a new comment is posted, so the newest discussion stays in view
+- Added a **comment icon + comment count** on task cards so discussion activity is visible from the board / planner surfaces
+- Updated frontend comment API service calls for create / list / update / delete and kept the UI in sync immediately after each action without a full page reload
+
+---
+
+### Issue #76 — Subtasks / Checklists UI
+
+- Added a **checklist / subtasks section** inside the task detail modal
+- Added a lightweight composer so users can create new checklist items by:
+  - pressing **Enter**
+  - clicking the **Add** button
+- Displayed checklist items in their stored order and rendered each item with:
+  - title
+  - completion checkbox
+  - delete action
+- Toggling a checkbox updates completion state immediately in the modal and on the task card without page refresh
+- Added delete confirmation for checklist item removal to match the rest of the task-detail UX
+- Added a **progress summary on task cards** so cards show how many subtasks are complete (for example, `1/3 done`)
+- Mirrored checklist support into the **planner modal**, keeping board and planner task details aligned
+- Updated subtasks API service calls for create / list / update / delete and kept frontend state synchronized immediately after every change
+
+---
+
+### Issue #77 — Activity History UI
+
+- Added an **Activity** tab inside project settings for project owners / managers
+- Restricted visibility of the Activity tab so non-owners do not see the activity history surface
+- Implemented an activity feed that renders each entry with:
+  - activity icon
+  - human-readable action description
+  - relative timestamp
+- Rendered entries in **reverse chronological order** so the newest activity appears first
+- Added filters for:
+  - team member
+  - date range
+- Filter changes update the activity list immediately without a full page reload
+- Added **Load more** style pagination so larger history lists can be browsed without overwhelming the initial settings view
+- Added an **empty state** when no activity exists for the project yet
+- Updated frontend activity service / API calls and local state handling so the activity feed stays consistent with the project settings UI
 
 ---
 
@@ -402,9 +485,9 @@ go test -v ./internal/testcases/...
 
 ---
 
-## Frontend Cypress E2E Tests — 105 total
+## Frontend Cypress E2E Tests — 142 total
 
-> Includes all 70 tests from Sprint 2 plus 35 new tests for Sprint 3.
+> Includes all 70 tests from Sprint 2 plus 72 new tests for Sprint 3.
 
 ### Sprint 2 E2E tests — 70 tests *(carried forward)*
 
@@ -472,6 +555,83 @@ go test -v ./internal/testcases/...
 | opens the notification panel from the home page |
 | shows empty state on home page when no notifications exist |
 | shows unread badge on home page when notification was seeded |
+
+### `project-members.cy.ts` — 10 tests *(Sprint 3 — NEW — Issue #74)*
+| Test |
+|------|
+| opens the settings modal on the Members tab from the top bar button |
+| keeps the Add Member button disabled until a search value is entered |
+| shows matching known users while typing in the member search field |
+| adds a member when a search result is clicked |
+| adds a member from a direct email entry with the Add Member button |
+| shows a clear error when trying to add a duplicate member |
+| hides remove buttons for non-owners |
+| keeps a member in the list when removal is cancelled |
+| shows an undo toast after removing a member and restores the member when Undo is clicked |
+| finalizes the member removal after the undo window expires |
+
+### `task-comments.cy.ts` — 11 tests *(Sprint 3 — NEW — Issue #75)*
+| Test |
+|------|
+| shows the board comment count on the task card |
+| shows the board empty state when a task has no comments |
+| keeps the board Post button disabled until comment text is entered |
+| shows edit and delete actions only for the board comment author |
+| cancels a board inline comment edit without saving changes |
+| auto-scrolls to the latest board comment when task details open |
+| shows the planner comment count on the task chip |
+| keeps the planner Post button disabled until text is entered |
+| shows author-only actions in the planner comment list |
+| keeps the planner comment when deletion is cancelled |
+| posts a planner comment from the Post button and updates the count |
+
+### `checklists.cy.ts` — 9 tests *(Sprint 3 — NEW — Issue #76)*
+| Test |
+|------|
+| shows the board empty checklist state when no subtasks exist |
+| keeps the board Add button disabled until a checklist title is entered |
+| adds a board checklist item when the Add button is clicked |
+| updates the board task progress bar fill after a checklist item is checked |
+| shows the board delete confirmation with the selected checklist title |
+| shows the planner empty checklist state when no subtasks exist |
+| keeps the planner Add button disabled until a checklist title is entered |
+| adds a planner checklist item from the Add button |
+| deletes a planner checklist item from the task modal |
+
+### `activity-history.cy.ts` — 7 tests *(Sprint 3 — NEW — Issue #77)*
+| Test |
+|------|
+| opens the Activity tab and shows the project activity heading |
+| renders activity icons and relative timestamps for entries |
+| lists project members in the activity member filter dropdown |
+| updates the activity list when the member filter changes |
+| clears the date and member filters when Reset is clicked |
+| loads more activity entries when Load more is clicked |
+| shows the empty state when the project has no activity |
+
+---
+
+### `board.cy.ts` — 13 tests *(Sprint 3 — NEW — Issues #75, #76, #77)*
+| Test |
+|------|
+| shows checklist items in order and renders progress on the task card |
+| adds a checklist item from the task detail modal |
+| toggles a checklist item without refreshing and updates progress immediately |
+| deletes a checklist item and shrinks the progress summary |
+| keeps a checklist item when delete is cancelled |
+| keeps checklist changes visible after switching to planner |
+| posts a comment from task details |
+| edits an existing comment |
+| cancels comment deletion from the confirm modal |
+| deletes a comment after confirming |
+| shows the Activity tab only for the owner |
+| renders newest activity first, filters by member/date, and paginates with load more |
+| shows an empty state when no activity has been logged |
+
+### `planner.cy.ts` — 1 test *(Sprint 3 — NEW — Issue #76)*
+| Test |
+|------|
+| shows and updates checklist items inside the planner task modal |
 
 ---
 
@@ -628,3 +788,6 @@ Key backend work merged for Sprint 3:
 - Task comments schema and CRUD API
 - Subtasks / checklist schema, ordering logic, and CRUD API
 - Merge-conflict resolution in `backend/internal/database/database.go` to preserve both Sprint 3 backend feature sets
+
+
+
