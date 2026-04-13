@@ -1,6 +1,7 @@
 /// <reference types="cypress" />
 
 import {
+  makeComment,
   STAGE_ID,
   TASK_ID,
   makeTask,
@@ -68,6 +69,7 @@ describe('Board — task checkbox (detail modal)', () => {
     cy.contains('.task-modal button', 'Save').click();
     cy.wait('@updateTask');
     cy.get('.task-modal').should('not.exist');
+    cy.get('.task-card .task-check input[type="checkbox"]').first().should('be.checked');
     cy.get('.task-card').first().should('have.class', 'task-completed');
   });
 });
@@ -266,7 +268,7 @@ describe('Board — filter panel', () => {
 
   it('Priority Critical chip can be selected', () => {
     openFilterPanel();
-    clickFilterChip('Priority', 'Critical');
+    clickFilterChip('Priority', 'Urgent');
     cy.contains('.filterGroupLabel', 'Priority')
       .parent()
       .find('.filterChip.chip-critical')
@@ -430,7 +432,7 @@ describe('Board — task detail modal', () => {
 
   it('saves notes in description payload', () => {
     cy.get('.task-card .task-content').first().click();
-    cy.get('.task-modal textarea').last().type('My notes');
+    cy.get('.task-detail-main textarea').last().type('My notes');
     cy.contains('.task-modal button', 'Save').click();
     cy.wait('@updateTask').its('request.body.description').should('include', 'notes:My notes');
   });
@@ -567,9 +569,19 @@ describe('Board — checklist subtasks', () => {
   it('deletes a checklist item and shrinks the progress summary', () => {
     cy.get('.task-card .task-content').first().click();
     cy.contains('.subtaskItem', 'Review copy').contains('button', 'Delete').click();
+    cy.contains('.delete-confirm-modal h3', 'Delete checklist item?').should('be.visible');
+    cy.contains('.delete-confirm-modal button', 'Delete').click();
     cy.wait('@deleteSubtask');
     cy.contains('.subtaskItem', 'Review copy').should('not.exist');
     cy.get('.task-subtask-progress-text').first().should('contain', '0/1 done');
+  });
+
+  it('keeps a checklist item when delete is cancelled', () => {
+    cy.get('.task-card .task-content').first().click();
+    cy.contains('.subtaskItem', 'Review copy').contains('button', 'Delete').click();
+    cy.contains('.delete-confirm-modal button', 'Cancel').click();
+    cy.get('.delete-confirm-modal').should('not.exist');
+    cy.contains('.subtaskItem', 'Review copy').should('exist');
   });
 
   it('keeps checklist changes visible after switching to planner', () => {
@@ -577,11 +589,60 @@ describe('Board — checklist subtasks', () => {
     cy.get('.subtaskComposer input').type('Planner sync item');
     cy.contains('.subtaskComposer button', 'Add').click();
     cy.wait('@createSubtask');
-
-    cy.get('nav.viewTabs a.viewTab').contains('Planner').click();
+    cy.get('.task-modal .btn-close-modal').click();
+    cy.get('nav.viewTabs a.viewTab').contains('Planner').click({ force: true });
     cy.get('#planner-nodue-toggle').click();
     cy.contains('.planner-task-title', 'Test task').click();
     cy.get('.plannerSubtaskItemTitle').should('contain', 'Planner sync item');
+  });
+});
+
+describe('Board — task comments', () => {
+  beforeEach(() =>
+    visitBoard({
+      commentsByTaskId: {
+        [TASK_ID]: [
+          makeComment(TASK_ID, 9101, 'Initial note'),
+          makeComment(TASK_ID, 9102, 'Follow-up comment'),
+        ],
+      },
+    })
+  );
+
+  it('posts a comment from task details', () => {
+    cy.get('.task-card .task-content').first().click();
+    cy.get('.commentsComposer textarea').type('Fresh update from Cypress');
+    cy.contains('.commentsComposer button', 'Post').click();
+    cy.wait('@createComment').its('request.body.content').should('eq', 'Fresh update from Cypress');
+    cy.contains('.commentCard', 'Fresh update from Cypress').should('be.visible');
+    cy.get('.task-comment-meta').first().should('contain', '3');
+  });
+
+  it('edits an existing comment', () => {
+    cy.get('.task-card .task-content').first().click();
+    cy.contains('.commentCard', 'Initial note').contains('button', 'Edit').click();
+    cy.get('.commentEditForm textarea').clear().type('Updated note copy');
+    cy.contains('.commentEditActions button', 'Save').click();
+    cy.wait('@updateComment').its('request.body.content').should('eq', 'Updated note copy');
+    cy.contains('.commentCard', 'Updated note copy').should('be.visible');
+  });
+
+  it('cancels comment deletion from the confirm modal', () => {
+    cy.get('.task-card .task-content').first().click();
+    cy.contains('.commentCard', 'Follow-up comment').contains('button', 'Delete').click();
+    cy.contains('.delete-confirm-modal h3', 'Delete comment?').should('be.visible');
+    cy.contains('.delete-confirm-modal button', 'Cancel').click();
+    cy.get('.delete-confirm-modal').should('not.exist');
+    cy.contains('.commentCard', 'Follow-up comment').should('exist');
+  });
+
+  it('deletes a comment after confirming', () => {
+    cy.get('.task-card .task-content').first().click();
+    cy.contains('.commentCard', 'Follow-up comment').contains('button', 'Delete').click();
+    cy.contains('.delete-confirm-modal button', 'Delete').click();
+    cy.wait('@deleteComment');
+    cy.contains('.commentCard', 'Follow-up comment').should('not.exist');
+    cy.get('.task-comment-meta').first().should('contain', '1');
   });
 });
 

@@ -38,6 +38,8 @@ export type BoardStubOptions = {
   tasksByStageId?: Record<number, unknown[]>;
   /** Subtasks per task id. */
   subtasksByTaskId?: Record<number, unknown[]>;
+  /** Comments per task id. */
+  commentsByTaskId?: Record<number, unknown[]>;
   /** Override stage list for project `projectId` (default: To Do + Doing). */
   stages?: unknown[];
   /** GET /api/projects — for board switcher (default: []). */
@@ -113,6 +115,18 @@ export function makeSubtask(taskId: number, id: number, title: string, isComplet
   };
 }
 
+export function makeComment(taskId: number, id: number | string, content: string, author = 'E2E User') {
+  return {
+    id,
+    task_id: taskId,
+    user_id: 'e2e@test.com',
+    author_name: author,
+    content,
+    created_at: isoNow(),
+    updated_at: isoNow(),
+  };
+}
+
 /**
  * Registers HTTP stubs for board E2E. Call once per visit, before `cy.visit`.
  */
@@ -139,15 +153,23 @@ export function registerBoardApiStubs(opts: BoardStubOptions = {}) {
   }
 
   const subtasksByTaskId: Record<number, any[]> = {};
+  const commentsByTaskId: Record<number, any[]> = {};
   Object.values(tasksByStageId).forEach((tasks) => {
     (tasks as any[]).forEach((task) => {
       subtasksByTaskId[Number(task.id)] = [];
+      commentsByTaskId[Number(task.id)] = [];
     });
   });
   if (opts.subtasksByTaskId) {
     Object.keys(opts.subtasksByTaskId).forEach((k) => {
       const id = Number(k);
       subtasksByTaskId[id] = [...((opts.subtasksByTaskId?.[id] as any[]) || [])];
+    });
+  }
+  if (opts.commentsByTaskId) {
+    Object.keys(opts.commentsByTaskId).forEach((k) => {
+      const id = Number(k);
+      commentsByTaskId[id] = [...((opts.commentsByTaskId?.[id] as any[]) || [])];
     });
   }
 
@@ -184,6 +206,13 @@ export function registerBoardApiStubs(opts: BoardStubOptions = {}) {
     if (subtasksMatch) {
       const taskId = Number(subtasksMatch[1]);
       req.reply(clone((subtasksByTaskId[taskId] || []).sort((a, b) => a.position - b.position)));
+      return;
+    }
+
+    const commentsMatch = path.match(/^\/api\/tasks\/(\d+)\/comments$/);
+    if (commentsMatch) {
+      const taskId = Number(commentsMatch[1]);
+      req.reply(clone(commentsByTaskId[taskId] || []));
       return;
     }
 
@@ -338,6 +367,60 @@ export function registerBoardApiStubs(opts: BoardStubOptions = {}) {
     req.reply({ statusCode: 204, body: null });
   }).as('deleteSubtask');
 
+  let nextCreateCommentId = 15000;
+
+  cy.intercept('POST', '**/api/tasks/*/comments', (req) => {
+    const m = req.url.match(/\/api\/tasks\/(\d+)\/comments/);
+    const taskId = m ? Number(m[1]) : TASK_ID;
+    nextCreateCommentId += 1;
+    const createdComment = {
+      id: nextCreateCommentId,
+      task_id: taskId,
+      user_id: 'e2e-user',
+      author_name: 'E2E User',
+      content: req.body.content,
+      created_at: isoNow(),
+      updated_at: isoNow(),
+    };
+    commentsByTaskId[taskId] = [...(commentsByTaskId[taskId] || []), createdComment];
+    req.reply({ statusCode: 201, body: clone(createdComment) });
+  }).as('createComment');
+
+  cy.intercept('PATCH', '**/api/comments/*', (req) => {
+    const m = req.url.match(/\/api\/comments\/(.+)/);
+    const commentId = m ? String(m[1]) : '';
+    let updatedComment: any = null;
+
+    Object.keys(commentsByTaskId).forEach((taskIdKey) => {
+      const taskId = Number(taskIdKey);
+      commentsByTaskId[taskId] = (commentsByTaskId[taskId] || []).map((comment) => {
+        if (String(comment.id) !== commentId) return comment;
+        updatedComment = {
+          ...comment,
+          content: req.body.content,
+          updated_at: isoNow(),
+        };
+        return updatedComment;
+      });
+    });
+
+    req.reply({ statusCode: 200, body: clone(updatedComment) });
+  }).as('updateComment');
+
+  cy.intercept('DELETE', '**/api/comments/*', (req) => {
+    const m = req.url.match(/\/api\/comments\/(.+)/);
+    const commentId = m ? String(m[1]) : '';
+
+    Object.keys(commentsByTaskId).forEach((taskIdKey) => {
+      const taskId = Number(taskIdKey);
+      commentsByTaskId[taskId] = (commentsByTaskId[taskId] || []).filter(
+        (comment) => String(comment.id) !== commentId
+      );
+    });
+
+    req.reply({ statusCode: 204, body: null });
+  }).as('deleteComment');
+
   cy.intercept('POST', '**/api/projects/*/stages', (req) => {
     const m = req.url.match(/\/projects\/(\d+)\/stages$/);
     const pid = m ? Number(m[1]) : projectId;
@@ -384,6 +467,7 @@ export function visitPlanner(opts: VisitBoardOptions = {}) {
     projectId: opts.projectId,
     tasksByStageId: opts.tasksByStageId,
     subtasksByTaskId: opts.subtasksByTaskId,
+    commentsByTaskId: opts.commentsByTaskId,
     stages: opts.stages,
     projectsList: opts.projectsList,
   };
