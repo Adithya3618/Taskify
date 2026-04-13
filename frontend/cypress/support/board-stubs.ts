@@ -24,7 +24,8 @@ export function seedBoardAuth(
   win: Cypress.AUTWindow,
   owners: Record<string, string> = { '1': 'e2e@test.com', '2': 'e2e@test.com' },
   sessionUser: { name: string; email: string; id?: string } = { name: 'E2E User', email: 'e2e@test.com' },
-  cachedProjectMembers?: Record<number, unknown[]>
+  cachedProjectMembers?: Record<number, unknown[]>,
+  knownUsers?: unknown[]
 ) {
   win.localStorage.setItem('taskify.auth.token', 'e2e-token');
   win.localStorage.setItem(
@@ -32,6 +33,9 @@ export function seedBoardAuth(
     JSON.stringify(sessionUser)
   );
   win.localStorage.setItem('taskify.board.owners', JSON.stringify(owners));
+  if (knownUsers) {
+    win.localStorage.setItem('taskify.auth.known-users', JSON.stringify(knownUsers));
+  }
   Object.entries(cachedProjectMembers || {}).forEach(([projectId, members]) => {
     win.localStorage.setItem(`taskify.project.members.v1.${projectId}`, JSON.stringify(members));
   });
@@ -55,6 +59,8 @@ export type BoardStubOptions = {
   sessionUser?: { name: string; email: string; id?: string };
   /** Cached members stored before the page loads. */
   cachedProjectMembers?: Record<number, unknown[]>;
+  /** Known users cached by auth service for member search / invite. */
+  knownUsers?: unknown[];
   /** Override stage list for project `projectId` (default: To Do + Doing). */
   stages?: unknown[];
   /** GET /api/projects — for board switcher (default: []). */
@@ -130,16 +136,26 @@ export function makeSubtask(taskId: number, id: number, title: string, isComplet
   };
 }
 
-export function makeComment(taskId: number, id: number | string, content: string, author = 'E2E User') {
+export function makeComment(
+  taskId: number,
+  id: number | string,
+  content: string,
+  author = 'E2E User',
+  opts: { userId?: string; createdAt?: string; updatedAt?: string } = {}
+) {
   return {
     id,
     task_id: taskId,
-    user_id: 'e2e@test.com',
+    user_id: opts.userId || 'e2e@test.com',
     author_name: author,
     content,
-    created_at: isoNow(),
-    updated_at: isoNow(),
+    created_at: opts.createdAt || isoNow(),
+    updated_at: opts.updatedAt || opts.createdAt || isoNow(),
   };
+}
+
+export function makeKnownUser(id: string, name: string, email: string) {
+  return { id, name, email };
 }
 
 export function makeProjectMember(
@@ -226,10 +242,10 @@ export function registerBoardApiStubs(opts: BoardStubOptions = {}) {
   }
 
   const projectsList = opts.projectsList ?? [];
-  const projectMembers = opts.projectMembers ?? [
+  const projectMembers = (opts.projectMembers ?? [
     makeProjectMember(projectId, 'owner-1', 'E2E User', 'e2e@test.com', 'owner'),
     makeProjectMember(projectId, 'member-2', 'Casey Doe', 'casey@test.com', 'member'),
-  ];
+  ]) as any[];
   const activityByProjectId: Record<number, any[]> = {
     [projectId]: [...((opts.activityByProjectId?.[projectId] as any[]) || [])],
   };
@@ -520,6 +536,33 @@ export function registerBoardApiStubs(opts: BoardStubOptions = {}) {
     req.reply({ statusCode: 204, body: null });
   }).as('deleteComment');
 
+  cy.intercept('POST', '**/api/projects/*/members', (req) => {
+    const m = req.url.match(/\/api\/projects\/(\d+)\/members/);
+    const pid = m ? Number(m[1]) : projectId;
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const userId = String(req.body.user_id || email || `member-${Date.now()}`);
+    const createdMember = makeProjectMember(
+      pid,
+      userId,
+      String(req.body.name || email || 'Team member'),
+      email,
+      'member'
+    );
+    projectMembers.push(createdMember);
+    req.reply({ statusCode: 201, body: clone(createdMember) });
+  }).as('addProjectMember');
+
+  cy.intercept('DELETE', '**/api/projects/*/members/*', (req) => {
+    const m = req.url.match(/\/api\/projects\/(\d+)\/members\/(.+)/);
+    const pid = m ? Number(m[1]) : projectId;
+    const userId = m ? decodeURIComponent(m[2]) : '';
+    if (pid === projectId) {
+      const nextMembers = projectMembers.filter((member) => String(member.user_id) !== userId);
+      projectMembers.splice(0, projectMembers.length, ...nextMembers);
+    }
+    req.reply({ statusCode: 204, body: null });
+  }).as('removeProjectMember');
+
   cy.intercept('POST', '**/api/projects/*/stages', (req) => {
     const m = req.url.match(/\/projects\/(\d+)\/stages$/);
     const pid = m ? Number(m[1]) : projectId;
@@ -549,7 +592,13 @@ export function visitBoard(opts: VisitBoardOptions = {}) {
   const pid = stubOpts.projectId ?? PROJECT_ID;
   cy.visit(`/board/${pid}`, {
     onBeforeLoad(win) {
-      seedBoardAuth(win, stubOpts.owners, stubOpts.sessionUser, stubOpts.cachedProjectMembers);
+      seedBoardAuth(
+        win,
+        stubOpts.owners,
+        stubOpts.sessionUser,
+        stubOpts.cachedProjectMembers,
+        stubOpts.knownUsers
+      );
     },
   });
   cy.get('.board-content', { timeout: 15000 }).should('be.visible');
@@ -579,7 +628,13 @@ export function visitPlanner(opts: VisitBoardOptions = {}) {
   const pid = stubOpts.projectId ?? PROJECT_ID;
   cy.visit(`/board/${pid}/planner`, {
     onBeforeLoad(win) {
-      seedBoardAuth(win, stubOpts.owners, stubOpts.sessionUser, stubOpts.cachedProjectMembers);
+      seedBoardAuth(
+        win,
+        stubOpts.owners,
+        stubOpts.sessionUser,
+        stubOpts.cachedProjectMembers,
+        stubOpts.knownUsers
+      );
     },
   });
   cy.get('.planner-main', { timeout: 15000 }).should('be.visible');
