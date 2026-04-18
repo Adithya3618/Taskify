@@ -236,6 +236,10 @@
         </svg>
         <span>{{ getTaskCommentCount(task.id) }}</span>
       </div>
+      <span class="taskAssigneeChip" *ngIf="getTaskAssignee(task) as assignee"
+            [title]="assignee.user_name || assignee.user_email || ''">
+        {{ getMemberInitials(assignee) }}
+      </span>
     </div>
     <div class="task-card-actions">
       <button
@@ -503,6 +507,7 @@
               <th>Priority</th>
               <th>Due Date</th>
               <th>Subtasks</th>
+              <th>Assignee</th>
             </tr>
           </thead>
           <tbody>
@@ -516,6 +521,14 @@
                 <td><span class="priorityBadge priorityBadge--{{ getEffectivePriority(t) }}">{{ getEffectivePriority(t) }}</span></td>
                 <td [class.overdue]="isDueOverdue(t)" [class.due-today]="isDueToday(t)">{{ getTaskDueLabel(t) }}</td>
                 <td>{{ t.subtask_count ? (t.completed_count || 0) + '/' + t.subtask_count : '—' }}</td>
+                <td>
+                  <span class="tableAssigneeChip" *ngIf="getTaskAssignee(t) as assignee"
+                        [title]="assignee.user_name || assignee.user_email || ''">
+                    <span class="tableAssigneeAvatar">{{ getMemberInitials(assignee) }}</span>
+                    {{ assignee.user_name || assignee.user_email }}
+                  </span>
+                  <span *ngIf="!getTaskAssignee(t)" class="tableUnassigned">—</span>
+                </td>
               </tr>
             </ng-container>
           </tbody>
@@ -622,6 +635,27 @@
                   <option value="High">High</option>
                   <option value="Urgent">Urgent</option>
                 </select>
+              </div>
+            </div>
+
+            <!-- Assignee -->
+            <div class="assigneeSection">
+              <span class="assigneeSectionTitle">Assignee</span>
+              <div class="assigneePickerWrap">
+                <select class="assigneeSelect" [(ngModel)]="detailAssignedTo">
+                  <option value="">Unassigned</option>
+                  <option *ngFor="let m of projectMembers" [value]="m.user_id">
+                    {{ m.user_name || m.user_email }}
+                  </option>
+                </select>
+                <div class="assigneePreview" *ngIf="detailAssignedTo">
+                  <span class="assigneeAvatar">
+                    {{ getMemberInitials(getTaskAssignee(detailTask!)!) }}
+                  </span>
+                  <span class="assigneeName">
+                    {{ getTaskAssignee(detailTask!)?.user_name || getTaskAssignee(detailTask!)?.user_email }}
+                  </span>
+                </div>
               </div>
             </div>
 
