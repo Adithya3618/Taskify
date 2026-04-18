@@ -507,7 +507,7 @@
           </thead>
           <tbody>
             <ng-container *ngFor="let s of stages">
-              <tr *ngFor="let t of s.tasks" (click)="openTaskDetail(s.id, t)" class="taskRow">
+              <tr *ngFor="let t of s.tasks" (click)="openTaskDetail(t)" class="taskRow">
                 <td class="taskRowTitle">
                   <span class="taskRowDot" [class]="'priority-dot priority-dot--' + getEffectivePriority(t)"></span>
                   {{ t.title }}
@@ -530,7 +530,7 @@
         <div class="timelineEmpty" *ngIf="timelineTasks.length === 0">
           No tasks with due dates found. Add due dates in Board view to see them here.
         </div>
-        <div class="timelineItem" *ngFor="let item of timelineTasks" (click)="openTaskDetail(item.stageId, item.task)">
+        <div class="timelineItem" *ngFor="let item of timelineTasks" (click)="openTaskDetail(item.task)">
           <div class="timelineDate" [class.overdue]="item.isOverdue" [class.today]="item.isToday">
             {{ item.dateLabel }}
           </div>
