@@ -226,4 +226,63 @@ describe('BoardComponent', () => {
     component.goBack();
     expect(navigateSpy).toHaveBeenCalledWith(['/boards']);
   });
+
+  // ── viewMode ─────────────────────────────────────────────
+  it('viewMode should default to kanban', () => {
+    expect(component.viewMode).toBe('kanban');
+  });
+
+  it('setView("dashboard") should switch viewMode to dashboard', () => {
+    component.setView('dashboard');
+    expect(component.viewMode).toBe('dashboard');
+  });
+
+  it('setView("table") should switch viewMode to table', () => {
+    component.setView('table');
+    expect(component.viewMode).toBe('table');
+  });
+
+  it('setView("timeline") should switch viewMode to timeline', () => {
+    component.setView('timeline');
+    expect(component.viewMode).toBe('timeline');
+  });
+
+  it('setView("kanban") should switch back to kanban', () => {
+    component.setView('dashboard');
+    component.setView('kanban');
+    expect(component.viewMode).toBe('kanban');
+  });
+
+  // ── dashTotalTasks ────────────────────────────────────────
+  it('dashTotalTasks should return 0 when no stages loaded', () => {
+    component.stages = [];
+    expect(component.dashTotalTasks).toBe(0);
+  });
+
+  it('dashTotalTasks should sum tasks across all stages', () => {
+    component.stages = [
+      makeStage([makeTask(), makeTask()]),
+      makeStage([makeTask()])
+    ];
+    expect(component.dashTotalTasks).toBe(3);
+  });
+
+  it('dashCompletedTasks should count only completed tasks', () => {
+    component.stages = [
+      makeStage([makeTask({ completed: true }), makeTask({ completed: false })]),
+      makeStage([makeTask({ completed: true })])
+    ];
+    expect(component.dashCompletedTasks).toBe(2);
+  });
+
+  it('dashStagePercent should return 0 when no tasks exist', () => {
+    component.stages = [];
+    const stage = makeStage([]);
+    expect(component.dashStagePercent(stage)).toBe(0);
+  });
+
+  it('timelineTasks should return empty array when no tasks have due dates', () => {
+    component.stages = [makeStage([makeTask()])];
+    expect(component.timelineTasks.length).toBe(0);
+  });
 });
