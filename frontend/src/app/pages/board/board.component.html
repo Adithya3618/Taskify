@@ -39,6 +39,7 @@
           [routerLink]="['/board', projectId]"
           routerLinkActive="viewTab--active"
           [routerLinkActiveOptions]="{ exact: true }"
+          (click)="setView('kanban')"
         >
           Board
         </a>
@@ -49,6 +50,15 @@
         >
           Planner
         </a>
+        <button class="viewTab" [class.viewTab--active]="viewMode === 'dashboard'" (click)="setView('dashboard')">
+          Dashboard
+        </button>
+        <button class="viewTab" [class.viewTab--active]="viewMode === 'table'" (click)="setView('table')">
+          Table
+        </button>
+        <button class="viewTab" [class.viewTab--active]="viewMode === 'timeline'" (click)="setView('timeline')">
+          Timeline
+        </button>
       </nav>
     </div>
 
@@ -266,7 +276,7 @@
   </ng-template>
 
   <div class="board-content" *ngIf="!loading">
-    <div class="columns-container">
+    <div class="columns-container" *ngIf="viewMode === 'kanban'">
       <!-- Stage Columns -->
       <div
         class="column"
@@ -450,6 +460,89 @@
         </button>
       </div>
     </div>
+
+    <!-- ── Dashboard View ── -->
+    <div class="viewPanel" *ngIf="viewMode === 'dashboard'">
+      <div class="dashGrid">
+        <div class="dashCard">
+          <span class="dashCardLabel">Total Tasks</span>
+          <span class="dashCardValue">{{ dashTotalTasks }}</span>
+        </div>
+        <div class="dashCard dashCard--danger">
+          <span class="dashCardLabel">Overdue</span>
+          <span class="dashCardValue">{{ dashOverdueTasks }}</span>
+        </div>
+        <div class="dashCard dashCard--warn">
+          <span class="dashCardLabel">Due Today</span>
+          <span class="dashCardValue">{{ dashDueTodayTasks }}</span>
+        </div>
+        <div class="dashCard dashCard--success">
+          <span class="dashCardLabel">Completed</span>
+          <span class="dashCardValue">{{ dashCompletedTasks }}</span>
+        </div>
+      </div>
+      <div class="dashStages">
+        <div class="dashStageRow" *ngFor="let s of stages">
+          <span class="dashStageName">{{ s.name }}</span>
+          <div class="dashStageBar">
+            <div class="dashStageBarFill" [style.width.%]="dashStagePercent(s)"></div>
+          </div>
+          <span class="dashStageCount">{{ s.tasks?.length || 0 }} tasks</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Table View ── -->
+    <div class="viewPanel" *ngIf="viewMode === 'table'">
+      <div class="tableWrap">
+        <table class="taskTable">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Stage</th>
+              <th>Priority</th>
+              <th>Due Date</th>
+              <th>Subtasks</th>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container *ngFor="let s of stages">
+              <tr *ngFor="let t of s.tasks" (click)="openTaskDetail(s.id, t)" class="taskRow">
+                <td class="taskRowTitle">
+                  <span class="taskRowDot" [class]="'priority-dot priority-dot--' + getEffectivePriority(t)"></span>
+                  {{ t.title }}
+                </td>
+                <td><span class="stagePill">{{ s.name }}</span></td>
+                <td><span class="priorityBadge priorityBadge--{{ getEffectivePriority(t) }}">{{ getEffectivePriority(t) }}</span></td>
+                <td [class.overdue]="isDueOverdue(t)" [class.due-today]="isDueToday(t)">{{ getTaskDueLabel(t) }}</td>
+                <td>{{ t.subtask_count ? (t.completed_count || 0) + '/' + t.subtask_count : '—' }}</td>
+              </tr>
+            </ng-container>
+          </tbody>
+        </table>
+        <div class="tableEmpty" *ngIf="dashTotalTasks === 0">No tasks yet. Switch to Board view to add some.</div>
+      </div>
+    </div>
+
+    <!-- ── Timeline View ── -->
+    <div class="viewPanel" *ngIf="viewMode === 'timeline'">
+      <div class="timelineWrap">
+        <div class="timelineEmpty" *ngIf="timelineTasks.length === 0">
+          No tasks with due dates found. Add due dates in Board view to see them here.
+        </div>
+        <div class="timelineItem" *ngFor="let item of timelineTasks" (click)="openTaskDetail(item.stageId, item.task)">
+          <div class="timelineDate" [class.overdue]="item.isOverdue" [class.today]="item.isToday">
+            {{ item.dateLabel }}
+          </div>
+          <div class="timelineContent">
+            <span class="timelineTitle">{{ item.task.title }}</span>
+            <span class="timelineStagePill">{{ item.stageName }}</span>
+            <span class="priorityBadge priorityBadge--{{ getEffectivePriority(item.task) }}">{{ getEffectivePriority(item.task) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- Delete task confirmation -->
