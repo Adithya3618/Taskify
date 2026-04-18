@@ -283,8 +283,9 @@ export class BoardComponent implements OnInit, OnDestroy {
         this.sortStageTasks(stage);
         this.apiService.primeTaskComments((stage.tasks || []).map((task) => task.id));
         // Check for upcoming/overdue deadlines and push notifications
+        // Prefer backend deadline field; fall back to metadata in description
         const withDeadlines = (tasks || [])
-          .map(t => ({ id: t.id, title: t.title, deadline: this.parseCardMeta(t.description || '').due }))
+          .map(t => ({ id: t.id, title: t.title, deadline: t.deadline || this.parseCardMeta(t.description || '').due }))
           .filter(t => !!t.deadline);
         if (withDeadlines.length) {
           this.notificationService.checkDeadlines(withDeadlines, this.projectId);
