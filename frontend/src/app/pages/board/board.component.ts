@@ -61,6 +61,13 @@ export class BoardComponent implements OnInit, OnDestroy {
   showBoardSwitcher = false;
   private routeSub?: Subscription;
 
+  /** Active board view tab. */
+  viewMode: 'kanban' | 'table' | 'dashboard' | 'timeline' = 'kanban';
+
+  setView(mode: 'kanban' | 'table' | 'dashboard' | 'timeline'): void {
+    this.viewMode = mode;
+  }
+
   /** Collapsed stage columns (narrow vertical strip with vertical title). Persisted per project in sessionStorage. */
   collapsedStages: Record<number, boolean> = {};
 
@@ -1705,6 +1712,88 @@ export class BoardComponent implements OnInit, OnDestroy {
     if (due < today) return 'due-overdue';
     if (due.getTime() === today.getTime()) return 'due-today';
     return '';
+  }
+
+  // ── Dashboard stats ───────────────────────────────────────────────────────
+
+  get dashTotalTasks(): number {
+    return this.stages.reduce((sum, s) => sum + (s.tasks?.length || 0), 0);
+  }
+
+  get dashCompletedTasks(): number {
+    return this.stages.reduce((sum, s) => sum + (s.tasks?.filter(t => t.completed).length || 0), 0);
+  }
+
+  get dashOverdueTasks(): number {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return this.stages.reduce((sum, s) => {
+      return sum + (s.tasks?.filter(t => {
+        const due = this.getTaskDue(t);
+        if (!due) return false;
+        const d = new Date(due); d.setHours(0, 0, 0, 0);
+        return d < today;
+      }).length || 0);
+    }, 0);
+  }
+
+  get dashDueTodayTasks(): number {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return this.stages.reduce((sum, s) => {
+      return sum + (s.tasks?.filter(t => {
+        const due = this.getTaskDue(t);
+        if (!due) return false;
+        const d = new Date(due); d.setHours(0, 0, 0, 0);
+        return d.getTime() === today.getTime();
+      }).length || 0);
+    }, 0);
+  }
+
+  dashStagePercent(stage: Stage): number {
+    if (this.dashTotalTasks === 0) return 0;
+    return Math.round(((stage.tasks?.length || 0) / this.dashTotalTasks) * 100);
+  }
+
+  // ── Timeline data ─────────────────────────────────────────────────────────
+
+  get timelineTasks(): { task: Task; stageId: number; stageName: string; dateLabel: string; isOverdue: boolean; isToday: boolean }[] {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const items: { task: Task; stageId: number; stageName: string; dateLabel: string; isOverdue: boolean; isToday: boolean }[] = [];
+    for (const s of this.stages) {
+      for (const t of (s.tasks || [])) {
+        const due = this.getTaskDue(t);
+        if (!due) continue;
+        const d = new Date(due); d.setHours(0, 0, 0, 0);
+        const isOverdue = d < today;
+        const isToday = d.getTime() === today.getTime();
+        const dateLabel = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+        items.push({ task: t, stageId: s.id, stageName: s.name, dateLabel, isOverdue, isToday });
+      }
+    }
+    return items.sort((a, b) => new Date(this.getTaskDue(a.task)).getTime() - new Date(this.getTaskDue(b.task)).getTime());
+  }
+
+  // ── Table view helpers ────────────────────────────────────────────────────
+
+  isDueOverdue(task: Task): boolean {
+    const due = this.getTaskDue(task);
+    if (!due) return false;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const d = new Date(due); d.setHours(0, 0, 0, 0);
+    return d < today;
+  }
+
+  isDueToday(task: Task): boolean {
+    const due = this.getTaskDue(task);
+    if (!due) return false;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const d = new Date(due); d.setHours(0, 0, 0, 0);
+    return d.getTime() === today.getTime();
+  }
+
+  getTaskDueLabel(task: Task): string {
+    const due = this.getTaskDue(task);
+    if (!due) return '—';
+    return new Date(due).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   }
 
   private migrateBoardOwnersEmail(oldEmail: string, newEmail: string) {
