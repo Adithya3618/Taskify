@@ -25,6 +25,7 @@ export interface UpdateTaskRequest {
   title: string;
   description: string;
   position: number;
+  assigned_to?: string | null;
 }
 
 export interface MoveTaskRequest {
