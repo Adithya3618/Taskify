@@ -2287,3 +2287,110 @@
   .viewPanel { padding: 16px; }
   .dashStageRow { grid-template-columns: 100px 1fr 60px; }
 }
+
+/* ── Task assignment ──────────────────────────────────────────────────────── */
+.taskAssigneeChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #818cf8, #6366f1);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  flex-shrink: 0;
+  cursor: default;
+  border: 2px solid var(--card-bg);
+  margin-left: auto;
+}
+
+.assigneeSection {
+  margin-bottom: 16px;
+}
+
+.assigneeSectionTitle {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.assigneePickerWrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.assigneeSelect {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-1);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: #818cf8;
+  }
+}
+
+.assigneePreview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.assigneeAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #818cf8, #6366f1);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.assigneeName {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-1);
+}
+
+.tableAssigneeChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-1);
+}
+
+.tableAssigneeAvatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #818cf8, #6366f1);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tableUnassigned {
+  color: var(--text-muted);
+}
