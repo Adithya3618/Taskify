@@ -4,6 +4,9 @@ export interface Task {
   title: string;
   description: string;
   position: number;
+  deadline?: string;
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+  assigned_to?: string;
   subtask_count?: number;
   completed_count?: number;
   /** Client-only; persisted via TaskCompletionStorageService (localStorage). */
