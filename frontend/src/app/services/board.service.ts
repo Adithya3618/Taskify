@@ -316,12 +316,16 @@ private loadTasksForStages(projectId: number,stageIds: number[]): void {
     const card = this.getCard(cardId);
     if (!card) return;
     const comments = card.comments ?? [];
+    const now = new Date().toISOString();
     const comment: Comment = {
       id: `comment-${Date.now()}`,
-      cardId,
-      author,
-      text,
-      createdAt: new Date().toISOString(),
+      task_id: parseInt(cardId, 10) || 0,
+      user_id: '',
+      author_name: author,
+      content: text,
+      created_at: now,
+      updated_at: now,
+      isLocalOnly: true,
     };
     this.updateCard(cardId, { comments: [...comments, comment] });
   }

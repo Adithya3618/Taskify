@@ -246,4 +246,66 @@ describe('NotificationService', () => {
     const past = new Date(Date.now() - 2 * 24 * 60 * 60_000).toISOString();
     expect(service.timeAgo(past)).toBe('2d ago');
   });
+
+  // ── remove() ──────────────────────────────────────────────────────────────
+
+  it('remove() should delete the notification with the given id', () => {
+    service.add('task_assigned', 'First notification');
+    service.add('deadline_reminder', 'Second notification');
+    const idToRemove = service.notifications()[1].id;
+
+    service.remove(idToRemove);
+
+    expect(service.notifications().length).toBe(1);
+    expect(service.notifications().every(n => n.id !== idToRemove)).toBeTrue();
+  });
+
+  it('remove() should persist the updated list to localStorage', () => {
+    service.add('task_assigned', 'Persisted notification');
+    const id = service.notifications()[0].id;
+
+    service.remove(id);
+
+    const stored = JSON.parse(localStorage.getItem('taskify.notifications') ?? '[]');
+    expect(stored.length).toBe(0);
+  });
+
+  it('remove() should not affect other notifications', () => {
+    service.add('task_assigned', 'Keep me');
+    service.add('deadline_reminder', 'Remove me');
+    const removeId = service.notifications()[0].id;
+
+    service.remove(removeId);
+
+    expect(service.notifications()[0].message).toBe('Keep me');
+  });
+
+  // ── clearAll() ────────────────────────────────────────────────────────────
+
+  it('clearAll() should empty the notifications list', () => {
+    service.add('task_assigned', 'Notification A');
+    service.add('project_invite', 'Notification B');
+
+    service.clearAll();
+
+    expect(service.notifications().length).toBe(0);
+  });
+
+  it('clearAll() should reset unreadCount to 0', () => {
+    service.add('task_assigned', 'Unread one');
+    service.add('deadline_reminder', 'Unread two');
+
+    service.clearAll();
+
+    expect(service.unreadCount()).toBe(0);
+  });
+
+  it('clearAll() should persist empty list to localStorage', () => {
+    service.add('task_assigned', 'Will be cleared');
+
+    service.clearAll();
+
+    const stored = JSON.parse(localStorage.getItem('taskify.notifications') ?? '["not empty"]');
+    expect(stored.length).toBe(0);
+  });
 });

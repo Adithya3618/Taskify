@@ -53,6 +53,17 @@ export class NotificationService {
     this.save(updated);
   }
 
+  remove(id: string): void {
+    const updated = this._notifications().filter(n => n.id !== id);
+    this._notifications.set(updated);
+    this.save(updated);
+  }
+
+  clearAll(): void {
+    this._notifications.set([]);
+    this.save([]);
+  }
+
   /** Called by board component when tasks load — generates deadline reminders. */
   checkDeadlines(tasks: { id: number; title: string; deadline?: string }[], projectId: number): void {
     const today = new Date(); today.setHours(0, 0, 0, 0);

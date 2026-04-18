@@ -14,9 +14,14 @@
   <div class="notifPanel" *ngIf="isOpen">
     <div class="notifHeader">
       <span class="notifTitle">Notifications</span>
-      <button class="markAllBtn" *ngIf="notifService.unreadCount() > 0" (click)="markAllRead()">
-        Mark all read
-      </button>
+      <div class="notifHeaderActions">
+        <button class="markAllBtn" *ngIf="notifService.unreadCount() > 0" (click)="markAllRead()">
+          Mark all read
+        </button>
+        <button class="clearAllBtn" *ngIf="notifService.notifications().length > 0" (click)="clearAll()">
+          Clear all
+        </button>
+      </div>
     </div>
 
     <!-- List -->
@@ -32,6 +37,7 @@
           <span class="notifTime">{{ notifService.timeAgo(n.created_at) }}</span>
         </div>
         <span class="unreadDot" *ngIf="!n.is_read"></span>
+        <button class="dismissBtn" (click)="dismiss($event, n.id)" aria-label="Dismiss notification">×</button>
       </div>
     </div>
 
