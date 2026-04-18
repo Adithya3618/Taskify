@@ -108,6 +108,50 @@ describe('NotificationBellComponent', () => {
     expect(navigateSpy).not.toHaveBeenCalled();
   });
 
+  // ── dismiss() ─────────────────────────────────────────────────────────────
+
+  it('dismiss() should remove the notification from the service', () => {
+    notifService.add('task_assigned', 'Dismiss me');
+    const id = notifService.notifications()[0].id;
+    const mockEvent = new MouseEvent('click');
+
+    component.dismiss(mockEvent, id);
+
+    expect(notifService.notifications().length).toBe(0);
+  });
+
+  it('dismiss() should not close the panel', () => {
+    notifService.add('task_assigned', 'Keep panel open');
+    const id = notifService.notifications()[0].id;
+    component.isOpen = true;
+    const mockEvent = new MouseEvent('click');
+
+    component.dismiss(mockEvent, id);
+
+    expect(component.isOpen).toBeTrue();
+  });
+
+  // ── clearAll() ────────────────────────────────────────────────────────────
+
+  it('clearAll() should empty all notifications via the service', () => {
+    notifService.add('task_assigned', 'One');
+    notifService.add('project_invite', 'Two');
+
+    component.clearAll();
+
+    expect(notifService.notifications().length).toBe(0);
+  });
+
+  // ── Escape key ────────────────────────────────────────────────────────────
+
+  it('onEscape() should close the panel', () => {
+    component.isOpen = true;
+
+    component.onEscape();
+
+    expect(component.isOpen).toBeFalse();
+  });
+
   // ── iconForType() ──────────────────────────────────────────────────────────
 
   it('iconForType() should return clock emoji for deadline_reminder', () => {
