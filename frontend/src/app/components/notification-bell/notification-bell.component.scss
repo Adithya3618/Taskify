@@ -82,6 +82,12 @@
   color: var(--text-1);
 }
 
+.notifHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .markAllBtn {
   font-size: 12px;
   font-weight: 600;
@@ -93,6 +99,19 @@
   font-family: inherit;
 
   &:hover { text-decoration: underline; }
+}
+
+.clearAllBtn {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+
+  &:hover { color: #ef4444; text-decoration: underline; }
 }
 
 .notifList {
@@ -147,6 +166,33 @@
   background: #818CF8;
   flex-shrink: 0;
   margin-top: 4px;
+}
+
+.dismissBtn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+
+  &:hover {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+  }
+}
+
+.notifItem:hover .dismissBtn {
+  opacity: 1;
 }
 
 /* ── Empty state ── */
