@@ -75,6 +75,11 @@
           [(ngModel)]="searchQuery"
           aria-label="Search tasks"
         />
+        <button *ngIf="searchQuery" class="searchClear" type="button" (click)="searchQuery = ''" aria-label="Clear search">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
       </div>
       <button class="themeToggle" type="button" (click)="themeService.toggle()"
               [attr.aria-label]="themeService.isDark ? 'Switch to light mode' : 'Switch to dark mode'">
@@ -98,7 +103,7 @@
           <path d="M3 6h18M7 12h10M11 18h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
         Filter
-        <span *ngIf="hasActiveFilters" class="filterBadge"></span>
+        <span *ngIf="hasActiveFilters" class="filterBadge">{{ activeFilterCount }}</span>
       </button>
       <button class="btn-ghost" type="button" (click)="openProjectSettings('members')">
         <svg class="topbarIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
