@@ -942,7 +942,12 @@
 /* ── Filter button active state ── */
 .btn-ghost { position: relative; }
 .btn-ghost-active { background: rgba(129,140,248,0.18) !important; border-color: rgba(129,140,248,0.45) !important; color: #c7d2fe !important; }
-.filterBadge { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: #818CF8; }
+.filterBadge {
+  position: absolute; top: 4px; right: 4px;
+  min-width: 16px; height: 16px; border-radius: 999px; padding: 0 4px;
+  background: #818CF8; color: #fff; font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; line-height: 1;
+}
 
 /* ── Filter Panel ── */
 .filterPanel {
