@@ -78,6 +78,7 @@ export class BoardComponent implements OnInit, OnDestroy {
   filterPriority = '';
   filterDue = '';
   filterLabel = '';
+  searchQuery = '';
 
   // Task assignments (localStorage fallback until backend issue #111 is merged)
   private get assignmentStorageKey(): string { return `taskify.taskAssignments.${this.projectId}`; }
