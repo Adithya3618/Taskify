@@ -78,6 +78,35 @@ export class BoardComponent implements OnInit, OnDestroy {
   filterPriority = '';
   filterDue = '';
   filterLabel = '';
+  searchQuery = '';
+
+  // Task assignments (localStorage fallback until backend issue #111 is merged)
+  private get assignmentStorageKey(): string { return `taskify.taskAssignments.${this.projectId}`; }
+
+  private loadStoredAssignments(): Record<number, string> {
+    try { return JSON.parse(localStorage.getItem(this.assignmentStorageKey) || '{}'); } catch { return {}; }
+  }
+
+  private saveStoredAssignment(taskId: number, userId: string): void {
+    const map = this.loadStoredAssignments();
+    if (userId) map[taskId] = userId; else delete map[taskId];
+    localStorage.setItem(this.assignmentStorageKey, JSON.stringify(map));
+  }
+
+  getStoredAssignment(taskId: number): string {
+    return this.loadStoredAssignments()[taskId] || '';
+  }
+
+  getTaskAssignee(task: Task): ProjectMember | undefined {
+    const userId = task.assigned_to || this.getStoredAssignment(task.id);
+    if (!userId) return undefined;
+    return this.projectMembers.find(m => m.user_id === userId);
+  }
+
+  getMemberInitials(member: ProjectMember): string {
+    const name = member.user_name || member.user_email || '?';
+    return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  }
 
   // Labels
   projectLabels: Label[] = [];
@@ -130,6 +159,7 @@ export class BoardComponent implements OnInit, OnDestroy {
   detailDesc = '';
   detailDue = '';
   detailPriority = '';
+  detailAssignedTo = '';
   detailNotes = '';
   /** Done flag — stored in browser only (TaskCompletionStorageService). */
   detailCompleted = false;
@@ -262,10 +292,11 @@ export class BoardComponent implements OnInit, OnDestroy {
         console.log('Stages loaded:', stages);
         this.stages = (stages || []).map((s) => ({ ...s, tasks: s.tasks ?? [] }));
         this.loadCollapsedColumnState();
-        // Load tasks for each stage
+        // Load tasks and members in parallel
         if (this.stages.length > 0) {
           this.stages.forEach(stage => this.loadTasks(stage));
         }
+        this.loadProjectMembers();
         this.loading = false;
       },
       error: (err) => {
@@ -712,6 +743,7 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.detailDue = parsed.due;
     this.detailPriority = parsed.priority;
     this.detailNotes = parsed.notes;
+    this.detailAssignedTo = task.assigned_to || this.getStoredAssignment(task.id);
     this.detailCompleted =
       task.completed ?? this.taskCompletionStorage.getCompleted(this.projectId, task.id);
     this.detailSubtasks = [];
@@ -741,10 +773,16 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.filterPriority = '';
     this.filterDue = '';
     this.filterLabel = '';
+    this.searchQuery = '';
   }
 
   get hasActiveFilters(): boolean {
-    return !!(this.filterCompletion || this.filterPriority || this.filterDue || this.filterLabel);
+    return !!(this.filterCompletion || this.filterPriority || this.filterDue || this.filterLabel || this.searchQuery.trim());
+  }
+
+  get activeFilterCount(): number {
+    return [this.filterCompletion, this.filterPriority, this.filterDue, this.filterLabel, this.searchQuery.trim()]
+      .filter(Boolean).length;
   }
 
   getFilteredTasks(stage: Stage): Task[] {
@@ -778,6 +816,13 @@ export class BoardComponent implements OnInit, OnDestroy {
     }
     if (this.filterLabel) {
       tasks = tasks.filter(t => this.getTaskLabelIds(t.id).includes(this.filterLabel));
+    }
+    if (this.searchQuery.trim()) {
+      const q = this.searchQuery.trim().toLowerCase();
+      tasks = tasks.filter(t =>
+        t.title.toLowerCase().includes(q) ||
+        (t.description || '').toLowerCase().includes(q)
+      );
     }
     return tasks;
   }
@@ -1162,10 +1207,14 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.updateTaskInStages(task.id, { completed: this.detailCompleted });
     this.cdr.detectChanges();
 
+    this.saveStoredAssignment(task.id, this.detailAssignedTo);
+    this.updateTaskInStages(task.id, { assigned_to: this.detailAssignedTo || undefined });
+
     this.apiService.updateTask(task.id, {
       title: updatedTitle,
       description: updatedDescription,
-      position: task.position
+      position: task.position,
+      assigned_to: this.detailAssignedTo || null
     }).subscribe({
       next: (updated) => {
         task.title = updated.title;
@@ -1173,6 +1222,7 @@ export class BoardComponent implements OnInit, OnDestroy {
         this.updateTaskInStages(task.id, {
           title: updated.title,
           description: updated.description,
+          assigned_to: this.detailAssignedTo || undefined,
           completed: this.detailCompleted
         });
         this.cdr.detectChanges();
@@ -1769,7 +1819,13 @@ export class BoardComponent implements OnInit, OnDestroy {
         items.push({ task: t, stageId: s.id, stageName: s.name, dateLabel, isOverdue, isToday });
       }
     }
-    return items.sort((a, b) => new Date(this.getTaskDue(a.task)).getTime() - new Date(this.getTaskDue(b.task)).getTime());
+    const sorted = items.sort((a, b) => new Date(this.getTaskDue(a.task)).getTime() - new Date(this.getTaskDue(b.task)).getTime());
+    if (!this.searchQuery.trim()) return sorted;
+    const q = this.searchQuery.trim().toLowerCase();
+    return sorted.filter(item =>
+      item.task.title.toLowerCase().includes(q) ||
+      (item.task.description || '').toLowerCase().includes(q)
+    );
   }
 
   // ── Table view helpers ────────────────────────────────────────────────────

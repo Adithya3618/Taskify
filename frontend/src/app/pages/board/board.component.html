@@ -63,6 +63,24 @@
     </div>
 
     <div class="right">
+      <div class="searchWrap">
+        <svg class="searchIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M16.5 16.5L21 21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <input
+          class="searchInput"
+          type="text"
+          placeholder="Search tasks…"
+          [(ngModel)]="searchQuery"
+          aria-label="Search tasks"
+        />
+        <button *ngIf="searchQuery" class="searchClear" type="button" (click)="searchQuery = ''" aria-label="Clear search">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
       <button class="themeToggle" type="button" (click)="themeService.toggle()"
               [attr.aria-label]="themeService.isDark ? 'Switch to light mode' : 'Switch to dark mode'">
         <svg *ngIf="themeService.isDark" class="themeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -85,7 +103,7 @@
           <path d="M3 6h18M7 12h10M11 18h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
         Filter
-        <span *ngIf="hasActiveFilters" class="filterBadge"></span>
+        <span *ngIf="hasActiveFilters" class="filterBadge">{{ activeFilterCount }}</span>
       </button>
       <button class="btn-ghost" type="button" (click)="openProjectSettings('members')">
         <svg class="topbarIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -236,6 +254,10 @@
         </svg>
         <span>{{ getTaskCommentCount(task.id) }}</span>
       </div>
+      <span class="taskAssigneeChip" *ngIf="getTaskAssignee(task) as assignee"
+            [title]="assignee.user_name || assignee.user_email || ''">
+        {{ getMemberInitials(assignee) }}
+      </span>
     </div>
     <div class="task-card-actions">
       <button
@@ -503,11 +525,12 @@
               <th>Priority</th>
               <th>Due Date</th>
               <th>Subtasks</th>
+              <th>Assignee</th>
             </tr>
           </thead>
           <tbody>
             <ng-container *ngFor="let s of stages">
-              <tr *ngFor="let t of s.tasks" (click)="openTaskDetail(s.id, t)" class="taskRow">
+              <tr *ngFor="let t of getFilteredTasks(s)" (click)="openTaskDetail(t)" class="taskRow">
                 <td class="taskRowTitle">
                   <span class="taskRowDot" [class]="'priority-dot priority-dot--' + getEffectivePriority(t)"></span>
                   {{ t.title }}
@@ -516,21 +539,33 @@
                 <td><span class="priorityBadge priorityBadge--{{ getEffectivePriority(t) }}">{{ getEffectivePriority(t) }}</span></td>
                 <td [class.overdue]="isDueOverdue(t)" [class.due-today]="isDueToday(t)">{{ getTaskDueLabel(t) }}</td>
                 <td>{{ t.subtask_count ? (t.completed_count || 0) + '/' + t.subtask_count : '—' }}</td>
+                <td>
+                  <span class="tableAssigneeChip" *ngIf="getTaskAssignee(t) as assignee"
+                        [title]="assignee.user_name || assignee.user_email || ''">
+                    <span class="tableAssigneeAvatar">{{ getMemberInitials(assignee) }}</span>
+                    {{ assignee.user_name || assignee.user_email }}
+                  </span>
+                  <span *ngIf="!getTaskAssignee(t)" class="tableUnassigned">—</span>
+                </td>
               </tr>
             </ng-container>
           </tbody>
         </table>
         <div class="tableEmpty" *ngIf="dashTotalTasks === 0">No tasks yet. Switch to Board view to add some.</div>
+        <div class="tableEmpty" *ngIf="dashTotalTasks > 0 && hasActiveFilters && !stages.some(s => getFilteredTasks(s).length > 0)">No tasks match your search.</div>
       </div>
     </div>
 
     <!-- ── Timeline View ── -->
     <div class="viewPanel" *ngIf="viewMode === 'timeline'">
       <div class="timelineWrap">
-        <div class="timelineEmpty" *ngIf="timelineTasks.length === 0">
+        <div class="timelineEmpty" *ngIf="timelineTasks.length === 0 && !searchQuery.trim()">
           No tasks with due dates found. Add due dates in Board view to see them here.
         </div>
-        <div class="timelineItem" *ngFor="let item of timelineTasks" (click)="openTaskDetail(item.stageId, item.task)">
+        <div class="timelineEmpty" *ngIf="timelineTasks.length === 0 && searchQuery.trim()">
+          No tasks match your search.
+        </div>
+        <div class="timelineItem" *ngFor="let item of timelineTasks" (click)="openTaskDetail(item.task)">
           <div class="timelineDate" [class.overdue]="item.isOverdue" [class.today]="item.isToday">
             {{ item.dateLabel }}
           </div>
@@ -622,6 +657,27 @@
                   <option value="High">High</option>
                   <option value="Urgent">Urgent</option>
                 </select>
+              </div>
+            </div>
+
+            <!-- Assignee -->
+            <div class="assigneeSection">
+              <span class="assigneeSectionTitle">Assignee</span>
+              <div class="assigneePickerWrap">
+                <select class="assigneeSelect" [(ngModel)]="detailAssignedTo">
+                  <option value="">Unassigned</option>
+                  <option *ngFor="let m of projectMembers" [value]="m.user_id">
+                    {{ m.user_name || m.user_email }}
+                  </option>
+                </select>
+                <div class="assigneePreview" *ngIf="detailAssignedTo">
+                  <span class="assigneeAvatar">
+                    {{ getMemberInitials(getTaskAssignee(detailTask!)!) }}
+                  </span>
+                  <span class="assigneeName">
+                    {{ getTaskAssignee(detailTask!)?.user_name || getTaskAssignee(detailTask!)?.user_email }}
+                  </span>
+                </div>
               </div>
             </div>
 

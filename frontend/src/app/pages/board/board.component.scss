@@ -139,6 +139,35 @@
   transition: box-shadow 0.2s, transform 0.15s; &:hover { box-shadow: 0 5px 16px rgba(14,165,233,0.5); transform: translateY(-1px); }
 }
 
+/* ── Search input in topbar ── */
+.searchWrap {
+  position: relative; display: flex; align-items: center;
+}
+.searchIcon {
+  position: absolute; left: 10px; width: 16px; height: 16px;
+  color: rgba(255,255,255,0.4); pointer-events: none;
+}
+.searchInput {
+  height: 36px; padding: 0 30px 0 34px; border-radius: 8px; width: 200px;
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+  color: #f1f5f9; font-size: 13px; font-family: inherit;
+  transition: background 0.2s, border-color 0.2s, width 0.25s;
+  outline: none;
+  &::placeholder { color: rgba(255,255,255,0.35); }
+  &:focus {
+    background: rgba(255,255,255,0.13); border-color: rgba(129,140,248,0.6);
+    width: 260px;
+  }
+}
+.searchClear {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; padding: 2px;
+  color: rgba(255,255,255,0.4); display: flex; align-items: center;
+  transition: color 0.15s;
+  &:hover { color: rgba(255,255,255,0.85); }
+  svg { width: 14px; height: 14px; display: block; }
+}
+
 /* Theme toggle in topbar */
 .themeToggle {
   border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.1);
@@ -913,7 +942,12 @@
 /* ── Filter button active state ── */
 .btn-ghost { position: relative; }
 .btn-ghost-active { background: rgba(129,140,248,0.18) !important; border-color: rgba(129,140,248,0.45) !important; color: #c7d2fe !important; }
-.filterBadge { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: #818CF8; }
+.filterBadge {
+  position: absolute; top: 4px; right: 4px;
+  min-width: 16px; height: 16px; border-radius: 999px; padding: 0 4px;
+  background: #818CF8; color: #fff; font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; line-height: 1;
+}
 
 /* ── Filter Panel ── */
 .filterPanel {
@@ -2286,4 +2320,111 @@
   .dashGrid { grid-template-columns: repeat(2, 1fr); }
   .viewPanel { padding: 16px; }
   .dashStageRow { grid-template-columns: 100px 1fr 60px; }
+}
+
+/* ── Task assignment ──────────────────────────────────────────────────────── */
+.taskAssigneeChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #818cf8, #6366f1);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  flex-shrink: 0;
+  cursor: default;
+  border: 2px solid var(--card-bg);
+  margin-left: auto;
+}
+
+.assigneeSection {
+  margin-bottom: 16px;
+}
+
+.assigneeSectionTitle {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.assigneePickerWrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.assigneeSelect {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-1);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: #818cf8;
+  }
+}
+
+.assigneePreview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.assigneeAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #818cf8, #6366f1);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.assigneeName {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-1);
+}
+
+.tableAssigneeChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-1);
+}
+
+.tableAssigneeAvatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #818cf8, #6366f1);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tableUnassigned {
+  color: var(--text-muted);
 }
