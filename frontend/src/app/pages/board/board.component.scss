@@ -139,6 +139,35 @@
   transition: box-shadow 0.2s, transform 0.15s; &:hover { box-shadow: 0 5px 16px rgba(14,165,233,0.5); transform: translateY(-1px); }
 }
 
+/* ── Search input in topbar ── */
+.searchWrap {
+  position: relative; display: flex; align-items: center;
+}
+.searchIcon {
+  position: absolute; left: 10px; width: 16px; height: 16px;
+  color: rgba(255,255,255,0.4); pointer-events: none;
+}
+.searchInput {
+  height: 36px; padding: 0 30px 0 34px; border-radius: 8px; width: 200px;
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+  color: #f1f5f9; font-size: 13px; font-family: inherit;
+  transition: background 0.2s, border-color 0.2s, width 0.25s;
+  outline: none;
+  &::placeholder { color: rgba(255,255,255,0.35); }
+  &:focus {
+    background: rgba(255,255,255,0.13); border-color: rgba(129,140,248,0.6);
+    width: 260px;
+  }
+}
+.searchClear {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; padding: 2px;
+  color: rgba(255,255,255,0.4); display: flex; align-items: center;
+  transition: color 0.15s;
+  &:hover { color: rgba(255,255,255,0.85); }
+  svg { width: 14px; height: 14px; display: block; }
+}
+
 /* Theme toggle in topbar */
 .themeToggle {
   border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.1);
