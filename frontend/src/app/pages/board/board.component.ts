@@ -773,10 +773,16 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.filterPriority = '';
     this.filterDue = '';
     this.filterLabel = '';
+    this.searchQuery = '';
   }
 
   get hasActiveFilters(): boolean {
-    return !!(this.filterCompletion || this.filterPriority || this.filterDue || this.filterLabel);
+    return !!(this.filterCompletion || this.filterPriority || this.filterDue || this.filterLabel || this.searchQuery.trim());
+  }
+
+  get activeFilterCount(): number {
+    return [this.filterCompletion, this.filterPriority, this.filterDue, this.filterLabel, this.searchQuery.trim()]
+      .filter(Boolean).length;
   }
 
   getFilteredTasks(stage: Stage): Task[] {
@@ -810,6 +816,13 @@ export class BoardComponent implements OnInit, OnDestroy {
     }
     if (this.filterLabel) {
       tasks = tasks.filter(t => this.getTaskLabelIds(t.id).includes(this.filterLabel));
+    }
+    if (this.searchQuery.trim()) {
+      const q = this.searchQuery.trim().toLowerCase();
+      tasks = tasks.filter(t =>
+        t.title.toLowerCase().includes(q) ||
+        (t.description || '').toLowerCase().includes(q)
+      );
     }
     return tasks;
   }
@@ -1806,7 +1819,13 @@ export class BoardComponent implements OnInit, OnDestroy {
         items.push({ task: t, stageId: s.id, stageName: s.name, dateLabel, isOverdue, isToday });
       }
     }
-    return items.sort((a, b) => new Date(this.getTaskDue(a.task)).getTime() - new Date(this.getTaskDue(b.task)).getTime());
+    const sorted = items.sort((a, b) => new Date(this.getTaskDue(a.task)).getTime() - new Date(this.getTaskDue(b.task)).getTime());
+    if (!this.searchQuery.trim()) return sorted;
+    const q = this.searchQuery.trim().toLowerCase();
+    return sorted.filter(item =>
+      item.task.title.toLowerCase().includes(q) ||
+      (item.task.description || '').toLowerCase().includes(q)
+    );
   }
 
   // ── Table view helpers ────────────────────────────────────────────────────
