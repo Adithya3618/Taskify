@@ -63,6 +63,19 @@
     </div>
 
     <div class="right">
+      <div class="searchWrap">
+        <svg class="searchIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M16.5 16.5L21 21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <input
+          class="searchInput"
+          type="text"
+          placeholder="Search tasks…"
+          [(ngModel)]="searchQuery"
+          aria-label="Search tasks"
+        />
+      </div>
       <button class="themeToggle" type="button" (click)="themeService.toggle()"
               [attr.aria-label]="themeService.isDark ? 'Switch to light mode' : 'Switch to dark mode'">
         <svg *ngIf="themeService.isDark" class="themeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -512,7 +525,7 @@
           </thead>
           <tbody>
             <ng-container *ngFor="let s of stages">
-              <tr *ngFor="let t of s.tasks" (click)="openTaskDetail(t)" class="taskRow">
+              <tr *ngFor="let t of getFilteredTasks(s)" (click)="openTaskDetail(t)" class="taskRow">
                 <td class="taskRowTitle">
                   <span class="taskRowDot" [class]="'priority-dot priority-dot--' + getEffectivePriority(t)"></span>
                   {{ t.title }}
@@ -534,14 +547,18 @@
           </tbody>
         </table>
         <div class="tableEmpty" *ngIf="dashTotalTasks === 0">No tasks yet. Switch to Board view to add some.</div>
+        <div class="tableEmpty" *ngIf="dashTotalTasks > 0 && hasActiveFilters && !stages.some(s => getFilteredTasks(s).length > 0)">No tasks match your search.</div>
       </div>
     </div>
 
     <!-- ── Timeline View ── -->
     <div class="viewPanel" *ngIf="viewMode === 'timeline'">
       <div class="timelineWrap">
-        <div class="timelineEmpty" *ngIf="timelineTasks.length === 0">
+        <div class="timelineEmpty" *ngIf="timelineTasks.length === 0 && !searchQuery.trim()">
           No tasks with due dates found. Add due dates in Board view to see them here.
+        </div>
+        <div class="timelineEmpty" *ngIf="timelineTasks.length === 0 && searchQuery.trim()">
+          No tasks match your search.
         </div>
         <div class="timelineItem" *ngFor="let item of timelineTasks" (click)="openTaskDetail(item.task)">
           <div class="timelineDate" [class.overdue]="item.isOverdue" [class.today]="item.isToday">
