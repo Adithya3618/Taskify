@@ -843,6 +843,10 @@ export class BoardComponent implements OnInit, OnDestroy {
     return tasks;
   }
 
+  getStageMatchCount(stage: Stage): number {
+    return this.getFilteredTasks(stage).length;
+  }
+
   // ── Labels ────────────────────────────────────
 
   private labelsKey(): string { return `taskify.labels.${this.projectId}`; }
