@@ -81,6 +81,9 @@
           </svg>
         </button>
       </div>
+      <span *ngIf="activeSearchQuery.trim()" class="searchResultCount">
+        {{ totalMatchCount }} result{{ totalMatchCount === 1 ? '' : 's' }}
+      </span>
       <button class="themeToggle" type="button" (click)="themeService.toggle()"
               [attr.aria-label]="themeService.isDark ? 'Switch to light mode' : 'Switch to dark mode'">
         <svg *ngIf="themeService.isDark" class="themeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
