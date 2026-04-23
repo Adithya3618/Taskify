@@ -168,6 +168,19 @@
   svg { width: 14px; height: 14px; display: block; }
 }
 
+/* Search result count pill next to input */
+.searchResultCount {
+  font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.5);
+  white-space: nowrap;
+}
+
+/* Per-stage match count in column header */
+.stageMatchCount {
+  font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+  background: rgba(129,140,248,0.18); color: #a5b4fc;
+  white-space: nowrap;
+}
+
 /* Theme toggle in topbar */
 .themeToggle {
   border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.1);
