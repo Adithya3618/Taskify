@@ -327,6 +327,9 @@
             <span class="column-task-count" [attr.title]="'completed / total'">
               {{ getStageDoneCount(stage) }}/{{ getStageTotalCount(stage) }}
             </span>
+            <span *ngIf="activeSearchQuery.trim()" class="stageMatchCount">
+              {{ getStageMatchCount(stage) }} match{{ getStageMatchCount(stage) === 1 ? '' : 'es' }}
+            </span>
           </div>
           <div class="column-header-actions">
             <button
