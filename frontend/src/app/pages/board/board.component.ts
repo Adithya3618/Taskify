@@ -2,7 +2,7 @@ import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { Subscription } from 'rxjs';
+import { Subject, Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
 import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { ApiService } from '../../services/api.service';
 import { ActivityLog } from '../../models/activity.model';
@@ -60,6 +60,8 @@ export class BoardComponent implements OnInit, OnDestroy {
   allBoards: Project[] = [];
   showBoardSwitcher = false;
   private routeSub?: Subscription;
+  private searchSub?: Subscription;
+  private searchSubject = new Subject<string>();
 
   /** Active board view tab. */
   viewMode: 'kanban' | 'table' | 'dashboard' | 'timeline' = 'kanban';
@@ -78,7 +80,13 @@ export class BoardComponent implements OnInit, OnDestroy {
   filterPriority = '';
   filterDue = '';
   filterLabel = '';
-  searchQuery = '';
+  private _searchQuery = '';
+  activeSearchQuery = '';
+  get searchQuery(): string { return this._searchQuery; }
+  set searchQuery(val: string) {
+    this._searchQuery = val;
+    this.searchSubject.next(val);
+  }
 
   // Task assignments (localStorage fallback until backend issue #111 is merged)
   private get assignmentStorageKey(): string { return `taskify.taskAssignments.${this.projectId}`; }
@@ -201,6 +209,11 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.userEmail = currentUser.email;
     this.knownUsers = this.authService.getKnownUsers();
 
+    this.searchSub = this.searchSubject.pipe(
+      debounceTime(200),
+      distinctUntilChanged()
+    ).subscribe(q => { this.activeSearchQuery = q; });
+
     this.loadAllBoards();
 
     this.routeSub = this.route.params.subscribe(params => {
@@ -226,6 +239,8 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.routeSub?.unsubscribe();
+    this.searchSub?.unsubscribe();
+    this.searchSubject.complete();
     if (this.pendingMemberRemoval) {
       clearTimeout(this.pendingMemberRemoval.timeoutId);
     }
@@ -774,14 +789,15 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.filterDue = '';
     this.filterLabel = '';
     this.searchQuery = '';
+    this.activeSearchQuery = '';
   }
 
   get hasActiveFilters(): boolean {
-    return !!(this.filterCompletion || this.filterPriority || this.filterDue || this.filterLabel || this.searchQuery.trim());
+    return !!(this.filterCompletion || this.filterPriority || this.filterDue || this.filterLabel || this.activeSearchQuery.trim());
   }
 
   get activeFilterCount(): number {
-    return [this.filterCompletion, this.filterPriority, this.filterDue, this.filterLabel, this.searchQuery.trim()]
+    return [this.filterCompletion, this.filterPriority, this.filterDue, this.filterLabel, this.activeSearchQuery.trim()]
       .filter(Boolean).length;
   }
 
@@ -817,14 +833,22 @@ export class BoardComponent implements OnInit, OnDestroy {
     if (this.filterLabel) {
       tasks = tasks.filter(t => this.getTaskLabelIds(t.id).includes(this.filterLabel));
     }
-    if (this.searchQuery.trim()) {
-      const q = this.searchQuery.trim().toLowerCase();
+    if (this.activeSearchQuery.trim()) {
+      const q = this.activeSearchQuery.trim().toLowerCase();
       tasks = tasks.filter(t =>
         t.title.toLowerCase().includes(q) ||
         (t.description || '').toLowerCase().includes(q)
       );
     }
     return tasks;
+  }
+
+  getStageMatchCount(stage: Stage): number {
+    return this.getFilteredTasks(stage).length;
+  }
+
+  get totalMatchCount(): number {
+    return this.stages.reduce((sum, s) => sum + this.getFilteredTasks(s).length, 0);
   }
 
   // ── Labels ────────────────────────────────────
@@ -1820,8 +1844,8 @@ export class BoardComponent implements OnInit, OnDestroy {
       }
     }
     const sorted = items.sort((a, b) => new Date(this.getTaskDue(a.task)).getTime() - new Date(this.getTaskDue(b.task)).getTime());
-    if (!this.searchQuery.trim()) return sorted;
-    const q = this.searchQuery.trim().toLowerCase();
+    if (!this.activeSearchQuery.trim()) return sorted;
+    const q = this.activeSearchQuery.trim().toLowerCase();
     return sorted.filter(item =>
       item.task.title.toLowerCase().includes(q) ||
       (item.task.description || '').toLowerCase().includes(q)
