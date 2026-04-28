@@ -42,6 +42,7 @@ Behavior:
 - Orders results by stage position, task position, then task ID.
 - Returns an empty JSON array when no tasks match.
 - Returns `400 Bad Request` when the `q` query parameter is missing or blank.
+- Returns `400 Bad Request` when the `q` query parameter exceeds maximum length (100 characters).
 - Returns `404 Not Found` when the project does not exist.
 - Returns `403 Forbidden` when the user does not have project access.
 

@@ -250,6 +250,9 @@ func (s *TaskService) SearchProjectTasks(userID string, projectID int64, query s
 	if query == "" {
 		return nil, &ServiceError{Code: "INVALID_REQUEST", Message: "query is required"}
 	}
+	if len(query) > 100 {
+		return nil, &ServiceError{Code: "INVALID_REQUEST", Message: "query is too long (max 100 characters)"}
+	}
 
 	exists, err := s.projectExists(projectID)
 	if err != nil {

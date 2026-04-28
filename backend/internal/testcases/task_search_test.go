@@ -240,6 +240,13 @@ func TestTaskService_SearchProjectTasksValidatesProjectAndAccess(t *testing.T) {
 			wantCode:  "INVALID_REQUEST",
 		},
 		{
+			name:      "query too long",
+			userID:    "user-1",
+			projectID: projectID,
+			query:     "this_is_a_very_long_query_that_exceeds_the_one_hundred_characters_limit_to_prevent_any_database_performance_issues",
+			wantCode:  "INVALID_REQUEST",
+		},
+		{
 			name:      "missing project",
 			userID:    "user-1",
 			projectID: projectID + 100,
@@ -290,6 +297,13 @@ func TestTaskController_SearchProjectTasksValidatesRequest(t *testing.T) {
 		{
 			name:       "missing query",
 			url:        "/api/projects/1/tasks/search",
+			userID:     "user-1",
+			projectVar: toString(projectID),
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "query too long",
+			url:        "/api/projects/1/tasks/search?q=this_is_a_very_long_query_that_exceeds_the_one_hundred_characters_limit_to_prevent_any_database_performance_issues",
 			userID:     "user-1",
 			projectVar: toString(projectID),
 			wantStatus: http.StatusBadRequest,
