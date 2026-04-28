@@ -152,6 +152,73 @@
 .muted { font-size: 13px; color: var(--text-muted); margin: 0; }
 .sectionRight { display: flex; align-items: center; gap: 14px; }
 
+.boardSearch {
+  align-items: center;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  color: var(--text-muted);
+  display: flex;
+  min-height: 38px;
+  min-width: 260px;
+  padding: 0 10px;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.boardSearch:focus-within {
+  background: var(--input-bg-focus);
+  border-color: var(--input-border-focus);
+  box-shadow: 0 0 0 4px var(--input-shadow-focus);
+}
+
+.boardSearchIcon {
+  flex: 0 0 auto;
+  height: 17px;
+  width: 17px;
+}
+
+.boardSearch input {
+  background: transparent;
+  border: 0;
+  color: var(--input-text);
+  flex: 1 1 auto;
+  font: inherit;
+  font-size: 14px;
+  min-width: 0;
+  outline: none;
+  padding: 0 8px;
+}
+
+.boardSearch input::placeholder {
+  color: var(--input-placeholder);
+}
+
+.boardSearchClear {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  flex: 0 0 auto;
+  height: 28px;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s, color 0.15s;
+  width: 28px;
+}
+
+.boardSearchClear:hover {
+  background: var(--surface-hover);
+  color: var(--text-1);
+}
+
+.boardSearchClear svg {
+  height: 16px;
+  width: 16px;
+}
+
 /* ── Buttons ── */
 .btn {
   border: none; border-radius: 10px; padding: 9px 18px;

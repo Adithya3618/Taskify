@@ -109,6 +109,29 @@
         <p class="muted">Showing boards you can access, {{ userDisplayName }}.</p>
       </div>
       <div class="sectionRight">
+        <div class="boardSearch">
+          <svg class="boardSearchIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M16.5 16.5L21 21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <input
+            type="text"
+            [(ngModel)]="boardSearchQuery"
+            placeholder="Search boards"
+            aria-label="Search boards"
+          >
+          <button
+            *ngIf="boardSearchQuery"
+            class="boardSearchClear"
+            type="button"
+            (click)="boardSearchQuery = ''"
+            aria-label="Clear board search"
+          >
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
         <div class="status">
           <span *ngIf="loading" class="badge">Loading</span>
           <span *ngIf="useDemoData" class="badge warn">Demo mode</span>
