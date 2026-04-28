@@ -108,6 +108,12 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	timelineRoutes.Use(projectAccessMiddleware)
 	timelineRoutes.HandleFunc("", taskController.GetProjectTimeline).Methods("GET")
 
+	// Project task search routes (protected with project access check)
+	taskSearchRoutes := api.PathPrefix("/projects/{id}/tasks/search").Subrouter()
+	taskSearchRoutes.Use(jwtMiddleware)
+	taskSearchRoutes.Use(projectAccessMiddleware)
+	taskSearchRoutes.HandleFunc("", taskController.SearchProjectTasks).Methods("GET")
+
 	// Project Member routes (protected with project access check)
 	projectMemberRoutes := api.PathPrefix("/projects/{id}/members").Subrouter()
 	projectMemberRoutes.Use(jwtMiddleware)

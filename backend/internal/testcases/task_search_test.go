@@ -121,6 +121,127 @@ func TestTaskController_SearchProjectTasksReturnsPlainArray(t *testing.T) {
 	}
 }
 
+func TestTaskService_SearchProjectTasksValidatesProjectAndAccess(t *testing.T) {
+	db := newTaskSearchTestDB(t)
+	defer db.Close()
+
+	projectID, _, _ := seedTaskSearchProject(t, db, "user-1")
+	service := services.NewTaskService(db, nil)
+
+	tests := []struct {
+		name      string
+		userID    string
+		projectID int64
+		query     string
+		wantCode  string
+	}{
+		{
+			name:      "blank query",
+			userID:    "user-1",
+			projectID: projectID,
+			query:     "   ",
+			wantCode:  "INVALID_REQUEST",
+		},
+		{
+			name:      "missing project",
+			userID:    "user-1",
+			projectID: projectID + 100,
+			query:     "task",
+			wantCode:  "PROJECT_NOT_FOUND",
+		},
+		{
+			name:      "no project access",
+			userID:    "user-2",
+			projectID: projectID,
+			query:     "task",
+			wantCode:  "ACCESS_DENIED",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			results, err := service.SearchProjectTasks(tt.userID, tt.projectID, tt.query)
+			if err == nil {
+				t.Fatalf("SearchProjectTasks() error = nil, want %s with results %+v", tt.wantCode, results)
+			}
+			serviceErr, ok := services.IsServiceError(err)
+			if !ok {
+				t.Fatalf("SearchProjectTasks() error = %T %v, want ServiceError", err, err)
+			}
+			if serviceErr.Code != tt.wantCode {
+				t.Fatalf("ServiceError.Code = %q, want %q", serviceErr.Code, tt.wantCode)
+			}
+		})
+	}
+}
+
+func TestTaskController_SearchProjectTasksValidatesRequest(t *testing.T) {
+	db := newTaskSearchTestDB(t)
+	defer db.Close()
+
+	projectID, _, _ := seedTaskSearchProject(t, db, "user-1")
+	service := services.NewTaskService(db, nil)
+	controller := controllers.NewTaskController(service)
+
+	tests := []struct {
+		name       string
+		url        string
+		userID     string
+		projectVar string
+		wantStatus int
+	}{
+		{
+			name:       "missing query",
+			url:        "/api/projects/1/tasks/search",
+			userID:     "user-1",
+			projectVar: toString(projectID),
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "invalid project id",
+			url:        "/api/projects/nope/tasks/search?q=task",
+			userID:     "user-1",
+			projectVar: "nope",
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "missing project",
+			url:        "/api/projects/999/tasks/search?q=task",
+			userID:     "user-1",
+			projectVar: toString(projectID + 100),
+			wantStatus: http.StatusNotFound,
+		},
+		{
+			name:       "no project access",
+			url:        "/api/projects/1/tasks/search?q=task",
+			userID:     "user-2",
+			projectVar: toString(projectID),
+			wantStatus: http.StatusForbidden,
+		},
+		{
+			name:       "unauthorized",
+			url:        "/api/projects/1/tasks/search?q=task",
+			userID:     "",
+			projectVar: toString(projectID),
+			wantStatus: http.StatusUnauthorized,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := createRequestWithUser(http.MethodGet, tt.url, nil, tt.userID)
+			req = mux.SetURLVars(req, map[string]string{"id": tt.projectVar})
+			w := httptest.NewRecorder()
+
+			controller.SearchProjectTasks(w, req)
+
+			if w.Code != tt.wantStatus {
+				t.Fatalf("SearchProjectTasks() status = %d, want %d; body=%s", w.Code, tt.wantStatus, w.Body.String())
+			}
+		})
+	}
+}
+
 func newTaskSearchTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 
