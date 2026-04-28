@@ -1,16 +1,17 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
 
 	"backend/internal/chat"
+	"backend/internal/config"
 	"backend/internal/database"
 	"backend/internal/routes"
 
 	"github.com/gorilla/mux"
-	"github.com/joho/godotenv"
 )
 
 // Custom CORS middleware that allows all localhost origins
@@ -36,11 +37,10 @@ func enableCORS(next http.Handler) http.Handler {
 }
 
 func main() {
-	// Load .env: repo root (../.env when running from backend/) or backend/.env
-	if err := godotenv.Load("../.env"); err != nil {
-		if err2 := godotenv.Load(".env"); err2 != nil {
-			log.Println("No .env file found (optional): use ../.env or backend/.env for JWT/SMTP")
-		}
+	// Load configuration from environment
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
 	// Initialize database
@@ -69,6 +69,7 @@ func main() {
 	corsHandler := enableCORS(router)
 
 	// Start server
-	log.Println("Server starting on http://localhost:8080/api/projects")
-	log.Fatal(http.ListenAndServe(":8080", corsHandler))
+	addr := fmt.Sprintf(":%s", cfg.Port)
+	log.Printf("Server starting on http://localhost:%s/api/projects", cfg.Port)
+	log.Fatal(http.ListenAndServe(addr, corsHandler))
 }
