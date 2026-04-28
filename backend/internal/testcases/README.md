@@ -20,6 +20,7 @@ This folder contains all unit tests for the Taskify backend, organized by functi
 | `task_enhancements_test.go` | Task deadline, priority, assignee, and start date behavior | 6 tests |
 | `stage_reorder_test.go` | Project stage reorder service and controller behavior | 3 tests |
 | `activity_endpoint_test.go` | Paginated project activity endpoint behavior | 4 tests |
+| `task_search_test.go` | Project-wide task search service and endpoint behavior | 5 tests |
 
 **Total: 100+ unit tests**
 
@@ -69,6 +70,12 @@ go test ./internal/testcases -run Stage.*Reorder
 go test ./internal/testcases -run ActivityController_GetActivity
 ```
 
+### Sprint 4 Task Search Tests
+```bash
+# Run only the project task search tests
+go test ./internal/testcases -run Task.*Search
+```
+
 ## Test Categories
 
 ### Authentication Tests
@@ -84,6 +91,7 @@ go test ./internal/testcases -run ActivityController_GetActivity
 - Timeline endpoint response format and request validation
 - Stage reorder endpoint response format
 - Activity feed response format and pagination
+- Task search endpoint response format and validation
 
 ### Model Tests
 - Structure validation
@@ -130,6 +138,18 @@ go test ./internal/testcases -run ActivityController_GetActivity
 - Returns `404` for missing projects.
 - Returns `403` for users without project access.
 
+### Task Search Tests
+- Searches task titles and descriptions.
+- Searches across all stages in the requested project.
+- Performs case-insensitive matching.
+- Prevents tasks from other projects from leaking into results.
+- Returns compact task result fields with `stage_name`.
+- Returns an empty array when no tasks match.
+- Rejects missing or blank query text.
+- Rejects invalid project IDs and unauthenticated requests.
+- Returns `404` for missing projects.
+- Returns `403` for users without project access.
+
 ### Task Enhancement Tests
 - Creates tasks with `start_date`.
 - Reads `start_date` through single-task and stage-task queries.
@@ -142,20 +162,42 @@ go test ./internal/testcases -run ActivityController_GetActivity
 
 Sprint 4 added a timeline endpoint for the frontend Timeline/Gantt view, a
 stage reorder endpoint for Kanban column persistence, and a paginated activity
-feed endpoint for the Dashboard. These endpoints depend on project access
-checks, database ordering, pagination, and compact response formatting, so the
-tests are split by behavior:
+feed endpoint for the Dashboard. Sprint 4 also added project-wide task search
+for the board search experience. These endpoints depend on project access
+checks, database ordering, pagination, validation, and compact response
+formatting, so the tests are split by behavior:
 
 - `timeline_test.go` covers endpoint-specific timeline behavior.
 - `task_enhancements_test.go` covers reusable task date behavior.
 - `stage_reorder_test.go` covers stage order persistence and validation.
 - `activity_endpoint_test.go` covers dashboard activity feed pagination and errors.
+- `task_search_test.go` covers project-wide task search matching and errors.
 
 This separation keeps the endpoint tests focused on the public API while the
 task enhancement tests verify that the underlying task model continues to work
 for regular board and planner flows. The stage reorder tests focus on the
 backend contract needed by the frontend drag-and-drop board. The activity
 endpoint tests focus on the Dashboard feed contract and its pagination metadata.
+The task search tests focus on the board search contract and project access
+rules.
+
+## Task Search Acceptance Coverage
+
+The task search tests map directly to the Sprint 4 acceptance criteria:
+
+| Acceptance Criteria | Test Coverage |
+|---------------------|---------------|
+| Searches tasks by title | `TestTaskService_SearchProjectTasksMatchesTitleAndDescription` |
+| Searches tasks by description | `TestTaskService_SearchProjectTasksMatchesTitleAndDescription` |
+| Searches within the requested project only | `TestTaskService_SearchProjectTasksMatchesTitleAndDescription` |
+| Returns task metadata and stage name | `TestTaskService_SearchProjectTasksMatchesTitleAndDescription` |
+| Returns plain JSON array | `TestTaskController_SearchProjectTasksReturnsPlainArray` |
+| Returns empty array for no matches | `TestTaskService_SearchProjectTasksReturnsEmptyArray` |
+| Rejects blank query text | `TestTaskService_SearchProjectTasksValidatesProjectAndAccess` |
+| Returns 404 if project not found | `TestTaskService_SearchProjectTasksValidatesProjectAndAccess` |
+| Rejects invalid project IDs | `TestTaskController_SearchProjectTasksValidatesRequest` |
+| Rejects missing auth | `TestTaskController_SearchProjectTasksValidatesRequest` |
+| Rejects users without access | `TestTaskController_SearchProjectTasksValidatesRequest` |
 
 ## Activity Feed Acceptance Coverage
 
