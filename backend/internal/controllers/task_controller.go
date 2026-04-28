@@ -265,25 +265,22 @@ func (c *TaskController) AssignTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		UserID string `json:"user_id"`
+		AssignedTo *string `json:"assigned_to"` // Can be null for unassign
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		helpers.WriteError(w, http.StatusBadRequest, "Invalid request body", helpers.ErrCodeBadRequest)
 		return
 	}
 
-	if req.UserID == "" {
-		helpers.WriteError(w, http.StatusBadRequest, "user_id is required", helpers.ErrCodeValidationFailed)
-		return
-	}
-
-	err = c.service.AssignTask(taskID, req.UserID, userID)
+	task, err := c.service.AssignTask(taskID, req.AssignedTo, userID)
 	if err != nil {
 		if se, ok := services.IsServiceError(err); ok {
 			switch se.Code {
 			case "TASK_NOT_FOUND":
 				helpers.WriteError(w, http.StatusNotFound, se.Message, helpers.ErrCodeNotFound)
-			case "ACCESS_DENIED", "USER_NOT_PROJECT_MEMBER":
+			case "INVALID_ASSIGNEE":
+				helpers.WriteError(w, http.StatusBadRequest, se.Message, helpers.ErrCodeBadRequest)
+			case "ACCESS_DENIED":
 				helpers.WriteError(w, http.StatusForbidden, se.Message, helpers.ErrCodeForbidden)
 			default:
 				helpers.WriteError(w, http.StatusInternalServerError, se.Message, helpers.ErrCodeInternalError)
@@ -294,7 +291,14 @@ func (c *TaskController) AssignTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	helpers.WriteSuccess(w, http.StatusOK, nil, "Task assigned successfully")
+	// Return full updated task
+	helpers.WriteSuccess(w, http.StatusOK, map[string]interface{}{
+		"id":          task.ID,
+		"title":       task.Title,
+		"assigned_to": task.AssignedTo,
+		"stage_id":    task.StageID,
+		"updated_at":  task.UpdatedAt,
+	}, "")
 }
 
 func taskAttributesFromRequest(req taskRequest) services.TaskAttributes {
