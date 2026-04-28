@@ -2,6 +2,49 @@
 
 ## Work Completed
 
+### Backend: Paginated Project Activity Feed
+
+Implemented and hardened the backend activity feed endpoint used by the
+Dashboard recent activity section:
+
+```http
+GET /api/projects/{id}/activity?page=1&limit=20
+Authorization: Bearer <JWT>
+```
+
+Response shape:
+
+```json
+{
+  "logs": [
+    {
+      "id": 1,
+      "user_name": "Owner User",
+      "action": "task_created",
+      "entity_type": "task",
+      "entity_title": "Created task",
+      "created_at": "2026-04-28T12:00:00Z"
+    }
+  ],
+  "total": 14,
+  "page": 1
+}
+```
+
+Behavior:
+
+- Requires JWT authentication.
+- Requires project access through project membership.
+- Supports `page` and `limit` query parameters.
+- Defaults to `page=1` and `limit=20`.
+- Clamps invalid page values to `1`.
+- Clamps invalid limit values to `20`.
+- Caps `limit` at `100`.
+- Orders activity logs by `created_at` descending.
+- Returns `404 Not Found` when the project does not exist.
+- Returns `403 Forbidden` when the user does not have project access.
+- Returns an empty `logs` array when the project has no activity.
+
 ### Backend: Project Stage Reorder Endpoint
 
 Implemented a backend endpoint to persist Kanban column order after drag-and-drop
@@ -124,6 +167,68 @@ Supported task create/update field:
 
 ## Backend API Documentation
 
+### GET `/api/projects/{id}/activity`
+
+Purpose:
+
+- Provides recent project activity for the Dashboard activity feed.
+- Gives the frontend a paginated list of project events.
+- Keeps the response focused on display fields for activity cards.
+
+Path parameters:
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `id` | integer | yes | Project ID |
+
+Query parameters:
+
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `page` | integer | no | `1` | Page number |
+| `limit` | integer | no | `20` | Number of logs per page, max `100` |
+
+Success response:
+
+- Status: `200 OK`
+- Body: activity feed object with `logs`, `total`, and `page`.
+
+Example request:
+
+```http
+GET /api/projects/10/activity?page=1&limit=20
+Authorization: Bearer <JWT>
+```
+
+Example response:
+
+```json
+{
+  "logs": [
+    {
+      "id": 42,
+      "user_name": "Owner User",
+      "action": "task_moved",
+      "entity_type": "task",
+      "entity_title": "Moved task to Done",
+      "created_at": "2026-04-28T12:00:00Z"
+    }
+  ],
+  "total": 1,
+  "page": 1
+}
+```
+
+Error responses:
+
+| Status | Scenario |
+|--------|----------|
+| `400 Bad Request` | Project ID is not numeric |
+| `401 Unauthorized` | Missing or invalid authentication |
+| `403 Forbidden` | User is not a member of the project |
+| `404 Not Found` | Project does not exist |
+| `500 Internal Server Error` | Unexpected database or service error |
+
 ### PUT `/api/projects/{id}/stages/reorder`
 
 Purpose:
@@ -225,7 +330,25 @@ Added stage-reorder-focused backend tests in:
 backend/internal/testcases/stage_reorder_test.go
 ```
 
+Added activity-endpoint-focused backend tests in:
+
+```text
+backend/internal/testcases/activity_endpoint_test.go
+```
+
 Test coverage includes:
+
+Activity feed:
+
+- Returns paginated activity logs.
+- Returns `logs`, `total`, and `page` fields.
+- Orders logs by `created_at` descending.
+- Returns the second page correctly.
+- Returns an empty `logs` array for projects with no activity.
+- Rejects invalid project IDs.
+- Rejects unauthenticated requests.
+- Returns `404` for missing projects.
+- Returns `403` for users without project access.
 
 Stage reorder:
 
@@ -266,6 +389,13 @@ cd backend
 go test ./internal/testcases -run Stage.*Reorder
 ```
 
+Run activity feed tests:
+
+```bash
+cd backend
+go test ./internal/testcases -run ActivityController_GetActivity
+```
+
 Run all backend tests:
 
 ```bash
@@ -274,6 +404,14 @@ go test ./...
 ```
 
 ## Notes For Video Demo
+
+Activity feed endpoint demo points:
+
+- Show the Dashboard activity section.
+- Explain that the frontend calls the paginated activity endpoint.
+- Show that the endpoint returns `logs`, `total`, and `page`.
+- Explain that newest project activity appears first.
+- Mention that missing projects return `404` and inaccessible projects return `403`.
 
 Stage reorder endpoint demo points:
 

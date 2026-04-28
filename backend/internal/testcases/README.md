@@ -19,6 +19,7 @@ This folder contains all unit tests for the Taskify backend, organized by functi
 | `timeline_test.go` | Timeline endpoint, project access, dated task filtering | 7 tests |
 | `task_enhancements_test.go` | Task deadline, priority, assignee, and start date behavior | 6 tests |
 | `stage_reorder_test.go` | Project stage reorder service and controller behavior | 3 tests |
+| `activity_endpoint_test.go` | Paginated project activity endpoint behavior | 4 tests |
 
 **Total: 100+ unit tests**
 
@@ -62,6 +63,12 @@ go test ./internal/testcases -run 'TaskService_Create|TaskController_Enhancement
 go test ./internal/testcases -run Stage.*Reorder
 ```
 
+### Sprint 4 Activity Feed Tests
+```bash
+# Run only the activity endpoint tests
+go test ./internal/testcases -run ActivityController_GetActivity
+```
+
 ## Test Categories
 
 ### Authentication Tests
@@ -76,6 +83,7 @@ go test ./internal/testcases -run Stage.*Reorder
 - Error response handling
 - Timeline endpoint response format and request validation
 - Stage reorder endpoint response format
+- Activity feed response format and pagination
 
 ### Model Tests
 - Structure validation
@@ -111,6 +119,17 @@ go test ./internal/testcases -run Stage.*Reorder
 - Rejects missing projects.
 - Rejects users without project access.
 
+### Activity Feed Tests
+- Returns paginated project activity logs.
+- Returns top-level `logs`, `total`, and `page` fields.
+- Orders activity by `created_at` descending.
+- Returns the second page of activity.
+- Returns an empty activity feed for projects without logs.
+- Rejects invalid project IDs.
+- Rejects unauthenticated requests.
+- Returns `404` for missing projects.
+- Returns `403` for users without project access.
+
 ### Task Enhancement Tests
 - Creates tasks with `start_date`.
 - Reads `start_date` through single-task and stage-task queries.
@@ -121,19 +140,37 @@ go test ./internal/testcases -run Stage.*Reorder
 
 ## Sprint 4 Backend Test Notes
 
-Sprint 4 added a timeline endpoint for the frontend Timeline/Gantt view and a
-stage reorder endpoint for Kanban column persistence. These endpoints depend on
-project access checks, database ordering, and compact response formatting, so
-the tests are split by behavior:
+Sprint 4 added a timeline endpoint for the frontend Timeline/Gantt view, a
+stage reorder endpoint for Kanban column persistence, and a paginated activity
+feed endpoint for the Dashboard. These endpoints depend on project access
+checks, database ordering, pagination, and compact response formatting, so the
+tests are split by behavior:
 
 - `timeline_test.go` covers endpoint-specific timeline behavior.
 - `task_enhancements_test.go` covers reusable task date behavior.
 - `stage_reorder_test.go` covers stage order persistence and validation.
+- `activity_endpoint_test.go` covers dashboard activity feed pagination and errors.
 
 This separation keeps the endpoint tests focused on the public API while the
 task enhancement tests verify that the underlying task model continues to work
 for regular board and planner flows. The stage reorder tests focus on the
-backend contract needed by the frontend drag-and-drop board.
+backend contract needed by the frontend drag-and-drop board. The activity
+endpoint tests focus on the Dashboard feed contract and its pagination metadata.
+
+## Activity Feed Acceptance Coverage
+
+The activity endpoint tests map directly to the Sprint 4 acceptance criteria:
+
+| Acceptance Criteria | Test Coverage |
+|---------------------|---------------|
+| Logs project actions | `TestActivityController_GetActivityReturnsPaginatedFeed` |
+| Paginates with page and limit | `TestActivityController_GetActivityReturnsPaginatedFeed` |
+| Returns second page correctly | `TestActivityController_GetActivityReturnsSecondPage` |
+| Orders by created_at descending | `TestActivityController_GetActivityReturnsPaginatedFeed` |
+| Returns 404 if project not found | `TestActivityController_GetActivityValidation` |
+| Rejects missing auth | `TestActivityController_GetActivityValidation` |
+| Rejects invalid project IDs | `TestActivityController_GetActivityValidation` |
+| Rejects users without access | `TestActivityController_GetActivityValidation` |
 
 ## Stage Reorder Acceptance Coverage
 
