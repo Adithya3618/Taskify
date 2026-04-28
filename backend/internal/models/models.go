@@ -41,6 +41,22 @@ type ProjectMemberAPIResponse struct {
 	Role   string `json:"role"`
 }
 
+// StageTaskCount represents tasks count for a single stage
+type StageTaskCount struct {
+	StageID   int64  `json:"stage_id"`
+	StageName string `json:"stage_name"`
+	Count     int    `json:"count"`
+}
+
+// ProjectStats represents the stats response for GET /api/projects/:id/stats
+type ProjectStats struct {
+	TotalTasks     int64            `json:"total_tasks"`
+	CompletedTasks int64            `json:"completed_tasks"`
+	OverdueTasks   int64            `json:"overdue_tasks"`
+	TasksByStage   []StageTaskCount `json:"tasks_by_stage"`
+	CompletionRate float64          `json:"completion_rate"`
+}
+
 // ActivityAction represents the type of activity action
 type ActivityAction string
 

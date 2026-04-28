@@ -168,3 +168,31 @@ func (c *ProjectController) DeleteProject(w http.ResponseWriter, r *http.Request
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// GetProjectStats handles GET /api/projects/:id/stats
+func (c *ProjectController) GetProjectStats(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		helpers.WriteError(w, http.StatusUnauthorized, "Authentication required", helpers.ErrCodeUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	id, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		helpers.WriteError(w, http.StatusBadRequest, "Invalid project ID", helpers.ErrCodeBadRequest)
+		return
+	}
+
+	stats, err := c.service.GetProjectStats(id, userID)
+	if err != nil {
+		if err.Error() == "project not found" {
+			helpers.WriteError(w, http.StatusNotFound, "project not found", helpers.ErrCodeNotFound)
+			return
+		}
+		helpers.WriteError(w, http.StatusInternalServerError, "Failed to get stats", helpers.ErrCodeInternalError)
+		return
+	}
+
+	helpers.WriteSuccess(w, http.StatusOK, stats, "")
+}

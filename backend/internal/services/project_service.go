@@ -176,3 +176,85 @@ func (s *ProjectService) DeleteProject(userID string, id int64) error {
 
 	return nil
 }
+
+// GetProjectStats retrieves project statistics (tasks, completion, etc.)
+// Authorization: user must be a member of the project (checked via project_members table)
+func (s *ProjectService) GetProjectStats(projectID int64, userID string) (*models.ProjectStats, error) {
+	// 1. Check if project exists
+	var projectExists int
+	err := s.db.QueryRow("SELECT COUNT(*) FROM projects WHERE id = ?", projectID).Scan(&projectExists)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check project: %v", err)
+	}
+	if projectExists == 0 {
+		return nil, fmt.Errorf("project not found")
+	}
+
+	// 2. Check if user is a member
+	var isMember int
+	err = s.db.QueryRow(
+		"SELECT COUNT(*) FROM project_members WHERE project_id = ? AND user_id = ?",
+		projectID, userID,
+	).Scan(&isMember)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check membership: %v", err)
+	}
+	if isMember == 0 {
+		return nil, fmt.Errorf("project not found") // Return 404 per requirement
+	}
+
+	// 3. Get total tasks, completed, and overdue in single query
+	// Note: Using final stage for completion (max position) since no status column exists
+	var totalTasks, completedTasks, overdueTasks int64
+	err = s.db.QueryRow(`
+		SELECT 
+			COUNT(*) as total,
+			COALESCE(SUM(CASE WHEN t.stage_id = (SELECT id FROM stages WHERE project_id = ? ORDER BY position DESC LIMIT 1) THEN 1 ELSE 0 END), 0) as completed,
+			COALESCE(SUM(CASE WHEN t.deadline IS NOT NULL AND t.deadline < datetime('now') AND t.stage_id != (SELECT id FROM stages WHERE project_id = ? ORDER BY position DESC LIMIT 1) THEN 1 ELSE 0 END), 0) as overdue
+		FROM tasks t
+		JOIN stages s ON t.stage_id = s.id
+		WHERE s.project_id = ?`,
+		projectID, projectID, projectID,
+	).Scan(&totalTasks, &completedTasks, &overdueTasks)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get task stats: %v", err)
+	}
+
+	// 4. Get tasks by stage (including stages with 0 tasks)
+	rows, err := s.db.Query(`
+		SELECT s.id, s.name, COALESCE(COUNT(t.id), 0) as count
+		FROM stages s
+		LEFT JOIN tasks t ON t.stage_id = s.id
+		WHERE s.project_id = ?
+		GROUP BY s.id, s.name
+		ORDER BY s.position`,
+		projectID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tasks by stage: %v", err)
+	}
+	defer rows.Close()
+
+	tasksByStage := make([]models.StageTaskCount, 0)
+	for rows.Next() {
+		var stage models.StageTaskCount
+		if err := rows.Scan(&stage.StageID, &stage.StageName, &stage.Count); err != nil {
+			return nil, fmt.Errorf("failed to scan stage: %v", err)
+		}
+		tasksByStage = append(tasksByStage, stage)
+	}
+
+	// 5. Calculate completion rate
+	var completionRate float64
+	if totalTasks > 0 {
+		completionRate = float64(completedTasks) / float64(totalTasks) * 100
+	}
+
+	return &models.ProjectStats{
+		TotalTasks:     totalTasks,
+		CompletedTasks: completedTasks,
+		OverdueTasks:   overdueTasks,
+		TasksByStage:   tasksByStage,
+		CompletionRate: completionRate,
+	}, nil
+}
