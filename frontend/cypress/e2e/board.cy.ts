@@ -5,6 +5,7 @@ import {
   makeComment,
   makeProjectMember,
   STAGE_ID,
+  STAGE_2_ID,
   TASK_ID,
   makeTask,
   makeSubtask,
@@ -275,6 +276,55 @@ describe('Board — filter panel', () => {
       .parent()
       .find('.filterChip.chip-critical')
       .should('have.class', 'active');
+  });
+});
+
+// ── Task search ────────────────────────────────────────────────────────────
+
+describe('Board — task search', () => {
+  beforeEach(() => {
+    visitBoard({
+      tasksByStageId: {
+        [STAGE_ID]: [
+          makeTask(8101, STAGE_ID, 'Write sprint demo script', 'Prepare narration notes'),
+          makeTask(8102, STAGE_ID, 'Fix login bug', 'Investigate auth timeout'),
+        ],
+        [STAGE_2_ID]: [
+          makeTask(8103, STAGE_2_ID, 'Polish board search', 'Search task cards by title'),
+        ],
+      },
+    });
+  });
+
+  it('filters task cards by title and shows the result count', () => {
+    cy.get('.searchInput').type('sprint');
+    cy.get('.searchResultCount').should('contain', '1 result');
+    cy.get('.task-card').should('have.length', 1);
+    cy.contains('.task-card .task-title', 'Write sprint demo script').should('be.visible');
+    cy.contains('.task-card .task-title', 'Fix login bug').should('not.exist');
+  });
+
+  it('filters task cards by description across columns', () => {
+    cy.get('.searchInput').type('title');
+    cy.get('.searchResultCount').should('contain', '1 result');
+    cy.get('.task-card').should('have.length', 1);
+    cy.contains('.column:not(.add-column)', 'Doing')
+      .find('.task-card .task-title')
+      .should('contain', 'Polish board search');
+  });
+
+  it('clear search restores all visible tasks', () => {
+    cy.get('.searchInput').type('auth');
+    cy.get('.task-card').should('have.length', 1);
+    cy.get('.searchClear').click();
+    cy.get('.searchResultCount').should('not.exist');
+    cy.get('.task-card').should('have.length', 3);
+  });
+
+  it('shows an empty state when no task matches the search', () => {
+    cy.get('.searchInput').type('no matching task');
+    cy.get('.searchResultCount').should('contain', '0 results');
+    cy.get('.column:not(.add-column)').first().find('.no-tasks').should('contain', 'No tasks match');
   });
 });
 

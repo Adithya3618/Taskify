@@ -1,142 +1,183 @@
-# 🚀 Project & Task Management Application
+# Taskify
 
-A modern **Project and Task Management Application** designed to help teams organize work, track progress, and communicate seamlessly — all within a single platform.
+Taskify is a full-stack project and task management application for teams that need one place to plan work, track progress, and collaborate. The app combines project boards, Kanban task stages, task details, comments, checklists, labels, notifications, activity history, and project member management.
 
-This application brings together **task tracking and real-time collaboration**, eliminating the need to switch between multiple tools. Built as part of our Software Engineering coursework, the project focuses on solving real-world team coordination challenges through a full-stack  implementation.
+## Features
 
----
+- Authentication with email/password and Google OAuth.
+- Project dashboard with owned/shared board visibility, search, and filters.
+- Kanban board with custom stages, task creation, editing, deletion, completion, and movement.
+- Task search and filter tools for title, description, completion, due date, priority, and labels.
+- Task metadata including priority, due dates, dynamic deadline escalation, notes, labels, comments, and checklist progress.
+- Project collaboration with members, invites, owner permissions, activity history, and project chat.
+- Notification center for project invites, assignments, and deadline reminders.
+- Profile page for viewing and updating account details.
+- Planner/calendar view for scheduled tasks.
 
-# 🎯 Project Motivation
+## Tech Stack
 
-In many team environments, **task tracking and communication happen across different platforms**, leading to confusion, missed updates, and reduced productivity.
+Frontend:
+- Angular 17
+- TypeScript
+- HTML/CSS
+- Jasmine/Karma unit tests
+- Cypress end-to-end tests
 
-We built this application to bring everything into one unified workspace.
+Backend:
+- Go
+- Gorilla Mux REST API
+- SQLite
+- JWT authentication
+- WebSocket project chat
+- Go unit tests
 
-## Key Objectives
-- Manage projects and tasks in a structured and organized way  
-- Visualize task progress clearly across stages  
-- Enable real-time team communication within each project  
-- Apply software engineering concepts in a practical full-stack implementation  
+## Requirements
 
----
+Install these before running the project:
 
-# ✨ Core Features
+- Node.js 20.x and npm
+- Angular CLI 17.x
+- Go 1.22 or newer
+- SQLite support for Go through `github.com/mattn/go-sqlite3`
 
-## 📋 Task Stages & Workflow
-Each project is organized into customizable stages:
-- Planned  
-- In Progress  
-- Completed  
+## Environment Setup
 
-These stages help teams monitor task progress visually.  
-Users can also create or remove stages based on project requirements.
+Backend environment variables are stored in `backend/.env`. A template is available at `backend/.env.example`.
 
----
+Required or commonly used variables:
 
-## 📝 Task Management
-Tasks are managed within stages and include:
-- Title and description  
-- Edit and delete functionality  
-- Ability to move tasks between stages  
-- Secure storage in the database  
+```bash
+JWT_SECRET=your-secure-jwt-secret
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_EMAIL=your-email@example.com
+SMTP_PASSWORD=your-app-password
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_REDIRECT_URL=http://localhost:8080/api/auth/google/callback
+GOOGLE_OAUTH_SCOPES=openid email profile
+FRONTEND_URL=http://localhost:4200
+```
 
-This structured approach improves task visibility, accountability, and workflow tracking.
+The backend creates `taskify.db` in the directory where the Go server is started.
 
----
+## Running Locally
 
-## 💬 Integrated Real-Time Chat
-Each project includes its own chat workspace for collaboration.
+Start the backend:
 
-**Features include:**
-- Real-time messaging between team members  
-- Sender name and timestamp display  
-- Communication without leaving the application  
-
-This ensures all project discussions remain organized and centralized.
-
----
-
-# 🧠 System Architecture
-
-The application follows a clean client–server architecture:
-
-
-### How it works
-- The Angular frontend handles user interface and interactions  
-- The Go backend processes requests and manages application logic  
-- SQLite securely stores project, task, and chat data  
-- Chat functionality uses WebSockets or API-based real-time communication  
-
----
-
-# 🛠️ Technology Stack
-
-## Frontend
-- Angular  
-- TypeScript  
-- HTML and CSS  
-- Component-based architecture  
-- Angular services for API and chat communication  
-
-## Backend
-- Go (Golang)  
-- RESTful APIs  
-- Real-time chat support  
-- Modular and clean code structure  
-
-## Database
-- SQLite (Relational Database)
-
----
-
-# ⚙️ Running the Project Locally
-
-## Backend Setup
-```bash ![1771628297360](image/README/1771628297360.png)![1771628300694](image/README/1771628300694.png)![1771628301067](image/README/1771628301067.png)
+```bash
 cd backend
 go mod tidy
 go run cmd/server/main.go
 ```
-## Frontend Setup
+
+The backend runs on:
+
+```text
+http://localhost:8080
+```
+
+Start the frontend in another terminal:
+
 ```bash
 cd frontend
 npm install
-ng serve
+npm start
 ```
-## Application is at 
-```bash
+
+The frontend runs on:
+
+```text
 http://localhost:4200
 ```
 
-# 🔮 Future Enhancements
-- User login and authentication system  
-- Role-based access control for teams  
-- Notifications for task updates  
-- File sharing within project chat  
-- Improved UI and mobile responsiveness  
+The Angular dev server uses `frontend/proxy.conf.json` to proxy `/api` to `http://localhost:8080` and `/ws` to `ws://localhost:8080`.
 
----
+## Using the Application
 
-# 📚 Learning Outcomes
-This project provided practical experience in:
-- Full-stack application development  
-- REST API design and integration  
-- Real-time communication systems  
-- Frontend and backend integration  
-- Building scalable and modular applications  
+1. Open `http://localhost:4200`.
+2. Create an account, log in, or use Google OAuth if Google credentials are configured.
+3. Create a project from the boards page.
+4. Open a board to create stages and tasks.
+5. Use the board controls to search tasks, filter by status, priority, due date, or label, and switch between Kanban, planner, dashboard, table, and timeline views.
+6. Open a task to edit details, add comments, manage checklist items, assign labels, and update due dates or priority.
+7. Use project settings to manage members and the activity tab to review recent project changes.
+8. Use the notification bell to review unread updates and deadline reminders.
+9. Use the profile menu to open account settings.
 
-It also helped us understand how modern project management tools function in real-world environments.
+## Testing
 
----
+Frontend unit tests:
 
-# 👥 Team Contributions
-- **Adithya** — Backend development 
-- **Nandhan** — Backend development  
-- **Meghana** — Frontend development  
-- **Sai Sreeja** — Frontend development
+```bash
+cd frontend
+npm test -- --watch=false
+```
 
----
+Targeted board unit tests:
 
-# 📄 Conclusion
-This Project & Task Management Application demonstrates how a unified platform can improve team productivity, organization, and collaboration. By combining task tracking and communication into a single system, the project reflects real-world software engineering practices and modern full-stack development.
+```bash
+cd frontend
+npm test -- --watch=false --include src/app/pages/board/board.component.spec.ts
+```
 
+Cypress end-to-end tests:
+
+```bash
+cd frontend
+npm run cy:run
+```
+
+Targeted board Cypress tests:
+
+```bash
+cd frontend
+npm run cy:run -- --spec cypress/e2e/board.cy.ts
+```
+
+Backend unit tests:
+
+```bash
+cd backend
+go test -v ./internal/testcases/... ./internal/auth/...
+```
+
+## Backend API Overview
+
+Public endpoints:
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | `/health` | Health check |
+| POST | `/api/auth/register` | Register a user |
+| POST | `/api/auth/login` | Log in with email/password |
+| POST | `/api/auth/google/id-token` | Log in with a Google ID token |
+| GET | `/api/auth/google/login` | Start Google OAuth redirect |
+| GET | `/api/auth/google/callback` | Complete Google OAuth redirect |
+| POST | `/api/auth/forgot-password` | Request password reset OTP |
+| POST | `/api/auth/verify-otp` | Verify password reset OTP |
+| POST | `/api/auth/reset-password` | Reset password |
+
+Protected endpoints require `Authorization: Bearer <jwt>`.
+
+| Resource | Endpoints |
+|----------|-----------|
+| Current user | `GET /api/auth/me` |
+| Projects | `POST /api/projects`, `GET /api/projects`, `GET /api/projects/{id}`, `PUT /api/projects/{id}`, `DELETE /api/projects/{id}` |
+| Members and invites | `POST /api/projects/{id}/members`, `GET /api/projects/{id}/members`, `DELETE /api/projects/{id}/members/{userId}`, `POST /api/projects/{id}/invites`, `GET /api/invites/{id}`, `POST /api/invites/{id}/accept` |
+| Stages | `POST /api/projects/{projectId}/stages`, `GET /api/projects/{projectId}/stages`, `GET /api/stages/{id}`, `PUT /api/stages/{id}`, `DELETE /api/stages/{id}` |
+| Tasks | `POST /api/projects/{projectId}/stages/{stageId}/tasks`, `GET /api/projects/{projectId}/stages/{stageId}/tasks`, `GET /api/tasks/{id}`, `PUT /api/tasks/{id}`, `PUT /api/tasks/{id}/move`, `DELETE /api/tasks/{id}` |
+| Comments | `POST /api/tasks/{id}/comments`, `GET /api/tasks/{id}/comments`, `PATCH /api/comments/{id}`, `DELETE /api/comments/{id}` |
+| Subtasks | `POST /api/tasks/{id}/subtasks`, `GET /api/tasks/{id}/subtasks`, `PATCH /api/subtasks/{id}`, `DELETE /api/subtasks/{id}` |
+| Messages | `POST /api/projects/{projectId}/messages`, `GET /api/projects/{projectId}/messages`, `GET /api/projects/{projectId}/messages/recent`, `DELETE /api/messages/{id}` |
+| Activity | `GET /api/projects/{id}/activity`, `GET /api/projects/{id}/activity/recent` |
+| Labels | `POST /api/projects/{id}/labels`, `GET /api/projects/{id}/labels`, `DELETE /api/labels/{id}`, `POST /api/tasks/{id}/labels`, `GET /api/tasks/{id}/labels`, `DELETE /api/tasks/{id}/labels/{labelId}` |
+| Notifications | `GET /api/notifications`, `PATCH /api/notifications/read-all`, `PATCH /api/notifications/{id}/read` |
+| Chat | `WS /ws/{projectId}` |
+
+## Team
+
+- Adithya - Backend development
+- Jyothi Nandhan Repaka - Backend development
+- Sai Meghana Barla - Frontend development
+- Sai Sreeja Chava - Frontend development
