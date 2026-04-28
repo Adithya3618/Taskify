@@ -52,7 +52,36 @@ describe('BoardComponent', () => {
     paramsSubject = new Subject();
     authSpy   = jasmine.createSpyObj('AuthService', ['getCurrentUser', 'getKnownUsers']);
     apiSpy    = jasmine.createSpyObj('ApiService', [
-      'getProject', 'getStages', 'getTasks', 'getProjects', 'userHasProjectAccess', 'seedProjectOwner', 'primeTaskComments', 'getProjectMemberCount', 'getTaskCommentCount',
+      'addProjectMember',
+      'createComment',
+      'createStage',
+      'createSubtask',
+      'createTask',
+      'deleteComment',
+      'deleteStage',
+      'deleteSubtask',
+      'deleteTask',
+      'getCachedProjectMembers',
+      'getCachedTaskComments',
+      'getComments',
+      'getProject',
+      'getProjectActivity',
+      'getProjectMemberCount',
+      'getProjectMembers',
+      'getProjects',
+      'getStages',
+      'getSubtasks',
+      'getTaskCommentCount',
+      'getTasks',
+      'moveTask',
+      'primeTaskComments',
+      'removeProjectMember',
+      'seedProjectOwner',
+      'setCachedProjectMembers',
+      'updateComment',
+      'updateSubtask',
+      'updateTask',
+      'userHasProjectAccess',
     ]);
 
     authSpy.getCurrentUser.and.returnValue(mockUser);
@@ -62,7 +91,22 @@ describe('BoardComponent', () => {
     apiSpy.getProjects.and.returnValue(of([]));
     apiSpy.userHasProjectAccess.and.returnValue(true);
     apiSpy.getProjectMemberCount.and.returnValue(1);
+    apiSpy.getProjectMembers.and.returnValue(of([
+      {
+        project_id: 1,
+        user_id: '1',
+        user_name: 'Alice',
+        user_email: 'alice@example.com',
+        role: 'owner',
+        joined_at: '',
+      }
+    ]));
+    apiSpy.getCachedProjectMembers.and.returnValue([]);
     apiSpy.getTaskCommentCount.and.returnValue(0);
+    apiSpy.getCachedTaskComments.and.returnValue([]);
+    apiSpy.getComments.and.returnValue(of([]));
+    apiSpy.getSubtasks.and.returnValue(of([]));
+    apiSpy.getProjectActivity.and.returnValue(of({ success: true, data: [], page: 1, limit: 20, total: 0 }));
 
     await TestBed.configureTestingModule({
       imports: [BoardComponent, HttpClientTestingModule, RouterTestingModule.withRoutes([])],
@@ -159,6 +203,70 @@ describe('BoardComponent', () => {
     const result = component.getFilteredTasks(stage);
     expect(result.length).toBe(1);
     expect(result[0].id).toBe(1);
+  });
+
+  // ── task search ─────────────────────────────────────────
+  it('getFilteredTasks() should filter tasks by title search', () => {
+    const stage = makeStage([
+      makeTask({ id: 1, title: 'Write release notes' }),
+      makeTask({ id: 2, title: 'Fix login bug' }),
+    ]);
+    component.activeSearchQuery = 'release';
+
+    const result = component.getFilteredTasks(stage);
+
+    expect(result.length).toBe(1);
+    expect(result[0].id).toBe(1);
+  });
+
+  it('getFilteredTasks() should filter tasks by description search', () => {
+    const stage = makeStage([
+      makeTask({ id: 1, title: 'Docs', description: 'Update onboarding checklist' }),
+      makeTask({ id: 2, title: 'Bug', description: 'Investigate auth timeout' }),
+    ]);
+    component.activeSearchQuery = 'auth';
+
+    const result = component.getFilteredTasks(stage);
+
+    expect(result.length).toBe(1);
+    expect(result[0].id).toBe(2);
+  });
+
+  it('task search should be case-insensitive and trim whitespace', () => {
+    const stage = makeStage([
+      makeTask({ id: 1, title: 'Sprint Demo Script' }),
+      makeTask({ id: 2, title: 'Backend contract review' }),
+    ]);
+    component.activeSearchQuery = '  demo  ';
+
+    const result = component.getFilteredTasks(stage);
+
+    expect(result.length).toBe(1);
+    expect(result[0].id).toBe(1);
+  });
+
+  it('totalMatchCount should count matching tasks across stages', () => {
+    component.stages = [
+      makeStage([
+        makeTask({ id: 1, title: 'Search API' }),
+        makeTask({ id: 2, title: 'Calendar polish' }),
+      ]),
+      { ...makeStage([makeTask({ id: 3, title: 'Search UI' })]), id: 2, name: 'Done' },
+    ];
+    component.activeSearchQuery = 'search';
+
+    expect(component.totalMatchCount).toBe(2);
+    expect(component.hasVisibleTasks).toBeTrue();
+  });
+
+  it('clearFilters() should clear task search state', () => {
+    component.searchQuery = 'release';
+    component.activeSearchQuery = 'release';
+
+    component.clearFilters();
+
+    expect(component.searchQuery).toBe('');
+    expect(component.activeSearchQuery).toBe('');
   });
 
   // ── openShareModal / closeShareModal ────────────────────
