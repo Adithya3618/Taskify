@@ -48,15 +48,21 @@ func (c *ActivityController) GetActivity(w http.ResponseWriter, r *http.Request)
 	}
 
 	if page := r.URL.Query().Get("page"); page != "" {
-		if p, err := strconv.Atoi(page); err == nil && p > 0 {
-			params.Page = p
+		p, err := strconv.Atoi(page)
+		if err != nil {
+			helpers.WriteError(w, http.StatusBadRequest, "Invalid page parameter", helpers.ErrCodeBadRequest)
+			return
 		}
+		params.Page = p
 	}
 
 	if limit := r.URL.Query().Get("limit"); limit != "" {
-		if l, err := strconv.Atoi(limit); err == nil && l > 0 {
-			params.Limit = l
+		l, err := strconv.Atoi(limit)
+		if err != nil {
+			helpers.WriteError(w, http.StatusBadRequest, "Invalid limit parameter", helpers.ErrCodeBadRequest)
+			return
 		}
+		params.Limit = l
 	}
 	params.Page, params.Limit = normalizeActivityPagination(params.Page, params.Limit)
 
@@ -65,15 +71,21 @@ func (c *ActivityController) GetActivity(w http.ResponseWriter, r *http.Request)
 	}
 
 	if from := r.URL.Query().Get("from"); from != "" {
-		if t, err := time.Parse(time.RFC3339, from); err == nil {
-			params.From = &t
+		t, err := time.Parse(time.RFC3339, from)
+		if err != nil {
+			helpers.WriteError(w, http.StatusBadRequest, "Invalid from date format", helpers.ErrCodeBadRequest)
+			return
 		}
+		params.From = &t
 	}
 
 	if to := r.URL.Query().Get("to"); to != "" {
-		if t, err := time.Parse(time.RFC3339, to); err == nil {
-			params.To = &t
+		t, err := time.Parse(time.RFC3339, to)
+		if err != nil {
+			helpers.WriteError(w, http.StatusBadRequest, "Invalid to date format", helpers.ErrCodeBadRequest)
+			return
 		}
+		params.To = &t
 	}
 
 	// Get activity logs
@@ -112,10 +124,14 @@ func (c *ActivityController) GetRecentActivity(w http.ResponseWriter, r *http.Re
 	// Parse limit parameter
 	limit := 20
 	if l := r.URL.Query().Get("limit"); l != "" {
-		if parsedLimit, err := strconv.Atoi(l); err == nil && parsedLimit > 0 {
-			limit = parsedLimit
+		parsedLimit, err := strconv.Atoi(l)
+		if err != nil {
+			helpers.WriteError(w, http.StatusBadRequest, "Invalid limit parameter", helpers.ErrCodeBadRequest)
+			return
 		}
+		limit = parsedLimit
 	}
+	_, limit = normalizeActivityPagination(1, limit)
 
 	// Get recent activity
 	logs, err := c.service.GetRecentActivity(projectID, requesterID, limit)

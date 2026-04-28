@@ -335,6 +335,8 @@ Error responses:
 | Status | Scenario |
 |--------|----------|
 | `400 Bad Request` | Project ID is not numeric |
+| `400 Bad Request` | `page` or `limit` parameter is provided but not a valid number |
+| `400 Bad Request` | `from` or `to` date filters are provided but not in RFC3339 format |
 | `401 Unauthorized` | Missing or invalid authentication |
 | `403 Forbidden` | User is not a member of the project |
 | `404 Not Found` | Project does not exist |

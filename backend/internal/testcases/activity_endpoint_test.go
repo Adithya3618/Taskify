@@ -278,39 +278,72 @@ func TestActivityController_GetActivityValidation(t *testing.T) {
 
 	tests := []struct {
 		name       string
+		url        string
 		userID     string
 		projectID  string
 		wantStatus int
 	}{
 		{
 			name:       "unauthenticated",
+			url:        "/api/projects/1/activity?page=1&limit=20",
 			userID:     "",
 			projectID:  toString(projectID),
 			wantStatus: http.StatusUnauthorized,
 		},
 		{
 			name:       "invalid project ID",
+			url:        "/api/projects/abc/activity?page=1&limit=20",
 			userID:     "user-1",
 			projectID:  "abc",
 			wantStatus: http.StatusBadRequest,
 		},
 		{
 			name:       "missing project",
+			url:        "/api/projects/99999/activity?page=1&limit=20",
 			userID:     "user-1",
 			projectID:  "99999",
 			wantStatus: http.StatusNotFound,
 		},
 		{
 			name:       "no project access",
+			url:        "/api/projects/1/activity?page=1&limit=20",
 			userID:     "user-2",
 			projectID:  toString(projectID),
 			wantStatus: http.StatusForbidden,
+		},
+		{
+			name:       "invalid page parameter",
+			url:        "/api/projects/1/activity?page=abc&limit=20",
+			userID:     "user-1",
+			projectID:  toString(projectID),
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "invalid limit parameter",
+			url:        "/api/projects/1/activity?page=1&limit=xyz",
+			userID:     "user-1",
+			projectID:  toString(projectID),
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "invalid from parameter",
+			url:        "/api/projects/1/activity?from=not-a-date",
+			userID:     "user-1",
+			projectID:  toString(projectID),
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "invalid to parameter",
+			url:        "/api/projects/1/activity?to=also-not-a-date",
+			userID:     "user-1",
+			projectID:  toString(projectID),
+			wantStatus: http.StatusBadRequest,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := createRequestWithUser(http.MethodGet, "/api/projects/1/activity?page=1&limit=20", nil, tt.userID)
+			req := createRequestWithUser(http.MethodGet, tt.url, nil, tt.userID)
 			req = mux.SetURLVars(req, map[string]string{"id": tt.projectID})
 			w := httptest.NewRecorder()
 
