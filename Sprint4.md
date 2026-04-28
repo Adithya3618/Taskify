@@ -79,6 +79,7 @@ Behavior:
 - Requires JWT authentication.
 - Requires project access through project membership.
 - Supports `page` and `limit` query parameters.
+- Supports optional `user_id`, `from`, and `to` filters.
 - Defaults to `page=1` and `limit=20`.
 - Clamps invalid page values to `1`.
 - Clamps invalid limit values to `20`.
@@ -137,6 +138,7 @@ Behavior:
 
 - Requires JWT authentication.
 - Requires access to the project.
+- Allows project members with access to persist the shared stage order.
 - Accepts an ordered array of stage IDs.
 - Rejects an empty `stage_ids` array.
 - Rejects duplicate stage IDs.
@@ -460,6 +462,7 @@ Task search:
 - Trims whitespace around the search query.
 - Allows project members to search shared project tasks.
 - Treats SQL wildcard characters as literal search text.
+- Verifies ordering by stage position, task position, then task ID.
 - Includes task metadata needed by frontend search results.
 - Includes `stage_name` for result grouping and display.
 - Returns an empty array when no tasks match.
@@ -477,6 +480,7 @@ Activity feed:
 - Returns the second page correctly.
 - Normalizes invalid page and limit values to defaults.
 - Caps overly large `limit` values at `100`.
+- Filters activity by user and RFC3339 date ranges.
 - Returns an empty `logs` array for projects with no activity.
 - Rejects invalid project IDs.
 - Rejects unauthenticated requests.
@@ -492,6 +496,7 @@ Stage reorder:
 - Rejects duplicate stage IDs.
 - Rejects stage IDs from a different project.
 - Rolls back partial updates when validation fails during reorder.
+- Allows project members to reorder shared project stages.
 - Rejects missing projects.
 - Rejects users without project access.
 - Confirms the controller returns `403 Forbidden` for inaccessible projects.
@@ -501,6 +506,7 @@ Timeline:
 
 - Returns tasks with deadlines.
 - Returns tasks with start dates but no deadline.
+- Confirms tasks with deadlines are ordered before start-only tasks.
 - Excludes tasks with no `start_date` and no `deadline`.
 - Includes `stage_name` in each timeline item.
 - Returns an empty array when there are no dated tasks.

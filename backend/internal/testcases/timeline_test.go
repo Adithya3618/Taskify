@@ -88,6 +88,36 @@ func TestTaskService_GetProjectTimelineReturnsEmptyArray(t *testing.T) {
 	}
 }
 
+func TestTaskService_GetProjectTimelineOrdersDeadlinesBeforeStartOnlyTasks(t *testing.T) {
+	db := newTimelineTestDB(t)
+	defer db.Close()
+
+	projectID, stageID, _ := seedTimelineProject(t, db, "user-1")
+	earlyDeadline := time.Date(2026, 5, 2, 9, 0, 0, 0, time.UTC)
+	lateDeadline := time.Date(2026, 5, 20, 9, 0, 0, 0, time.UTC)
+	startDate := time.Date(2026, 4, 1, 9, 0, 0, 0, time.UTC)
+
+	lateDeadlineID := seedTimelineTask(t, db, "user-1", stageID, "Late deadline", nil, &lateDeadline, nil, nil)
+	startOnlyID := seedTimelineTask(t, db, "user-1", stageID, "Start only", &startDate, nil, nil, nil)
+	earlyDeadlineID := seedTimelineTask(t, db, "user-1", stageID, "Early deadline", nil, &earlyDeadline, nil, nil)
+
+	service := services.NewTaskService(db, nil)
+	timeline, err := service.GetProjectTimeline("user-1", projectID)
+	if err != nil {
+		t.Fatalf("GetProjectTimeline() error = %v", err)
+	}
+
+	wantIDs := []int64{earlyDeadlineID, lateDeadlineID, startOnlyID}
+	if len(timeline) != len(wantIDs) {
+		t.Fatalf("GetProjectTimeline() len = %d, want %d: %+v", len(timeline), len(wantIDs), timeline)
+	}
+	for index, wantID := range wantIDs {
+		if timeline[index].TaskID != wantID {
+			t.Fatalf("timeline[%d].TaskID = %d, want %d; timeline=%+v", index, timeline[index].TaskID, wantID, timeline)
+		}
+	}
+}
+
 func TestTaskService_GetProjectTimelineRequiresProjectAccess(t *testing.T) {
 	db := newTimelineTestDB(t)
 	defer db.Close()

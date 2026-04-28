@@ -127,6 +127,26 @@ func TestStageService_ReorderStagesRollsBackInvalidOrder(t *testing.T) {
 	assertStageOrder(t, persisted, []int64{stageIDs[0], stageIDs[1], stageIDs[2]})
 }
 
+func TestStageService_ReorderStagesAllowsProjectMember(t *testing.T) {
+	db := newStageReorderTestDB(t)
+	defer db.Close()
+
+	projectID, stageIDs := seedStageReorderProject(t, db, "user-1")
+	if _, err := db.Exec(
+		"INSERT INTO project_members (project_id, user_id, role, invited_by) VALUES (?, ?, ?, ?)",
+		projectID, "user-2", "member", "user-1",
+	); err != nil {
+		t.Fatalf("insert project member error = %v", err)
+	}
+
+	service := services.NewStageService(db)
+	reordered, err := service.ReorderStages("user-2", projectID, []int64{stageIDs[1], stageIDs[2], stageIDs[0]})
+	if err != nil {
+		t.Fatalf("ReorderStages() error = %v", err)
+	}
+	assertStageOrder(t, reordered, []int64{stageIDs[1], stageIDs[2], stageIDs[0]})
+}
+
 func TestStageController_ReorderStagesReturnsUpdatedOrder(t *testing.T) {
 	db := newStageReorderTestDB(t)
 	defer db.Close()

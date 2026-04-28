@@ -197,6 +197,50 @@ func TestActivityController_GetActivityCapsLargeLimit(t *testing.T) {
 	}
 }
 
+func TestActivityController_GetActivityFiltersByUserAndDateRange(t *testing.T) {
+	db := newActivityEndpointTestDB(t)
+	defer db.Close()
+
+	projectID := seedActivityEndpointProject(t, db, "user-1")
+	start := time.Date(2026, 4, 20, 9, 0, 0, 0, time.UTC)
+	middle := time.Date(2026, 4, 21, 9, 0, 0, 0, time.UTC)
+	end := time.Date(2026, 4, 22, 9, 0, 0, 0, time.UTC)
+	seedActivityEndpointLog(t, db, projectID, "user-1", "Owner User", models.ActivityTaskCreated, models.EntityTask, 1, "Outside earlier", start)
+	seedActivityEndpointLog(t, db, projectID, "user-2", "Member User", models.ActivityTaskMoved, models.EntityTask, 2, "Matching member activity", middle)
+	seedActivityEndpointLog(t, db, projectID, "user-2", "Member User", models.ActivityTaskUpdated, models.EntityTask, 3, "Outside later", end)
+	seedActivityEndpointLog(t, db, projectID, "user-3", "Other User", models.ActivityCommentAdded, models.EntityComment, 4, "Wrong user", middle)
+
+	controller := newActivityEndpointController(db)
+	req := createRequestWithUser(
+		http.MethodGet,
+		"/api/projects/1/activity?user_id=user-2&from=2026-04-21T00:00:00Z&to=2026-04-21T23:59:59Z",
+		nil,
+		"user-1",
+	)
+	req = mux.SetURLVars(req, map[string]string{"id": toString(projectID)})
+	w := httptest.NewRecorder()
+
+	controller.GetActivity(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GetActivity() status = %d, want %d; body=%s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	var response activityFeedResponse
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+		t.Fatalf("decode response error = %v", err)
+	}
+	if response.Total != 1 {
+		t.Fatalf("response.Total = %d, want 1", response.Total)
+	}
+	if len(response.Logs) != 1 {
+		t.Fatalf("len(response.Logs) = %d, want 1: %+v", len(response.Logs), response.Logs)
+	}
+	if response.Logs[0].EntityTitle != "Matching member activity" {
+		t.Fatalf("entity_title = %q, want Matching member activity", response.Logs[0].EntityTitle)
+	}
+}
+
 func TestActivityController_GetActivityReturnsEmptyFeed(t *testing.T) {
 	db := newActivityEndpointTestDB(t)
 	defer db.Close()

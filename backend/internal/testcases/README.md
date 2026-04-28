@@ -16,11 +16,11 @@ This folder contains all unit tests for the Taskify backend, organized by functi
 | `services_test.go` | Service constructor tests | 4 tests |
 | `user_repository_test.go` | Database operations for users | 11 tests |
 | `database_test.go` | Database connection and SQL operations | 6 tests |
-| `timeline_test.go` | Timeline endpoint, project access, dated task filtering | 8 tests |
+| `timeline_test.go` | Timeline endpoint, project access, dated task filtering | 9 tests |
 | `task_enhancements_test.go` | Task deadline, priority, assignee, and start date behavior | 6 tests |
-| `stage_reorder_test.go` | Project stage reorder service and controller behavior | 5 tests |
-| `activity_endpoint_test.go` | Paginated project activity endpoint behavior | 6 tests |
-| `task_search_test.go` | Project-wide task search service and endpoint behavior | 7 tests |
+| `stage_reorder_test.go` | Project stage reorder service and controller behavior | 6 tests |
+| `activity_endpoint_test.go` | Paginated project activity endpoint behavior | 7 tests |
+| `task_search_test.go` | Project-wide task search service and endpoint behavior | 8 tests |
 
 **Total: 100+ unit tests**
 
@@ -114,6 +114,7 @@ go test ./internal/testcases -run Task.*Search
 - Returns tasks with `start_date`.
 - Excludes tasks without either timeline date.
 - Includes `stage_name` for frontend row grouping.
+- Orders deadline tasks before start-only tasks.
 - Allows project members to read timeline data.
 - Rejects users without project access.
 - Rejects invalid project IDs and unauthenticated requests.
@@ -126,6 +127,7 @@ go test ./internal/testcases -run Task.*Search
 - Rejects duplicate stage IDs.
 - Rejects stage IDs from another project.
 - Rolls back partial updates when an invalid stage is found.
+- Allows project members to persist stage order.
 - Rejects missing projects.
 - Rejects users without project access.
 
@@ -136,6 +138,7 @@ go test ./internal/testcases -run Task.*Search
 - Returns the second page of activity.
 - Normalizes invalid page and limit values to defaults.
 - Caps oversized limits at 100 results while preserving the total count.
+- Filters activity by user and date range.
 - Returns an empty activity feed for projects without logs.
 - Rejects invalid project IDs.
 - Rejects unauthenticated requests.
@@ -150,6 +153,7 @@ go test ./internal/testcases -run Task.*Search
 - Treats SQL wildcard characters as literal search text.
 - Prevents tasks from other projects from leaking into results.
 - Allows project members to search shared project tasks.
+- Orders results by stage position, then task position.
 - Returns compact task result fields with `stage_name`.
 - Returns an empty array when no tasks match.
 - Rejects missing or blank query text.
@@ -200,6 +204,7 @@ The task search tests map directly to the Sprint 4 acceptance criteria:
 | Trims query whitespace | `TestTaskService_SearchProjectTasksTrimsQueryAndAllowsProjectMember` |
 | Allows project members to search | `TestTaskService_SearchProjectTasksTrimsQueryAndAllowsProjectMember` |
 | Treats `%` and `_` literally | `TestTaskService_SearchProjectTasksTreatsLikeWildcardsLiterally` |
+| Orders by stage and task position | `TestTaskService_SearchProjectTasksOrdersByStageAndTaskPosition` |
 | Returns task metadata and stage name | `TestTaskService_SearchProjectTasksMatchesTitleAndDescription` |
 | Returns plain JSON array | `TestTaskController_SearchProjectTasksReturnsPlainArray` |
 | Returns empty array for no matches | `TestTaskService_SearchProjectTasksReturnsEmptyArray` |
@@ -220,6 +225,7 @@ The activity endpoint tests map directly to the Sprint 4 acceptance criteria:
 | Returns second page correctly | `TestActivityController_GetActivityReturnsSecondPage` |
 | Normalizes invalid pagination values | `TestActivityController_GetActivityNormalizesPagination` |
 | Caps large limits at 100 results | `TestActivityController_GetActivityCapsLargeLimit` |
+| Filters by user and date range | `TestActivityController_GetActivityFiltersByUserAndDateRange` |
 | Orders by created_at descending | `TestActivityController_GetActivityReturnsPaginatedFeed` |
 | Returns 404 if project not found | `TestActivityController_GetActivityValidation` |
 | Rejects missing auth | `TestActivityController_GetActivityValidation` |
@@ -238,6 +244,7 @@ The stage reorder tests map directly to the Sprint 4 acceptance criteria:
 | Returns updated stages in new order | `TestStageController_ReorderStagesReturnsUpdatedOrder` |
 | Rejects stage IDs from another project | `TestStageService_ReorderStagesRejectsInvalidRequests` |
 | Rolls back invalid reorder requests | `TestStageService_ReorderStagesRollsBackInvalidOrder` |
+| Allows project members to reorder stages | `TestStageService_ReorderStagesAllowsProjectMember` |
 | Returns error for missing project | `TestStageService_ReorderStagesRejectsInvalidRequests` |
 | Rejects invalid reorder input | `TestStageService_ReorderStagesRejectsInvalidRequests` |
 | Returns forbidden for inaccessible projects | `TestStageController_ReorderStagesValidation` |
@@ -251,6 +258,7 @@ The timeline tests map directly to the Sprint 4 acceptance criteria:
 | Returns only tasks with a deadline or start date | `TestTaskService_GetProjectTimelineFiltersDatedTasks` |
 | Includes stage name for grouping rows | `TestTaskService_GetProjectTimelineFiltersDatedTasks` |
 | Ordered by deadline ascending | `TestTaskService_GetProjectTimelineFiltersDatedTasks` |
+| Places deadline tasks before start-only tasks | `TestTaskService_GetProjectTimelineOrdersDeadlinesBeforeStartOnlyTasks` |
 | Returns empty array if no tasks have dates | `TestTaskService_GetProjectTimelineReturnsEmptyArray` |
 | Requires project access | `TestTaskService_GetProjectTimelineRequiresProjectAccess` |
 | Allows project members | `TestTaskService_GetProjectTimelineAllowsProjectMember` |

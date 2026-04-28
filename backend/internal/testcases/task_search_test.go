@@ -143,6 +143,50 @@ func TestTaskService_SearchProjectTasksTreatsLikeWildcardsLiterally(t *testing.T
 	}
 }
 
+func TestTaskService_SearchProjectTasksOrdersByStageAndTaskPosition(t *testing.T) {
+	db := newTaskSearchTestDB(t)
+	defer db.Close()
+
+	projectID, todoStageID, doneStageID := seedTaskSearchProject(t, db, "user-1")
+	reviewStageID := seedTaskSearchStage(t, db, "user-1", projectID, "Review", 1)
+	if _, err := db.Exec("UPDATE stages SET position = ? WHERE id = ?", 2, doneStageID); err != nil {
+		t.Fatalf("update done stage position error = %v", err)
+	}
+
+	todoLaterID := seedTaskSearchTask(t, db, "user-1", todoStageID, "Search todo later", "Ordering", nil, nil, nil)
+	doneID := seedTaskSearchTask(t, db, "user-1", doneStageID, "Search done", "Ordering", nil, nil, nil)
+	reviewID := seedTaskSearchTask(t, db, "user-1", reviewStageID, "Search review", "Ordering", nil, nil, nil)
+	todoFirstID := seedTaskSearchTask(t, db, "user-1", todoStageID, "Search todo first", "Ordering", nil, nil, nil)
+
+	updates := map[int64]int{
+		todoLaterID: 5,
+		todoFirstID: 1,
+		reviewID:    0,
+		doneID:      0,
+	}
+	for taskID, position := range updates {
+		if _, err := db.Exec("UPDATE tasks SET position = ? WHERE id = ?", position, taskID); err != nil {
+			t.Fatalf("update task position error = %v", err)
+		}
+	}
+
+	service := services.NewTaskService(db, nil)
+	results, err := service.SearchProjectTasks("user-1", projectID, "search")
+	if err != nil {
+		t.Fatalf("SearchProjectTasks() error = %v", err)
+	}
+
+	wantIDs := []int64{todoFirstID, todoLaterID, reviewID, doneID}
+	if len(results) != len(wantIDs) {
+		t.Fatalf("SearchProjectTasks() len = %d, want %d: %+v", len(results), len(wantIDs), results)
+	}
+	for index, wantID := range wantIDs {
+		if results[index].TaskID != wantID {
+			t.Fatalf("results[%d].TaskID = %d, want %d; results=%+v", index, results[index].TaskID, wantID, results)
+		}
+	}
+}
+
 func TestTaskController_SearchProjectTasksReturnsPlainArray(t *testing.T) {
 	db := newTaskSearchTestDB(t)
 	defer db.Close()
