@@ -159,7 +159,7 @@ func (s *CommentService) verifyTaskOwnership(userID string, taskID int64) (int64
 		FROM tasks
 		JOIN stages ON tasks.stage_id = stages.id
 		JOIN projects ON stages.project_id = projects.id
-		WHERE tasks.id = ? AND projects.user_id = ?`,
+		WHERE tasks.id = ? AND projects.owner_id = ?`,
 		taskID, userID,
 	).Scan(&taskIDFound)
 	if err == sql.ErrNoRows {

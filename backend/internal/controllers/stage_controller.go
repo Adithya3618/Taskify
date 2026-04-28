@@ -45,6 +45,7 @@ func (c *StageController) CreateStage(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Name     string `json:"name"`
 		Position int    `json:"position"`
+		IsFinal  *bool  `json:"is_final"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -57,7 +58,12 @@ func (c *StageController) CreateStage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stage, err := c.service.CreateStage(userID, projectID, req.Name, req.Position)
+	isFinal := 0
+	if req.IsFinal != nil && *req.IsFinal {
+		isFinal = 1
+	}
+
+	stage, err := c.service.CreateStage(userID, projectID, req.Name, req.Position, isFinal)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
