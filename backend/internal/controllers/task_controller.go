@@ -136,6 +136,31 @@ func (c *TaskController) GetTask(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(task)
 }
 
+// GetProjectTimeline handles GET /api/projects/:id/timeline
+func (c *TaskController) GetProjectTimeline(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	projectID, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+		return
+	}
+
+	timeline, err := c.service.GetProjectTimeline(userID, projectID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(timeline)
+}
+
 // UpdateTask handles PUT /api/tasks/:id
 func (c *TaskController) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	userID := helpers.GetUserID(r)

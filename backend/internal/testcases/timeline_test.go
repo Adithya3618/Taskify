@@ -88,6 +88,49 @@ func TestTaskService_GetProjectTimelineReturnsEmptyArray(t *testing.T) {
 	}
 }
 
+func TestTaskService_GetProjectTimelineRequiresProjectAccess(t *testing.T) {
+	db := newTimelineTestDB(t)
+	defer db.Close()
+
+	projectID, stageID, _ := seedTimelineProject(t, db, "user-1")
+	deadline := time.Date(2026, 5, 10, 9, 0, 0, 0, time.UTC)
+	seedTimelineTask(t, db, "user-1", stageID, "Private task", nil, &deadline, nil, nil)
+
+	service := services.NewTaskService(db, nil)
+	timeline, err := service.GetProjectTimeline("user-2", projectID)
+	if err == nil {
+		t.Fatal("GetProjectTimeline() error = nil, want access error")
+	}
+	if timeline != nil {
+		t.Fatalf("GetProjectTimeline() = %+v, want nil", timeline)
+	}
+}
+
+func TestTaskService_GetProjectTimelineAllowsProjectMember(t *testing.T) {
+	db := newTimelineTestDB(t)
+	defer db.Close()
+
+	projectID, stageID, _ := seedTimelineProject(t, db, "user-1")
+	if _, err := db.Exec(
+		"INSERT INTO project_members (project_id, user_id, role, invited_by) VALUES (?, ?, ?, ?)",
+		projectID, "user-2", "member", "user-1",
+	); err != nil {
+		t.Fatalf("insert project member error = %v", err)
+	}
+
+	deadline := time.Date(2026, 5, 10, 9, 0, 0, 0, time.UTC)
+	taskID := seedTimelineTask(t, db, "user-1", stageID, "Shared task", nil, &deadline, nil, nil)
+
+	service := services.NewTaskService(db, nil)
+	timeline, err := service.GetProjectTimeline("user-2", projectID)
+	if err != nil {
+		t.Fatalf("GetProjectTimeline() error = %v", err)
+	}
+	if len(timeline) != 1 || timeline[0].TaskID != taskID {
+		t.Fatalf("GetProjectTimeline() = %+v, want shared task %d", timeline, taskID)
+	}
+}
+
 func TestTaskController_GetProjectTimelineReturnsPlainArray(t *testing.T) {
 	db := newTimelineTestDB(t)
 	defer db.Close()
@@ -117,6 +160,40 @@ func TestTaskController_GetProjectTimelineReturnsPlainArray(t *testing.T) {
 	}
 	if timeline[0].TaskID != taskID {
 		t.Fatalf("response task_id = %d, want %d", timeline[0].TaskID, taskID)
+	}
+}
+
+func TestTaskController_GetProjectTimelineRejectsInvalidProjectID(t *testing.T) {
+	db := newTimelineTestDB(t)
+	defer db.Close()
+
+	service := services.NewTaskService(db, nil)
+	controller := controllers.NewTaskController(service)
+	req := createRequestWithUser(http.MethodGet, "/api/projects/not-a-number/timeline", nil, "user-1")
+	req = mux.SetURLVars(req, map[string]string{"id": "not-a-number"})
+	w := httptest.NewRecorder()
+
+	controller.GetProjectTimeline(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("GetProjectTimeline() status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
+func TestTaskController_GetProjectTimelineRequiresAuthentication(t *testing.T) {
+	db := newTimelineTestDB(t)
+	defer db.Close()
+
+	service := services.NewTaskService(db, nil)
+	controller := controllers.NewTaskController(service)
+	req := httptest.NewRequest(http.MethodGet, "/api/projects/1/timeline", nil)
+	req = mux.SetURLVars(req, map[string]string{"id": "1"})
+	w := httptest.NewRecorder()
+
+	controller.GetProjectTimeline(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("GetProjectTimeline() status = %d, want %d", w.Code, http.StatusUnauthorized)
 	}
 }
 

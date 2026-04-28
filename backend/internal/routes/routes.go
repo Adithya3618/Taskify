@@ -102,6 +102,12 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	protected.HandleFunc("/projects/{id}", projectController.UpdateProject).Methods("PUT")
 	protected.HandleFunc("/projects/{id}", projectController.DeleteProject).Methods("DELETE")
 
+	// Timeline routes (protected with project access check)
+	timelineRoutes := api.PathPrefix("/projects/{id}/timeline").Subrouter()
+	timelineRoutes.Use(jwtMiddleware)
+	timelineRoutes.Use(projectAccessMiddleware)
+	timelineRoutes.HandleFunc("", taskController.GetProjectTimeline).Methods("GET")
+
 	// Project Member routes (protected with project access check)
 	projectMemberRoutes := api.PathPrefix("/projects/{id}/members").Subrouter()
 	projectMemberRoutes.Use(jwtMiddleware)
