@@ -185,6 +185,57 @@ func (s *TaskService) GetTaskByID(userID string, id int64) (*models.Task, error)
 	return &task, nil
 }
 
+// GetProjectTimeline returns dated tasks for a project timeline view.
+func (s *TaskService) GetProjectTimeline(userID string, projectID int64) ([]models.TimelineTaskResponse, error) {
+	hasAccess, err := s.hasProjectAccess(userID, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify project access: %v", err)
+	}
+	if !hasAccess {
+		return nil, fmt.Errorf("project not found or access denied")
+	}
+
+	rows, err := s.db.Query(
+		`SELECT
+			tasks.id,
+			tasks.title,
+			tasks.stage_id,
+			stages.name,
+			tasks.start_date,
+			tasks.deadline,
+			tasks.priority,
+			tasks.assigned_to
+		FROM tasks
+		JOIN stages ON stages.id = tasks.stage_id
+		WHERE stages.project_id = ?
+			AND (tasks.start_date IS NOT NULL OR tasks.deadline IS NOT NULL)
+		ORDER BY
+			tasks.deadline IS NULL,
+			tasks.deadline ASC,
+			tasks.start_date ASC,
+			tasks.id ASC`,
+		projectID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query project timeline: %v", err)
+	}
+	defer rows.Close()
+
+	timeline := []models.TimelineTaskResponse{}
+	for rows.Next() {
+		item, err := scanTimelineTask(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan timeline task: %v", err)
+		}
+		timeline = append(timeline, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate timeline tasks: %v", err)
+	}
+
+	return timeline, nil
+}
+
 // UpdateTask updates a task (validates ownership)
 func (s *TaskService) UpdateTask(userID string, id int64, title, description string, position int, attrs TaskAttributes) (*models.Task, error) {
 	attrs, err := normalizeTaskAttributes(attrs)
@@ -201,6 +252,26 @@ func (s *TaskService) UpdateTask(userID string, id int64, title, description str
 	}
 
 	return s.GetTaskByID(userID, id)
+}
+
+func (s *TaskService) hasProjectAccess(userID string, projectID int64) (bool, error) {
+	var count int
+	err := s.db.QueryRow(
+		`SELECT COUNT(*)
+		FROM projects
+		LEFT JOIN project_members
+			ON project_members.project_id = projects.id
+			AND project_members.user_id = ?
+		WHERE projects.id = ?
+			AND (projects.owner_id = ? OR project_members.user_id IS NOT NULL)`,
+		userID,
+		projectID,
+		userID,
+	).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 // MoveTask moves a task to a different stage (validates ownership)
@@ -305,6 +376,35 @@ func scanTask(scanner taskScanner) (models.Task, error) {
 	task.AssignedTo = nullableStringPtr(assignedTo)
 
 	return task, nil
+}
+
+func scanTimelineTask(scanner taskScanner) (models.TimelineTaskResponse, error) {
+	var item models.TimelineTaskResponse
+	var startDate sql.NullTime
+	var deadline sql.NullTime
+	var priority sql.NullString
+	var assignedTo sql.NullString
+
+	err := scanner.Scan(
+		&item.TaskID,
+		&item.Title,
+		&item.StageID,
+		&item.StageName,
+		&startDate,
+		&deadline,
+		&priority,
+		&assignedTo,
+	)
+	if err != nil {
+		return models.TimelineTaskResponse{}, err
+	}
+
+	item.StartDate = nullableTimePtr(startDate)
+	item.Deadline = nullableTimePtr(deadline)
+	item.Priority = nullableStringPtr(priority)
+	item.AssignedTo = nullableStringPtr(assignedTo)
+
+	return item, nil
 }
 
 func normalizeTaskAttributes(attrs TaskAttributes) (TaskAttributes, error) {

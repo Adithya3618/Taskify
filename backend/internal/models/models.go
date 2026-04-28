@@ -169,6 +169,18 @@ type Task struct {
 	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
+// TimelineTaskResponse is the compact task shape used by the project timeline view.
+type TimelineTaskResponse struct {
+	TaskID     int64      `json:"task_id"`
+	Title      string     `json:"title"`
+	StageID    int64      `json:"stage_id"`
+	StageName  string     `json:"stage_name"`
+	StartDate  *time.Time `json:"start_date"`
+	Deadline   *time.Time `json:"deadline"`
+	Priority   *string    `json:"priority"`
+	AssignedTo *string    `json:"assigned_to"`
+}
+
 // Comment represents a task comment.
 type Comment struct {
 	ID         int64     `json:"id"`
