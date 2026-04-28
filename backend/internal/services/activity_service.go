@@ -189,6 +189,24 @@ func (s *ActivityService) LogTaskMoved(projectID int64, actorID, actorName strin
 	)
 }
 
+// LogTaskAssigned logs when a task is assigned to a user
+func (s *ActivityService) LogTaskAssigned(projectID int64, actorID, previousAssignee, newAssignee string, taskID int64) {
+	description := fmt.Sprintf("task assigned from %s to %s", previousAssignee, newAssignee)
+	if previousAssignee == "" {
+		description = fmt.Sprintf("task assigned to %s", newAssignee)
+	}
+	s.LogActivity(
+		projectID,
+		actorID,
+		"",
+		models.ActivityTaskAssigned,
+		models.EntityTask,
+		taskID,
+		description,
+		fmt.Sprintf(`{"task_id": %d, "from": "%s", "to": "%s"}`, taskID, previousAssignee, newAssignee),
+	)
+}
+
 // LogLabelCreated logs when a label is created
 func (s *ActivityService) LogLabelCreated(projectID int64, actorID, actorName string, labelID int64, labelName string) {
 	s.LogActivity(
