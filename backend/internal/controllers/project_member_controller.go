@@ -164,6 +164,7 @@ func (c *ProjectMemberController) RemoveMember(w http.ResponseWriter, r *http.Re
 }
 
 // GetMembers handles GET /api/projects/:id/members
+// Returns simple array: [{user_id, name, email, role}]
 func (c *ProjectMemberController) GetMembers(w http.ResponseWriter, r *http.Request) {
 	currentUserID := getUserIDFromContext(r)
 	if currentUserID == "" {
@@ -177,16 +178,15 @@ func (c *ProjectMemberController) GetMembers(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-
-	result, err := c.service.GetMembers(projectID, currentUserID, page, limit)
+	// No pagination - returns simple array as per API contract
+	members, err := c.service.GetMembers(projectID, currentUserID)
 	if err != nil {
 		handleServiceError(w, err)
 		return
 	}
 
-	helpers.WritePaginated(w, http.StatusOK, result.Members, result.Page, result.Limit, result.Total)
+	// Return simple JSON array
+	helpers.WriteSuccess(w, http.StatusOK, members, "")
 }
 
 // -------------------- Helpers --------------------
