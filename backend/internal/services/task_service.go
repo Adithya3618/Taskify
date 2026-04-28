@@ -16,6 +16,7 @@ type TaskService struct {
 }
 
 var ErrInvalidTaskPriority = errors.New("invalid task priority")
+var ErrInvalidDateRange = errors.New("start date cannot be after deadline")
 
 func NewTaskService(db *sql.DB, activitySvc *ActivityService) *TaskService {
 	return &TaskService{db: db, activitySvc: activitySvc}
@@ -29,6 +30,7 @@ var allowedTaskPriorities = map[string]struct{}{
 }
 
 type TaskAttributes struct {
+	StartDate  *time.Time
 	Deadline   *time.Time
 	Priority   *string
 	AssignedTo *string
@@ -68,8 +70,8 @@ func (s *TaskService) CreateTask(userID string, stageID int64, title, descriptio
 	}
 
 	result, err := s.db.Exec(
-		"INSERT INTO tasks (user_id, stage_id, title, description, position, deadline, priority, assigned_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-		userID, stageID, title, description, position, nullableTime(attrs.Deadline), nullableString(attrs.Priority), nullableString(attrs.AssignedTo),
+		"INSERT INTO tasks (user_id, stage_id, title, description, position, start_date, deadline, priority, assigned_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		userID, stageID, title, description, position, nullableTime(attrs.StartDate), nullableTime(attrs.Deadline), nullableString(attrs.Priority), nullableString(attrs.AssignedTo),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create task: %v", err)
@@ -92,6 +94,7 @@ func (s *TaskService) CreateTask(userID string, stageID int64, title, descriptio
 		Title:       title,
 		Description: description,
 		Position:    position,
+		StartDate:   attrs.StartDate,
 		Deadline:    attrs.Deadline,
 		Priority:    attrs.Priority,
 		AssignedTo:  attrs.AssignedTo,
@@ -119,6 +122,7 @@ func (s *TaskService) GetTasksByStage(userID string, stageID int64) ([]models.Ta
 			tasks.title,
 			tasks.description,
 			tasks.position,
+			tasks.start_date,
 			tasks.deadline,
 			tasks.priority,
 			tasks.assigned_to,
@@ -158,6 +162,7 @@ func (s *TaskService) GetTaskByID(userID string, id int64) (*models.Task, error)
 			tasks.title,
 			tasks.description,
 			tasks.position,
+			tasks.start_date,
 			tasks.deadline,
 			tasks.priority,
 			tasks.assigned_to,
@@ -181,6 +186,134 @@ func (s *TaskService) GetTaskByID(userID string, id int64) (*models.Task, error)
 	return &task, nil
 }
 
+// GetProjectTimeline returns dated tasks for a project timeline view.
+func (s *TaskService) GetProjectTimeline(userID string, projectID int64) ([]models.TimelineTaskResponse, error) {
+	exists, err := s.projectExists(projectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify project: %v", err)
+	}
+	if !exists {
+		return nil, &ServiceError{Code: "PROJECT_NOT_FOUND", Message: "project not found"}
+	}
+
+	hasAccess, err := s.hasProjectAccess(userID, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify project access: %v", err)
+	}
+	if !hasAccess {
+		return nil, &ServiceError{Code: "ACCESS_DENIED", Message: "access denied to this project"}
+	}
+
+	rows, err := s.db.Query(
+		`SELECT
+			tasks.id,
+			tasks.title,
+			tasks.stage_id,
+			stages.name,
+			tasks.start_date,
+			tasks.deadline,
+			tasks.priority,
+			tasks.assigned_to
+		FROM tasks
+		JOIN stages ON stages.id = tasks.stage_id
+		WHERE stages.project_id = ?
+			AND (tasks.start_date IS NOT NULL OR tasks.deadline IS NOT NULL)
+		ORDER BY
+			tasks.deadline IS NULL,
+			tasks.deadline ASC,
+			tasks.start_date ASC,
+			tasks.id ASC`,
+		projectID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query project timeline: %v", err)
+	}
+	defer rows.Close()
+
+	timeline := []models.TimelineTaskResponse{}
+	for rows.Next() {
+		item, err := scanTimelineTask(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan timeline task: %v", err)
+		}
+		timeline = append(timeline, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate timeline tasks: %v", err)
+	}
+
+	return timeline, nil
+}
+
+// SearchProjectTasks returns project tasks matching the title or description.
+func (s *TaskService) SearchProjectTasks(userID string, projectID int64, query string) ([]models.TaskSearchResult, error) {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return nil, &ServiceError{Code: "INVALID_REQUEST", Message: "query is required"}
+	}
+	if len(query) > 100 {
+		return nil, &ServiceError{Code: "INVALID_REQUEST", Message: "query is too long (max 100 characters)"}
+	}
+
+	exists, err := s.projectExists(projectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify project: %v", err)
+	}
+	if !exists {
+		return nil, &ServiceError{Code: "PROJECT_NOT_FOUND", Message: "project not found"}
+	}
+
+	hasAccess, err := s.hasProjectAccess(userID, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify project access: %v", err)
+	}
+	if !hasAccess {
+		return nil, &ServiceError{Code: "ACCESS_DENIED", Message: "access denied to this project"}
+	}
+
+	pattern := "%" + escapeLikePattern(strings.ToLower(query)) + "%"
+	rows, err := s.db.Query(
+		`SELECT
+			tasks.id,
+			tasks.title,
+			COALESCE(tasks.description, ''),
+			tasks.stage_id,
+			stages.name,
+			tasks.deadline,
+			tasks.priority,
+			tasks.assigned_to
+		FROM tasks
+		JOIN stages ON stages.id = tasks.stage_id
+		WHERE stages.project_id = ?
+			AND (
+				LOWER(tasks.title) LIKE ? ESCAPE '\'
+				OR LOWER(COALESCE(tasks.description, '')) LIKE ? ESCAPE '\'
+			)
+		ORDER BY stages.position ASC, tasks.position ASC, tasks.id ASC`,
+		projectID,
+		pattern,
+		pattern,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search project tasks: %v", err)
+	}
+	defer rows.Close()
+
+	results := []models.TaskSearchResult{}
+	for rows.Next() {
+		result, err := scanTaskSearchResult(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan task search result: %v", err)
+		}
+		results = append(results, result)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate task search results: %v", err)
+	}
+
+	return results, nil
+}
+
 // UpdateTask updates a task (validates ownership)
 func (s *TaskService) UpdateTask(userID string, id int64, title, description string, position int, attrs TaskAttributes) (*models.Task, error) {
 	attrs, err := normalizeTaskAttributes(attrs)
@@ -189,14 +322,34 @@ func (s *TaskService) UpdateTask(userID string, id int64, title, description str
 	}
 
 	_, err = s.db.Exec(
-		"UPDATE tasks SET title = ?, description = ?, position = ?, deadline = ?, priority = ?, assigned_to = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?",
-		title, description, position, nullableTime(attrs.Deadline), nullableString(attrs.Priority), nullableString(attrs.AssignedTo), id, userID,
+		"UPDATE tasks SET title = ?, description = ?, position = ?, start_date = ?, deadline = ?, priority = ?, assigned_to = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?",
+		title, description, position, nullableTime(attrs.StartDate), nullableTime(attrs.Deadline), nullableString(attrs.Priority), nullableString(attrs.AssignedTo), id, userID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update task: %v", err)
 	}
 
 	return s.GetTaskByID(userID, id)
+}
+
+func (s *TaskService) hasProjectAccess(userID string, projectID int64) (bool, error) {
+	var count int
+	err := s.db.QueryRow(
+		`SELECT COUNT(*)
+		FROM projects
+		LEFT JOIN project_members
+			ON project_members.project_id = projects.id
+			AND project_members.user_id = ?
+		WHERE projects.id = ?
+			AND (projects.owner_id = ? OR project_members.user_id IS NOT NULL)`,
+		userID,
+		projectID,
+		userID,
+	).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 // MoveTask moves a task to a different stage (validates ownership)
@@ -395,6 +548,7 @@ type taskScanner interface {
 
 func scanTask(scanner taskScanner) (models.Task, error) {
 	var task models.Task
+	var startDate sql.NullTime
 	var deadline sql.NullTime
 	var priority sql.NullString
 	var assignedTo sql.NullString
@@ -406,6 +560,7 @@ func scanTask(scanner taskScanner) (models.Task, error) {
 		&task.Title,
 		&task.Description,
 		&task.Position,
+		&startDate,
 		&deadline,
 		&priority,
 		&assignedTo,
@@ -418,11 +573,68 @@ func scanTask(scanner taskScanner) (models.Task, error) {
 		return models.Task{}, err
 	}
 
+	task.StartDate = nullableTimePtr(startDate)
 	task.Deadline = nullableTimePtr(deadline)
 	task.Priority = nullableStringPtr(priority)
 	task.AssignedTo = nullableStringPtr(assignedTo)
 
 	return task, nil
+}
+
+func scanTaskSearchResult(scanner taskScanner) (models.TaskSearchResult, error) {
+	var result models.TaskSearchResult
+	var deadline sql.NullTime
+	var priority sql.NullString
+	var assignedTo sql.NullString
+
+	err := scanner.Scan(
+		&result.TaskID,
+		&result.Title,
+		&result.Description,
+		&result.StageID,
+		&result.StageName,
+		&deadline,
+		&priority,
+		&assignedTo,
+	)
+	if err != nil {
+		return models.TaskSearchResult{}, err
+	}
+
+	result.Deadline = nullableTimePtr(deadline)
+	result.Priority = nullableStringPtr(priority)
+	result.AssignedTo = nullableStringPtr(assignedTo)
+
+	return result, nil
+}
+
+func scanTimelineTask(scanner taskScanner) (models.TimelineTaskResponse, error) {
+	var item models.TimelineTaskResponse
+	var startDate sql.NullTime
+	var deadline sql.NullTime
+	var priority sql.NullString
+	var assignedTo sql.NullString
+
+	err := scanner.Scan(
+		&item.TaskID,
+		&item.Title,
+		&item.StageID,
+		&item.StageName,
+		&startDate,
+		&deadline,
+		&priority,
+		&assignedTo,
+	)
+	if err != nil {
+		return models.TimelineTaskResponse{}, err
+	}
+
+	item.StartDate = nullableTimePtr(startDate)
+	item.Deadline = nullableTimePtr(deadline)
+	item.Priority = nullableStringPtr(priority)
+	item.AssignedTo = nullableStringPtr(assignedTo)
+
+	return item, nil
 }
 
 func normalizeTaskAttributes(attrs TaskAttributes) (TaskAttributes, error) {
@@ -447,7 +659,27 @@ func normalizeTaskAttributes(attrs TaskAttributes) (TaskAttributes, error) {
 		}
 	}
 
+	if attrs.StartDate != nil && attrs.Deadline != nil {
+		if attrs.StartDate.After(*attrs.Deadline) {
+			return TaskAttributes{}, ErrInvalidDateRange
+		}
+	}
+
 	return attrs, nil
+}
+
+func escapeLikePattern(value string) string {
+	replacer := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+	return replacer.Replace(value)
+}
+
+func (s *TaskService) projectExists(projectID int64) (bool, error) {
+	var count int
+	err := s.db.QueryRow("SELECT COUNT(*) FROM projects WHERE id = ?", projectID).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 func nullableTime(value *time.Time) interface{} {

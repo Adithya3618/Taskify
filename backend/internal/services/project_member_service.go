@@ -55,7 +55,7 @@ func (s *ProjectMemberService) CreateInvite(projectID int64, invitedBy string, e
 
 	// Calculate expiry time
 	var expiresAt time.Time
-	if expiresInHours > 0 {
+	if expiresInHours != 0 {
 		expiresAt = time.Now().Add(time.Duration(expiresInHours) * time.Hour)
 	}
 
@@ -107,7 +107,7 @@ func (s *ProjectMemberService) AcceptInviteByID(inviteID string, userID string) 
 	}
 
 	// Add user as member
-	_, err = s.pmRepo.AddMember(invite.ProjectID, userID, invite.InvitedBy, invite.Role)
+	_, err = s.pmRepo.AddMember(invite.ProjectID, userID, invite.Role, invite.InvitedBy)
 	if err != nil {
 		return nil, err
 	}

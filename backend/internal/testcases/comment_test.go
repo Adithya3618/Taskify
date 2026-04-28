@@ -49,7 +49,7 @@ func newCommentTestDB(t *testing.T) *sql.DB {
 		)`,
 		`CREATE TABLE projects (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			user_id TEXT,
+			owner_id TEXT,
 			name TEXT NOT NULL,
 			description TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -123,7 +123,7 @@ func seedCommentFixtures(t *testing.T, db *sql.DB) (string, int64) {
 	}
 
 	projRes, err := db.Exec(
-		"INSERT INTO projects (user_id, name, description) VALUES (?, ?, ?)",
+		"INSERT INTO projects (owner_id, name, description) VALUES (?, ?, ?)",
 		userID, "Project", "Desc",
 	)
 	if err != nil {
@@ -278,9 +278,12 @@ func TestCommentService_UpdateComment_EmptyContentRejected(t *testing.T) {
 	userID, taskID := seedCommentFixtures(t, db)
 	svc := services.NewCommentService(db)
 
-	created, _ := svc.CreateComment(userID, taskID, "Original")
+	created, err := svc.CreateComment(userID, taskID, "Original")
+	if err != nil {
+		t.Fatalf("setup CreateComment error: %v", err)
+	}
 
-	_, err := svc.UpdateComment(userID, created.ID, "")
+	_, err = svc.UpdateComment(userID, created.ID, "")
 	if err != services.ErrCommentContentRequired {
 		t.Fatalf("UpdateComment() error = %v, want %v", err, services.ErrCommentContentRequired)
 	}
@@ -291,9 +294,12 @@ func TestCommentService_UpdateComment_OtherUserCannotEdit(t *testing.T) {
 	userID, taskID := seedCommentFixtures(t, db)
 	svc := services.NewCommentService(db)
 
-	created, _ := svc.CreateComment(userID, taskID, "Owner comment")
+	created, err := svc.CreateComment(userID, taskID, "Owner comment")
+	if err != nil {
+		t.Fatalf("setup CreateComment error: %v", err)
+	}
 
-	_, err := svc.UpdateComment("other-user", created.ID, "Hijacked")
+	_, err = svc.UpdateComment("other-user", created.ID, "Hijacked")
 	if err == nil {
 		t.Fatal("UpdateComment() error = nil, want access denied error")
 	}
@@ -307,7 +313,10 @@ func TestCommentService_DeleteComment_Success(t *testing.T) {
 	userID, taskID := seedCommentFixtures(t, db)
 	svc := services.NewCommentService(db)
 
-	created, _ := svc.CreateComment(userID, taskID, "To delete")
+	created, err := svc.CreateComment(userID, taskID, "To delete")
+	if err != nil {
+		t.Fatalf("setup CreateComment error: %v", err)
+	}
 
 	if err := svc.DeleteComment(userID, created.ID); err != nil {
 		t.Fatalf("DeleteComment() error = %v", err)
@@ -324,9 +333,12 @@ func TestCommentService_DeleteComment_OtherUserCannotDelete(t *testing.T) {
 	userID, taskID := seedCommentFixtures(t, db)
 	svc := services.NewCommentService(db)
 
-	created, _ := svc.CreateComment(userID, taskID, "Owner comment")
+	created, err := svc.CreateComment(userID, taskID, "Owner comment")
+	if err != nil {
+		t.Fatalf("setup CreateComment error: %v", err)
+	}
 
-	err := svc.DeleteComment("other-user", created.ID)
+	err = svc.DeleteComment("other-user", created.ID)
 	if err == nil {
 		t.Fatal("DeleteComment() error = nil, want access denied error")
 	}

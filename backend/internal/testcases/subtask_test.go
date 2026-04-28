@@ -49,7 +49,7 @@ func newSubtaskTestDB(t *testing.T) *sql.DB {
 		)`,
 		`CREATE TABLE projects (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			user_id TEXT,
+			owner_id TEXT,
 			name TEXT NOT NULL,
 			description TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -115,7 +115,7 @@ func seedSubtaskFixtures(t *testing.T, db *sql.DB, userID string) int64 {
 	t.Helper()
 
 	projRes, err := db.Exec(
-		"INSERT INTO projects (user_id, name, description) VALUES (?, ?, ?)",
+		"INSERT INTO projects (owner_id, name, description) VALUES (?, ?, ?)",
 		userID, "Project", "Desc",
 	)
 	if err != nil {

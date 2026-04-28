@@ -130,6 +130,23 @@ type ActivityLogResponse struct {
 	CreatedAt   time.Time      `json:"created_at"`
 }
 
+// ActivityFeedLog is the compact response shape for dashboard activity feeds.
+type ActivityFeedLog struct {
+	ID          int64          `json:"id"`
+	UserName    string         `json:"user_name,omitempty"`
+	Action      ActivityAction `json:"action"`
+	EntityType  EntityType     `json:"entity_type"`
+	EntityTitle string         `json:"entity_title"`
+	CreatedAt   time.Time      `json:"created_at"`
+}
+
+// ActivityFeedResponse is the paginated project activity response.
+type ActivityFeedResponse struct {
+	Logs  []ActivityFeedLog `json:"logs"`
+	Total int64             `json:"total"`
+	Page  int               `json:"page"`
+}
+
 // Permission constants for project access
 const (
 	PermissionViewProject   = "view_project"
@@ -185,6 +202,7 @@ type Task struct {
 	Title          string     `json:"title"`
 	Description    string     `json:"description"`
 	Position       int        `json:"position"`
+	StartDate      *time.Time `json:"start_date"`
 	Deadline       *time.Time `json:"deadline"`
 	Priority       *string    `json:"priority"`
 	AssignedTo     *string    `json:"assigned_to"`
@@ -192,6 +210,30 @@ type Task struct {
 	CompletedCount int        `json:"completed_count"`
 	CreatedAt      time.Time  `json:"created_at"`
 	UpdatedAt      time.Time  `json:"updated_at"`
+}
+
+// TimelineTaskResponse is the compact task shape used by the project timeline view.
+type TimelineTaskResponse struct {
+	TaskID     int64      `json:"task_id"`
+	Title      string     `json:"title"`
+	StageID    int64      `json:"stage_id"`
+	StageName  string     `json:"stage_name"`
+	StartDate  *time.Time `json:"start_date"`
+	Deadline   *time.Time `json:"deadline"`
+	Priority   *string    `json:"priority"`
+	AssignedTo *string    `json:"assigned_to"`
+}
+
+// TaskSearchResult is the compact task shape used by project-wide search.
+type TaskSearchResult struct {
+	TaskID      int64      `json:"task_id"`
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	StageID     int64      `json:"stage_id"`
+	StageName   string     `json:"stage_name"`
+	Deadline    *time.Time `json:"deadline"`
+	Priority    *string    `json:"priority"`
+	AssignedTo  *string    `json:"assigned_to"`
 }
 
 // Comment represents a task comment.

@@ -51,20 +51,21 @@ func newProjectMemberTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to create project_members table: %v", err)
 	}
 
-	// Create invites table
+	// Create project_invites table
 	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS invites (
+		CREATE TABLE IF NOT EXISTS project_invites (
 			id TEXT PRIMARY KEY,
 			project_id INTEGER NOT NULL,
 			invited_by TEXT NOT NULL,
-			role TEXT DEFAULT 'member',
-			status TEXT DEFAULT 'pending',
+			role TEXT NOT NULL DEFAULT 'member',
+			status TEXT NOT NULL DEFAULT 'pending',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			expires_at DATETIME,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			accepted_by TEXT
 		)
 	`)
 	if err != nil {
-		t.Fatalf("Failed to create invites table: %v", err)
+		t.Fatalf("Failed to create project_invites table: %v", err)
 	}
 
 	// Create users table

@@ -99,6 +99,39 @@ func (c *StageController) GetStagesByProject(w http.ResponseWriter, r *http.Requ
 	json.NewEncoder(w).Encode(stages)
 }
 
+// ReorderStages handles PUT /api/projects/:id/stages/reorder
+func (c *StageController) ReorderStages(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	projectID, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		StageIDs []int64 `json:"stage_ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	stages, err := c.service.ReorderStages(userID, projectID, req.StageIDs)
+	if err != nil {
+		handleServiceError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(stages)
+}
+
 // GetStage handles GET /api/stages/:id
 func (c *StageController) GetStage(w http.ResponseWriter, r *http.Request) {
 	userID := helpers.GetUserID(r)

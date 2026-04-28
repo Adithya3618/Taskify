@@ -1,11 +1,13 @@
 package controllers
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
 
 	"backend/internal/helpers"
+	"backend/internal/models"
 	"backend/internal/repository"
 	"backend/internal/services"
 
@@ -46,31 +48,44 @@ func (c *ActivityController) GetActivity(w http.ResponseWriter, r *http.Request)
 	}
 
 	if page := r.URL.Query().Get("page"); page != "" {
-		if p, err := strconv.Atoi(page); err == nil && p > 0 {
-			params.Page = p
+		p, err := strconv.Atoi(page)
+		if err != nil {
+			helpers.WriteError(w, http.StatusBadRequest, "Invalid page parameter", helpers.ErrCodeBadRequest)
+			return
 		}
+		params.Page = p
 	}
 
 	if limit := r.URL.Query().Get("limit"); limit != "" {
-		if l, err := strconv.Atoi(limit); err == nil && l > 0 {
-			params.Limit = l
+		l, err := strconv.Atoi(limit)
+		if err != nil {
+			helpers.WriteError(w, http.StatusBadRequest, "Invalid limit parameter", helpers.ErrCodeBadRequest)
+			return
 		}
+		params.Limit = l
 	}
+	params.Page, params.Limit = normalizeActivityPagination(params.Page, params.Limit)
 
 	if userID := r.URL.Query().Get("user_id"); userID != "" {
 		params.UserID = userID
 	}
 
 	if from := r.URL.Query().Get("from"); from != "" {
-		if t, err := time.Parse(time.RFC3339, from); err == nil {
-			params.From = &t
+		t, err := time.Parse(time.RFC3339, from)
+		if err != nil {
+			helpers.WriteError(w, http.StatusBadRequest, "Invalid from date format", helpers.ErrCodeBadRequest)
+			return
 		}
+		params.From = &t
 	}
 
 	if to := r.URL.Query().Get("to"); to != "" {
-		if t, err := time.Parse(time.RFC3339, to); err == nil {
-			params.To = &t
+		t, err := time.Parse(time.RFC3339, to)
+		if err != nil {
+			helpers.WriteError(w, http.StatusBadRequest, "Invalid to date format", helpers.ErrCodeBadRequest)
+			return
 		}
+		params.To = &t
 	}
 
 	// Get activity logs
@@ -80,7 +95,13 @@ func (c *ActivityController) GetActivity(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	helpers.WritePaginated(w, http.StatusOK, logs, params.Page, params.Limit, total)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(models.ActivityFeedResponse{
+		Logs:  toActivityFeedLogs(logs),
+		Total: total,
+		Page:  params.Page,
+	})
 }
 
 // GetRecentActivity handles GET /api/projects/:id/activity/recent
@@ -103,10 +124,14 @@ func (c *ActivityController) GetRecentActivity(w http.ResponseWriter, r *http.Re
 	// Parse limit parameter
 	limit := 20
 	if l := r.URL.Query().Get("limit"); l != "" {
-		if parsedLimit, err := strconv.Atoi(l); err == nil && parsedLimit > 0 {
-			limit = parsedLimit
+		parsedLimit, err := strconv.Atoi(l)
+		if err != nil {
+			helpers.WriteError(w, http.StatusBadRequest, "Invalid limit parameter", helpers.ErrCodeBadRequest)
+			return
 		}
+		limit = parsedLimit
 	}
+	_, limit = normalizeActivityPagination(1, limit)
 
 	// Get recent activity
 	logs, err := c.service.GetRecentActivity(projectID, requesterID, limit)
@@ -116,4 +141,32 @@ func (c *ActivityController) GetRecentActivity(w http.ResponseWriter, r *http.Re
 	}
 
 	helpers.WriteSuccess(w, http.StatusOK, logs, "")
+}
+
+func toActivityFeedLogs(logs []models.ActivityLogResponse) []models.ActivityFeedLog {
+	feedLogs := make([]models.ActivityFeedLog, 0, len(logs))
+	for _, log := range logs {
+		feedLogs = append(feedLogs, models.ActivityFeedLog{
+			ID:          log.ID,
+			UserName:    log.UserName,
+			Action:      log.Action,
+			EntityType:  log.EntityType,
+			EntityTitle: log.Description,
+			CreatedAt:   log.CreatedAt,
+		})
+	}
+	return feedLogs
+}
+
+func normalizeActivityPagination(page, limit int) (int, int) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	return page, limit
 }

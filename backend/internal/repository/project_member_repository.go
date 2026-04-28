@@ -31,10 +31,12 @@ func (r *ProjectMemberRepository) AddMember(projectID int64, userID, role, invit
 		}
 	}()
 
-	// Check if member already exists (with lock)
+	// Check if member already exists inside the transaction. SQLite does not
+	// support SELECT ... FOR UPDATE; the UNIQUE constraint still protects
+	// against concurrent duplicate inserts.
 	var existingID int64
 	err = tx.QueryRow(
-		"SELECT id FROM project_members WHERE project_id = ? AND user_id = ? FOR UPDATE",
+		"SELECT id FROM project_members WHERE project_id = ? AND user_id = ?",
 		projectID, userID,
 	).Scan(&existingID)
 	if err != sql.ErrNoRows {
@@ -63,8 +65,16 @@ func (r *ProjectMemberRepository) AddMember(projectID int64, userID, role, invit
 		"role": role, "invited_by": invitedBy,
 	})
 	_, err = tx.Exec(
-		"INSERT INTO activity_logs (project_id, user_id, action, target_user, details, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-		projectID, invitedBy, models.ActivityMemberAdded, userID, string(details), time.Now(),
+		`INSERT INTO activity_logs
+			(project_id, user_id, action, entity_type, description, details, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		projectID,
+		invitedBy,
+		models.ActivityMemberAdded,
+		models.EntityMember,
+		fmt.Sprintf("Added member %s", userID),
+		string(details),
+		time.Now(),
 	)
 	if err != nil {
 		// Activity logging is non-critical, log but continue
@@ -97,10 +107,11 @@ func (r *ProjectMemberRepository) RemoveMember(projectID int64, userID, removedB
 		}
 	}()
 
-	// Check if member exists (with lock)
+	// Check if member exists inside the transaction. SQLite does not support
+	// SELECT ... FOR UPDATE.
 	var existingRole string
 	err = tx.QueryRow(
-		"SELECT role FROM project_members WHERE project_id = ? AND user_id = ? FOR UPDATE",
+		"SELECT role FROM project_members WHERE project_id = ? AND user_id = ?",
 		projectID, userID,
 	).Scan(&existingRole)
 	if err == sql.ErrNoRows {
@@ -126,8 +137,15 @@ func (r *ProjectMemberRepository) RemoveMember(projectID int64, userID, removedB
 
 	// Log activity
 	_, err = tx.Exec(
-		"INSERT INTO activity_logs (project_id, user_id, action, target_user, created_at) VALUES (?, ?, ?, ?, ?)",
-		projectID, removedBy, models.ActivityMemberRemoved, userID, time.Now(),
+		`INSERT INTO activity_logs
+			(project_id, user_id, action, entity_type, description, created_at)
+		VALUES (?, ?, ?, ?, ?, ?)`,
+		projectID,
+		removedBy,
+		models.ActivityMemberRemoved,
+		models.EntityMember,
+		fmt.Sprintf("Removed member %s", userID),
+		time.Now(),
 	)
 	if err != nil {
 		fmt.Printf("Warning: failed to log activity: %v\n", err)
@@ -143,7 +161,7 @@ func (r *ProjectMemberRepository) RemoveMember(projectID int64, userID, removedB
 // GetMembers retrieves all members of a project (without pagination)
 func (r *ProjectMemberRepository) GetMembers(projectID int64) ([]models.ProjectMember, error) {
 	rows, err := r.db.Query(`
-		SELECT id, project_id, user_id, role, invited_by, joined_at 
+		SELECT id, project_id, user_id, role, COALESCE(invited_by, ''), joined_at 
 		FROM project_members 
 		WHERE project_id = ? 
 		ORDER BY joined_at ASC
@@ -194,7 +212,7 @@ func (r *ProjectMemberRepository) GetMembersPaginated(projectID int64, page, lim
 
 	// Get paginated results
 	rows, err := r.db.Query(`
-		SELECT id, project_id, user_id, role, invited_by, joined_at 
+		SELECT id, project_id, user_id, role, COALESCE(invited_by, ''), joined_at 
 		FROM project_members 
 		WHERE project_id = ? 
 		ORDER BY joined_at ASC
@@ -223,7 +241,7 @@ func (r *ProjectMemberRepository) GetMembersPaginated(projectID int64, page, lim
 // GetMembersWithUserInfo retrieves all members with their user information (without pagination)
 func (r *ProjectMemberRepository) GetMembersWithUserInfo(projectID int64) ([]models.ProjectMemberResponse, error) {
 	rows, err := r.db.Query(`
-		SELECT pm.id, pm.project_id, pm.user_id, COALESCE(u.name, ''), COALESCE(u.email, ''), pm.role, pm.invited_by, pm.joined_at 
+		SELECT pm.id, pm.project_id, pm.user_id, COALESCE(u.name, ''), COALESCE(u.email, ''), pm.role, COALESCE(pm.invited_by, ''), pm.joined_at 
 		FROM project_members pm
 		LEFT JOIN users u ON pm.user_id = u.id
 		WHERE pm.project_id = ? 
@@ -278,7 +296,7 @@ func (r *ProjectMemberRepository) GetMembersWithUserInfoPaginated(projectID int6
 
 func (r *ProjectMemberRepository) getMembersWithUserInfoNoPagination(projectID int64, total int64) ([]models.ProjectMemberResponse, int64, error) {
 	rows, err := r.db.Query(`
-		SELECT pm.id, pm.project_id, pm.user_id, COALESCE(u.name, ''), COALESCE(u.email, ''), pm.role, pm.invited_by, pm.joined_at 
+		SELECT pm.id, pm.project_id, pm.user_id, COALESCE(u.name, ''), COALESCE(u.email, ''), pm.role, COALESCE(pm.invited_by, ''), pm.joined_at 
 		FROM project_members pm
 		LEFT JOIN users u ON pm.user_id = u.id
 		WHERE pm.project_id = ? 
@@ -306,7 +324,7 @@ func (r *ProjectMemberRepository) getMembersWithUserInfoNoPagination(projectID i
 
 func (r *ProjectMemberRepository) getMembersWithUserInfoPaginated(projectID int64, limit, offset int, total int64) ([]models.ProjectMemberResponse, int64, error) {
 	rows, err := r.db.Query(`
-		SELECT pm.id, pm.project_id, pm.user_id, COALESCE(u.name, ''), COALESCE(u.email, ''), pm.role, pm.invited_by, pm.joined_at 
+		SELECT pm.id, pm.project_id, pm.user_id, COALESCE(u.name, ''), COALESCE(u.email, ''), pm.role, COALESCE(pm.invited_by, ''), pm.joined_at 
 		FROM project_members pm
 		LEFT JOIN users u ON pm.user_id = u.id
 		WHERE pm.project_id = ? 

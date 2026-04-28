@@ -22,6 +22,7 @@ type taskRequest struct {
 	Title       string     `json:"title"`
 	Description string     `json:"description"`
 	Position    int        `json:"position"`
+	StartDate   *time.Time `json:"start_date"`
 	Deadline    *time.Time `json:"deadline"`
 	Priority    *string    `json:"priority"`
 	AssignedTo  *string    `json:"assigned_to"`
@@ -29,6 +30,7 @@ type taskRequest struct {
 
 type taskUpdateRequest struct {
 	taskRequest
+	StartDateProvided  bool
 	DeadlineProvided   bool
 	PriorityProvided   bool
 	AssignedToProvided bool
@@ -66,7 +68,7 @@ func (c *TaskController) CreateTask(w http.ResponseWriter, r *http.Request) {
 
 	task, err := c.service.CreateTask(userID, stageID, req.Title, req.Description, req.Position, taskAttributesFromRequest(req))
 	if err != nil {
-		if errors.Is(err, services.ErrInvalidTaskPriority) {
+		if errors.Is(err, services.ErrInvalidTaskPriority) || errors.Is(err, services.ErrInvalidDateRange) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -134,6 +136,56 @@ func (c *TaskController) GetTask(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(task)
 }
 
+// GetProjectTimeline handles GET /api/projects/:id/timeline
+func (c *TaskController) GetProjectTimeline(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	projectID, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil || projectID <= 0 {
+		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+		return
+	}
+
+	timeline, err := c.service.GetProjectTimeline(userID, projectID)
+	if err != nil {
+		handleServiceError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(timeline)
+}
+
+// SearchProjectTasks handles GET /api/projects/:id/tasks/search?q=
+func (c *TaskController) SearchProjectTasks(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	projectID, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+		return
+	}
+
+	results, err := c.service.SearchProjectTasks(userID, projectID, r.URL.Query().Get("q"))
+	if err != nil {
+		handleServiceError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(results)
+}
+
 // UpdateTask handles PUT /api/tasks/:id
 func (c *TaskController) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	userID := helpers.GetUserID(r)
@@ -169,7 +221,7 @@ func (c *TaskController) UpdateTask(w http.ResponseWriter, r *http.Request) {
 
 	task, err := c.service.UpdateTask(userID, id, req.Title, req.Description, req.Position, attrs)
 	if err != nil {
-		if errors.Is(err, services.ErrInvalidTaskPriority) {
+		if errors.Is(err, services.ErrInvalidTaskPriority) || errors.Is(err, services.ErrInvalidDateRange) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -303,6 +355,7 @@ func (c *TaskController) AssignTask(w http.ResponseWriter, r *http.Request) {
 
 func taskAttributesFromRequest(req taskRequest) services.TaskAttributes {
 	return services.TaskAttributes{
+		StartDate:  req.StartDate,
 		Deadline:   req.Deadline,
 		Priority:   req.Priority,
 		AssignedTo: req.AssignedTo,
@@ -311,11 +364,15 @@ func taskAttributesFromRequest(req taskRequest) services.TaskAttributes {
 
 func mergeTaskAttributes(existing *models.Task, req taskUpdateRequest) services.TaskAttributes {
 	attrs := services.TaskAttributes{
+		StartDate:  existing.StartDate,
 		Deadline:   existing.Deadline,
 		Priority:   existing.Priority,
 		AssignedTo: existing.AssignedTo,
 	}
 
+	if req.StartDateProvided {
+		attrs.StartDate = req.StartDate
+	}
 	if req.DeadlineProvided {
 		attrs.Deadline = req.Deadline
 	}
@@ -351,6 +408,7 @@ func decodeTaskUpdateRequest(r *http.Request) (taskUpdateRequest, error) {
 		return taskUpdateRequest{}, err
 	}
 
+	_, req.StartDateProvided = raw["start_date"]
 	_, req.DeadlineProvided = raw["deadline"]
 	_, req.PriorityProvided = raw["priority"]
 	_, req.AssignedToProvided = raw["assigned_to"]

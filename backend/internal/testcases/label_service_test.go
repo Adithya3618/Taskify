@@ -225,9 +225,12 @@ func TestLabelRepository_DeleteLabel(t *testing.T) {
 	}
 
 	// Try to get the deleted label
-	_, err = repo.GetLabelByID(created.ID)
-	if err != sql.ErrNoRows {
-		t.Errorf("GetLabelByID() after delete should return ErrNoRows, got %v", err)
+	fetched, err := repo.GetLabelByID(created.ID)
+	if err != nil {
+		t.Errorf("GetLabelByID() after delete error = %v, want nil", err)
+	}
+	if fetched != nil {
+		t.Errorf("GetLabelByID() after delete = %+v, want nil", fetched)
 	}
 }
 

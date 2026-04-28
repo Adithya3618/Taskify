@@ -111,6 +111,18 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	protected.HandleFunc("/projects/{id}", projectController.UpdateProject).Methods("PUT")
 	protected.HandleFunc("/projects/{id}", projectController.DeleteProject).Methods("DELETE")
 
+	// Timeline routes (protected with project access check)
+	timelineRoutes := api.PathPrefix("/projects/{id}/timeline").Subrouter()
+	timelineRoutes.Use(jwtMiddleware)
+	timelineRoutes.Use(projectAccessMiddleware)
+	timelineRoutes.HandleFunc("", taskController.GetProjectTimeline).Methods("GET")
+
+	// Project task search routes (protected with project access check)
+	taskSearchRoutes := api.PathPrefix("/projects/{id}/tasks/search").Subrouter()
+	taskSearchRoutes.Use(jwtMiddleware)
+	taskSearchRoutes.Use(projectAccessMiddleware)
+	taskSearchRoutes.HandleFunc("", taskController.SearchProjectTasks).Methods("GET")
+
 	// Project Member routes (protected with project access check)
 	projectMemberRoutes := api.PathPrefix("/projects/{id}/members").Subrouter()
 	projectMemberRoutes.Use(jwtMiddleware)
@@ -130,6 +142,11 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	protected.HandleFunc("/invites/{id}/accept", projectMemberController.AcceptInvite).Methods("POST")
 
 	// Stage routes (protected)
+	stageReorderRoutes := api.PathPrefix("/projects/{id}/stages/reorder").Subrouter()
+	stageReorderRoutes.Use(jwtMiddleware)
+	stageReorderRoutes.Use(projectAccessMiddleware)
+	stageReorderRoutes.HandleFunc("", stageController.ReorderStages).Methods("PUT")
+
 	protected.HandleFunc("/projects/{projectId}/stages", stageController.CreateStage).Methods("POST")
 	protected.HandleFunc("/projects/{projectId}/stages", stageController.GetStagesByProject).Methods("GET")
 	protected.HandleFunc("/stages/{id}", stageController.GetStage).Methods("GET")

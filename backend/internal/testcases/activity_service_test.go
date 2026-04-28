@@ -18,6 +18,7 @@ func newActivityTestDB(t *testing.T) *sql.DB {
 	if err != nil {
 		t.Fatalf("Failed to open test database: %v", err)
 	}
+	db.SetMaxOpenConns(1)
 
 	// Create activity_logs table
 	_, err = db.Exec(`
@@ -211,15 +212,15 @@ func TestActivityRepository_GetActivityLogsByProject_Pagination(t *testing.T) {
 		t.Errorf("GetActivityLogsByProject() page 2 len = %v, want 3", len(logs))
 	}
 
-	// Get page 4 (should be empty)
-	params.Page = 4
+	// Get page 5 (should be empty)
+	params.Page = 5
 	logs, _, err = repo.GetActivityLogsByProject(params)
 	if err != nil {
-		t.Fatalf("GetActivityLogsByProject() page 4 error = %v", err)
+		t.Fatalf("GetActivityLogsByProject() page 5 error = %v", err)
 	}
 
 	if len(logs) != 0 {
-		t.Errorf("GetActivityLogsByProject() page 4 len = %v, want 0", len(logs))
+		t.Errorf("GetActivityLogsByProject() page 5 len = %v, want 0", len(logs))
 	}
 }
 
