@@ -41,7 +41,7 @@ func (s *TaskService) verifyStageOwnership(userID string, stageID int64) (int64,
 		SELECT stages.project_id 
 		FROM stages 
 		JOIN projects ON stages.project_id = projects.id 
-		WHERE stages.id = ? AND projects.user_id = ?`, stageID, userID).Scan(&projectID)
+		WHERE stages.id = ? AND projects.owner_id = ?`, stageID, userID).Scan(&projectID)
 	if err == sql.ErrNoRows {
 		return 0, nil
 	}

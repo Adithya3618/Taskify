@@ -119,7 +119,7 @@ func (s *SubtaskService) GetSubtaskByID(userID string, subtaskID int64) (*models
 		JOIN tasks ON subtasks.task_id = tasks.id
 		JOIN stages ON tasks.stage_id = stages.id
 		JOIN projects ON stages.project_id = projects.id
-		WHERE subtasks.id = ? AND projects.user_id = ?`,
+		WHERE subtasks.id = ? AND projects.owner_id = ?`,
 		subtaskID, userID,
 	)
 
@@ -251,7 +251,7 @@ func (s *SubtaskService) verifyTaskOwnership(q queryable, userID string, taskID 
 		FROM tasks
 		JOIN stages ON tasks.stage_id = stages.id
 		JOIN projects ON stages.project_id = projects.id
-		WHERE tasks.id = ? AND projects.user_id = ?`,
+		WHERE tasks.id = ? AND projects.owner_id = ?`,
 		taskID, userID,
 	).Scan(&taskIDFound)
 	if err == sql.ErrNoRows {
@@ -270,7 +270,7 @@ func (s *SubtaskService) getSubtaskByIDForUpdate(tx *sql.Tx, userID string, subt
 		JOIN tasks ON subtasks.task_id = tasks.id
 		JOIN stages ON tasks.stage_id = stages.id
 		JOIN projects ON stages.project_id = projects.id
-		WHERE subtasks.id = ? AND projects.user_id = ?`,
+		WHERE subtasks.id = ? AND projects.owner_id = ?`,
 		subtaskID, userID,
 	)
 

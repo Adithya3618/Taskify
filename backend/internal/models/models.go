@@ -172,6 +172,7 @@ type Stage struct {
 	ProjectID int64     `json:"project_id"`
 	Name      string    `json:"name"`
 	Position  int       `json:"position"`
+	IsFinal   int       `json:"is_final"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

@@ -19,7 +19,7 @@ func NewStageService(db *sql.DB) *StageService {
 // verifyProjectOwnership checks if project belongs to user
 func (s *StageService) verifyProjectOwnership(userID string, projectID int64) (bool, error) {
 	var count int
-	err := s.db.QueryRow("SELECT COUNT(*) FROM projects WHERE id = ? AND user_id = ?", projectID, userID).Scan(&count)
+	err := s.db.QueryRow("SELECT COUNT(*) FROM projects WHERE id = ? AND owner_id = ?", projectID, userID).Scan(&count)
 	if err != nil {
 		return false, err
 	}
@@ -27,7 +27,7 @@ func (s *StageService) verifyProjectOwnership(userID string, projectID int64) (b
 }
 
 // CreateStage creates a new stage for a project (validates ownership)
-func (s *StageService) CreateStage(userID string, projectID int64, name string, position int) (*models.Stage, error) {
+func (s *StageService) CreateStage(userID string, projectID int64, name string, position int, isFinal int) (*models.Stage, error) {
 	// Verify project belongs to user
 	owned, err := s.verifyProjectOwnership(userID, projectID)
 	if err != nil {
@@ -38,8 +38,8 @@ func (s *StageService) CreateStage(userID string, projectID int64, name string, 
 	}
 
 	result, err := s.db.Exec(
-		"INSERT INTO stages (user_id, project_id, name, position) VALUES (?, ?, ?, ?)",
-		userID, projectID, name, position,
+		"INSERT INTO stages (user_id, project_id, name, position, is_final) VALUES (?, ?, ?, ?, ?)",
+		userID, projectID, name, position, isFinal,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create stage: %v", err)
@@ -56,6 +56,7 @@ func (s *StageService) CreateStage(userID string, projectID int64, name string, 
 		ProjectID: projectID,
 		Name:      name,
 		Position:  position,
+		IsFinal:   isFinal,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}, nil
@@ -73,7 +74,7 @@ func (s *StageService) GetStagesByProject(userID string, projectID int64) ([]mod
 	}
 
 	rows, err := s.db.Query(
-		"SELECT id, user_id, project_id, name, position, created_at, updated_at FROM stages WHERE project_id = ? AND user_id = ? ORDER BY position",
+		"SELECT id, user_id, project_id, name, position, created_at, updated_at FROM stages WHERE project_id = ? ORDER BY position",
 		projectID, userID,
 	)
 	if err != nil {
