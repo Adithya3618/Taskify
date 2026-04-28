@@ -173,6 +173,36 @@ export class HomeComponent {
       .filter((project) => this.matchesBoardSearch(project, query));
   }
 
+  get hasBoardRefinements(): boolean {
+    return !!this.boardSearchQuery.trim() || this.boardFilter !== 'all';
+  }
+
+  get boardResultSummary(): string {
+    const count = this.visibleProjects.length;
+    const label = count === 1 ? 'board' : 'boards';
+
+    if (!this.hasBoardRefinements) {
+      return `Showing ${count} ${label} you can access, ${this.userDisplayName}.`;
+    }
+
+    return `Found ${count} ${label} matching your view.`;
+  }
+
+  get emptyBoardTitle(): string {
+    return this.hasBoardRefinements ? 'No boards match' : 'No boards yet';
+  }
+
+  get emptyBoardBody(): string {
+    return this.hasBoardRefinements
+      ? 'Try a different search or filter.'
+      : 'Create your first board to get started.';
+  }
+
+  clearBoardRefinements(): void {
+    this.boardSearchQuery = '';
+    this.boardFilter = 'all';
+  }
+
   private matchesBoardFilter(project: Project): boolean {
     const memberCount = project.member_count || 1;
 
