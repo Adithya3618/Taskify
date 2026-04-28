@@ -18,6 +18,7 @@ This folder contains all unit tests for the Taskify backend, organized by functi
 | `database_test.go` | Database connection and SQL operations | 6 tests |
 | `timeline_test.go` | Timeline endpoint, project access, dated task filtering | 7 tests |
 | `task_enhancements_test.go` | Task deadline, priority, assignee, and start date behavior | 6 tests |
+| `stage_reorder_test.go` | Project stage reorder service and controller behavior | 3 tests |
 
 **Total: 100+ unit tests**
 
@@ -55,6 +56,12 @@ go test ./internal/testcases -run Timeline
 go test ./internal/testcases -run 'TaskService_Create|TaskController_Enhancement|TaskController_StartDate'
 ```
 
+### Sprint 4 Stage Reorder Tests
+```bash
+# Run only the stage reorder tests
+go test ./internal/testcases -run Stage.*Reorder
+```
+
 ## Test Categories
 
 ### Authentication Tests
@@ -68,6 +75,7 @@ go test ./internal/testcases -run 'TaskService_Create|TaskController_Enhancement
 - Authorization checks (401 for missing user context)
 - Error response handling
 - Timeline endpoint response format and request validation
+- Stage reorder endpoint response format
 
 ### Model Tests
 - Structure validation
@@ -93,6 +101,16 @@ go test ./internal/testcases -run 'TaskService_Create|TaskController_Enhancement
 - Rejects users without project access.
 - Rejects invalid project IDs and unauthenticated requests.
 
+### Stage Reorder Tests
+- Updates stage positions from an ordered ID list.
+- Persists reordered positions in the database.
+- Returns reordered stages in position order.
+- Rejects empty `stage_ids`.
+- Rejects duplicate stage IDs.
+- Rejects stage IDs from another project.
+- Rejects missing projects.
+- Rejects users without project access.
+
 ### Task Enhancement Tests
 - Creates tasks with `start_date`.
 - Reads `start_date` through single-task and stage-task queries.
@@ -103,16 +121,33 @@ go test ./internal/testcases -run 'TaskService_Create|TaskController_Enhancement
 
 ## Sprint 4 Backend Test Notes
 
-Sprint 4 added a timeline endpoint for the frontend Timeline/Gantt view. The
-new endpoint depends on task date fields, project access checks, and compact
-response formatting, so the tests are split across two files:
+Sprint 4 added a timeline endpoint for the frontend Timeline/Gantt view and a
+stage reorder endpoint for Kanban column persistence. These endpoints depend on
+project access checks, database ordering, and compact response formatting, so
+the tests are split by behavior:
 
 - `timeline_test.go` covers endpoint-specific timeline behavior.
 - `task_enhancements_test.go` covers reusable task date behavior.
+- `stage_reorder_test.go` covers stage order persistence and validation.
 
 This separation keeps the endpoint tests focused on the public API while the
 task enhancement tests verify that the underlying task model continues to work
-for regular board and planner flows.
+for regular board and planner flows. The stage reorder tests focus on the
+backend contract needed by the frontend drag-and-drop board.
+
+## Stage Reorder Acceptance Coverage
+
+The stage reorder tests map directly to the Sprint 4 acceptance criteria:
+
+| Acceptance Criteria | Test Coverage |
+|---------------------|---------------|
+| Accepts ordered array of stage IDs | `TestStageService_ReorderStagesUpdatesPositions` |
+| Updates position field for each stage | `TestStageService_ReorderStagesUpdatesPositions` |
+| Uses persisted database order | `TestStageService_ReorderStagesUpdatesPositions` |
+| Returns updated stages in new order | `TestStageController_ReorderStagesReturnsUpdatedOrder` |
+| Rejects stage IDs from another project | `TestStageService_ReorderStagesRejectsInvalidRequests` |
+| Returns error for missing project | `TestStageService_ReorderStagesRejectsInvalidRequests` |
+| Rejects invalid reorder input | `TestStageService_ReorderStagesRejectsInvalidRequests` |
 
 ## Timeline Endpoint Acceptance Coverage
 
