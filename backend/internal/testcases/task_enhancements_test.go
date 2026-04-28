@@ -39,6 +39,9 @@ func TestTaskService_CreateTask_BackwardCompatibleWithoutEnhancements(t *testing
 	if task.AssignedTo != nil {
 		t.Errorf("AssignedTo = %v, want nil", task.AssignedTo)
 	}
+	if task.StartDate != nil {
+		t.Errorf("StartDate = %v, want nil", task.StartDate)
+	}
 }
 
 func TestTaskService_CreateUpdateAndReadEnhancements(t *testing.T) {
@@ -48,11 +51,13 @@ func TestTaskService_CreateUpdateAndReadEnhancements(t *testing.T) {
 	stageID := seedTaskEnhancementStage(t, db, "user-1")
 	service := services.NewTaskService(db, nil)
 
+	initialStartDate := time.Date(2026, 4, 18, 9, 0, 0, 0, time.UTC)
 	initialDeadline := time.Date(2026, 4, 20, 15, 0, 0, 0, time.UTC)
 	initialPriority := "high"
 	initialAssignedTo := "user-2"
 
 	created, err := service.CreateTask("user-1", stageID, "Enhanced Task", "desc", 1, services.TaskAttributes{
+		StartDate:  &initialStartDate,
 		Deadline:   &initialDeadline,
 		Priority:   &initialPriority,
 		AssignedTo: &initialAssignedTo,
@@ -61,13 +66,13 @@ func TestTaskService_CreateUpdateAndReadEnhancements(t *testing.T) {
 		t.Fatalf("CreateTask() error = %v", err)
 	}
 
-	assertTaskEnhancements(t, created, &initialDeadline, "high", "user-2")
+	assertTaskEnhancements(t, created, &initialStartDate, &initialDeadline, "high", "user-2")
 
 	fetched, err := service.GetTaskByID("user-1", created.ID)
 	if err != nil {
 		t.Fatalf("GetTaskByID() error = %v", err)
 	}
-	assertTaskEnhancements(t, fetched, &initialDeadline, "high", "user-2")
+	assertTaskEnhancements(t, fetched, &initialStartDate, &initialDeadline, "high", "user-2")
 
 	listed, err := service.GetTasksByStage("user-1", stageID)
 	if err != nil {
@@ -76,13 +81,15 @@ func TestTaskService_CreateUpdateAndReadEnhancements(t *testing.T) {
 	if len(listed) != 1 {
 		t.Fatalf("GetTasksByStage() len = %d, want 1", len(listed))
 	}
-	assertTaskEnhancements(t, &listed[0], &initialDeadline, "high", "user-2")
+	assertTaskEnhancements(t, &listed[0], &initialStartDate, &initialDeadline, "high", "user-2")
 
+	updatedStartDate := time.Date(2026, 4, 21, 10, 0, 0, 0, time.UTC)
 	updatedDeadline := time.Date(2026, 5, 1, 9, 30, 0, 0, time.UTC)
 	updatedPriority := "urgent"
 	updatedAssignedTo := "user-3"
 
 	updated, err := service.UpdateTask("user-1", created.ID, "Updated Task", "updated desc", 2, services.TaskAttributes{
+		StartDate:  &updatedStartDate,
 		Deadline:   &updatedDeadline,
 		Priority:   &updatedPriority,
 		AssignedTo: &updatedAssignedTo,
@@ -90,13 +97,13 @@ func TestTaskService_CreateUpdateAndReadEnhancements(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UpdateTask() error = %v", err)
 	}
-	assertTaskEnhancements(t, updated, &updatedDeadline, "urgent", "user-3")
+	assertTaskEnhancements(t, updated, &updatedStartDate, &updatedDeadline, "urgent", "user-3")
 
 	cleared, err := service.UpdateTask("user-1", created.ID, "Updated Task", "updated desc", 2, services.TaskAttributes{})
 	if err != nil {
 		t.Fatalf("UpdateTask(clear) error = %v", err)
 	}
-	if cleared.Deadline != nil || cleared.Priority != nil || cleared.AssignedTo != nil {
+	if cleared.StartDate != nil || cleared.Deadline != nil || cleared.Priority != nil || cleared.AssignedTo != nil {
 		t.Errorf("expected cleared nullable fields, got %+v", cleared)
 	}
 }
@@ -172,11 +179,13 @@ func TestTaskController_EnhancementRoundTripAndBackwardCompatibleUpdate(t *testi
 	service := services.NewTaskService(db, nil)
 	controller := controllers.NewTaskController(service)
 
+	createStartDate := "2026-06-01T09:00:00Z"
 	createDeadline := "2026-06-10T12:30:00Z"
 	createReq := createRequestWithUser(http.MethodPost, "/api/projects/1/stages/1/tasks", map[string]interface{}{
 		"title":       "Task with enhancements",
 		"description": "desc",
 		"position":    0,
+		"start_date":  createStartDate,
 		"deadline":    createDeadline,
 		"priority":    " HIGH ",
 		"assigned_to": "  user-2  ",
@@ -199,6 +208,9 @@ func TestTaskController_EnhancementRoundTripAndBackwardCompatibleUpdate(t *testi
 	}
 	if created.AssignedTo == nil || *created.AssignedTo != "user-2" {
 		t.Fatalf("created assigned_to = %v, want user-2", created.AssignedTo)
+	}
+	if created.StartDate == nil || created.StartDate.Format(time.RFC3339) != createStartDate {
+		t.Fatalf("created start_date = %v, want %s", created.StartDate, createStartDate)
 	}
 	if created.Deadline == nil || created.Deadline.Format(time.RFC3339) != createDeadline {
 		t.Fatalf("created deadline = %v, want %s", created.Deadline, createDeadline)
@@ -228,6 +240,9 @@ func TestTaskController_EnhancementRoundTripAndBackwardCompatibleUpdate(t *testi
 	if updated.AssignedTo == nil || *updated.AssignedTo != "user-2" {
 		t.Fatalf("updated assigned_to = %v, want preserved user-2", updated.AssignedTo)
 	}
+	if updated.StartDate == nil || updated.StartDate.Format(time.RFC3339) != createStartDate {
+		t.Fatalf("updated start_date = %v, want preserved %s", updated.StartDate, createStartDate)
+	}
 	if updated.Deadline == nil || updated.Deadline.Format(time.RFC3339) != createDeadline {
 		t.Fatalf("updated deadline = %v, want preserved %s", updated.Deadline, createDeadline)
 	}
@@ -236,6 +251,7 @@ func TestTaskController_EnhancementRoundTripAndBackwardCompatibleUpdate(t *testi
 		"title":       "Task after clear",
 		"description": "updated desc",
 		"position":    4,
+		"start_date":  nil,
 		"deadline":    nil,
 		"priority":    nil,
 		"assigned_to": nil,
@@ -263,7 +279,7 @@ func TestTaskController_EnhancementRoundTripAndBackwardCompatibleUpdate(t *testi
 	if err := json.NewDecoder(getW.Body).Decode(&fetched); err != nil {
 		t.Fatalf("decode get response error = %v", err)
 	}
-	if fetched.Deadline != nil || fetched.Priority != nil || fetched.AssignedTo != nil {
+	if fetched.StartDate != nil || fetched.Deadline != nil || fetched.Priority != nil || fetched.AssignedTo != nil {
 		t.Fatalf("expected cleared nullable fields, got %+v", fetched)
 	}
 
@@ -284,8 +300,86 @@ func TestTaskController_EnhancementRoundTripAndBackwardCompatibleUpdate(t *testi
 	if len(listed) != 1 {
 		t.Fatalf("GetTasksByStage() len = %d, want 1", len(listed))
 	}
-	if listed[0].Deadline != nil || listed[0].Priority != nil || listed[0].AssignedTo != nil {
+	if listed[0].StartDate != nil || listed[0].Deadline != nil || listed[0].Priority != nil || listed[0].AssignedTo != nil {
 		t.Fatalf("expected list response with cleared nullable fields, got %+v", listed[0])
+	}
+}
+
+func TestTaskController_StartDateUpdateCanChangeAndClear(t *testing.T) {
+	db := newTaskEnhancementTestDB(t)
+	defer db.Close()
+
+	stageID := seedTaskEnhancementStage(t, db, "user-1")
+	service := services.NewTaskService(db, nil)
+	controller := controllers.NewTaskController(service)
+	taskID := seedTaskEnhancementTask(t, db, "user-1", stageID)
+	firstStartDate := "2026-07-01T08:00:00Z"
+	secondStartDate := "2026-07-03T08:00:00Z"
+
+	setReq := createRequestWithUser(http.MethodPut, "/api/tasks/1", map[string]interface{}{
+		"title":       "Task with start date",
+		"description": "desc",
+		"position":    1,
+		"start_date":  firstStartDate,
+	}, "user-1")
+	setReq = mux.SetURLVars(setReq, map[string]string{"id": toString(taskID)})
+	setW := httptest.NewRecorder()
+
+	controller.UpdateTask(setW, setReq)
+
+	if setW.Code != http.StatusOK {
+		t.Fatalf("UpdateTask(set start_date) status = %d, want %d", setW.Code, http.StatusOK)
+	}
+	var setTask models.Task
+	if err := json.NewDecoder(setW.Body).Decode(&setTask); err != nil {
+		t.Fatalf("decode set response error = %v", err)
+	}
+	if setTask.StartDate == nil || setTask.StartDate.Format(time.RFC3339) != firstStartDate {
+		t.Fatalf("set start_date = %v, want %s", setTask.StartDate, firstStartDate)
+	}
+
+	changeReq := createRequestWithUser(http.MethodPut, "/api/tasks/1", map[string]interface{}{
+		"title":       "Task with changed start date",
+		"description": "desc",
+		"position":    2,
+		"start_date":  secondStartDate,
+	}, "user-1")
+	changeReq = mux.SetURLVars(changeReq, map[string]string{"id": toString(taskID)})
+	changeW := httptest.NewRecorder()
+
+	controller.UpdateTask(changeW, changeReq)
+
+	if changeW.Code != http.StatusOK {
+		t.Fatalf("UpdateTask(change start_date) status = %d, want %d", changeW.Code, http.StatusOK)
+	}
+	var changedTask models.Task
+	if err := json.NewDecoder(changeW.Body).Decode(&changedTask); err != nil {
+		t.Fatalf("decode change response error = %v", err)
+	}
+	if changedTask.StartDate == nil || changedTask.StartDate.Format(time.RFC3339) != secondStartDate {
+		t.Fatalf("changed start_date = %v, want %s", changedTask.StartDate, secondStartDate)
+	}
+
+	clearReq := createRequestWithUser(http.MethodPut, "/api/tasks/1", map[string]interface{}{
+		"title":       "Task with cleared start date",
+		"description": "desc",
+		"position":    3,
+		"start_date":  nil,
+	}, "user-1")
+	clearReq = mux.SetURLVars(clearReq, map[string]string{"id": toString(taskID)})
+	clearW := httptest.NewRecorder()
+
+	controller.UpdateTask(clearW, clearReq)
+
+	if clearW.Code != http.StatusOK {
+		t.Fatalf("UpdateTask(clear start_date) status = %d, want %d", clearW.Code, http.StatusOK)
+	}
+	var clearedTask models.Task
+	if err := json.NewDecoder(clearW.Body).Decode(&clearedTask); err != nil {
+		t.Fatalf("decode clear response error = %v", err)
+	}
+	if clearedTask.StartDate != nil {
+		t.Fatalf("cleared start_date = %v, want nil", clearedTask.StartDate)
 	}
 }
 
@@ -419,11 +513,14 @@ func seedTaskEnhancementTask(t *testing.T, db *sql.DB, userID string, stageID in
 	return taskID
 }
 
-func assertTaskEnhancements(t *testing.T, task *models.Task, wantDeadline *time.Time, wantPriority, wantAssignedTo string) {
+func assertTaskEnhancements(t *testing.T, task *models.Task, wantStartDate, wantDeadline *time.Time, wantPriority, wantAssignedTo string) {
 	t.Helper()
 
 	if task == nil {
 		t.Fatal("task = nil")
+	}
+	if task.StartDate == nil || !task.StartDate.Equal(*wantStartDate) {
+		t.Fatalf("StartDate = %v, want %v", task.StartDate, wantStartDate)
 	}
 	if task.Deadline == nil || !task.Deadline.Equal(*wantDeadline) {
 		t.Fatalf("Deadline = %v, want %v", task.Deadline, wantDeadline)
