@@ -8,6 +8,8 @@ import { AuthService } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
 import { NotificationBellComponent } from '../../components/notification-bell/notification-bell.component';
 
+type BoardFilter = 'all' | 'solo' | 'shared';
+
 @Component({
   selector: 'app-home',
   standalone: true,
@@ -16,8 +18,6 @@ import { NotificationBellComponent } from '../../components/notification-bell/no
   styleUrls: ['./home.component.scss']
 })
 /** Home page: boards list, navbar with profile, login/signup links, footer. */
-type BoardFilter = 'all' | 'solo' | 'shared';
-
 export class HomeComponent {
   projects: Project[] = [];
   loading = true;

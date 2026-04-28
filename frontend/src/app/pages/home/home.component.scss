@@ -376,6 +376,39 @@
 .empty h3 { font-size: 22px; font-weight: 700; color: var(--text-1); margin: 0 0 10px 0; }
 .empty p  { color: var(--text-muted); margin: 0 0 24px 0; font-size: 15px; }
 
+@media (max-width: 980px) {
+  .sectionHead {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .sectionRight {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .boardSearch {
+    flex: 1 1 280px;
+  }
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding: 8px 18px 32px;
+  }
+
+  .sectionRight,
+  .boardSearch,
+  .boardFilters,
+  .sectionRight .btn {
+    width: 100%;
+  }
+
+  .boardFilters button {
+    flex: 1 1 0;
+  }
+}
+
 /* ── Modals ── */
 .modalBackdrop {
   position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(6px);
