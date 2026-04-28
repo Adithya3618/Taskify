@@ -6,7 +6,7 @@ import { AddProjectMemberRequest, CreateProjectRequest, Project, ProjectMember }
 import { ActivityLog, ActivityQueryParams } from '../models/activity.model';
 import { Comment, CreateCommentRequest } from '../models/comment.model';
 import { Stage, CreateStageRequest } from '../models/stage.model';
-import { Task, CreateTaskRequest, MoveTaskRequest } from '../models/task.model';
+import { Task, CreateTaskRequest, MoveTaskRequest, UpdateTaskRequest } from '../models/task.model';
 import { CreateSubtaskRequest, Subtask, UpdateSubtaskRequest } from '../models/subtask.model';
 import { Message, CreateMessageRequest } from '../models/message.model';
 import { AuthService, AuthUser } from './auth.service';
@@ -668,7 +668,7 @@ export class ApiService {
     );
   }
 
-  updateTask(id: number, request: { title: string; description: string; position: number }): Observable<Task> {
+  updateTask(id: number, request: UpdateTaskRequest): Observable<Task> {
     const cachedEntry = Object.entries(localStorage)
       .find(([key, value]) => key.startsWith(this.taskStorePrefix) && String(value).includes(`"id":${id}`));
     const stageId = cachedEntry ? Number(cachedEntry[0].replace(this.taskStorePrefix, '')) : 0;

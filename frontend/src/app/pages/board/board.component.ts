@@ -851,6 +851,10 @@ export class BoardComponent implements OnInit, OnDestroy {
     return this.stages.reduce((sum, s) => sum + this.getFilteredTasks(s).length, 0);
   }
 
+  get hasVisibleTasks(): boolean {
+    return this.stages.some((stage) => this.getFilteredTasks(stage).length > 0);
+  }
+
   // ── Labels ────────────────────────────────────
 
   private labelsKey(): string { return `taskify.labels.${this.projectId}`; }
