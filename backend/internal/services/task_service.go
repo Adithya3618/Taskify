@@ -264,6 +264,25 @@ func (s *TaskService) AssignTask(taskID int64, assignedTo *string, requesterID s
 		return nil, fmt.Errorf("failed to get task: %v", err)
 	}
 
+	// Check if assignment is the same (redundant update)
+	currentAssigneeStr := ""
+	if currentAssignee.Valid {
+		currentAssigneeStr = currentAssignee.String
+	}
+	newAssigneeStr := ""
+	if assignedTo != nil {
+		newAssigneeStr = *assignedTo
+	}
+	if currentAssigneeStr == newAssigneeStr {
+		// Return current task without update
+		return &models.Task{
+			ID:         taskID,
+			Title:      title,
+			StageID:    stageID,
+			AssignedTo: &currentAssigneeStr,
+		}, nil
+	}
+
 	// 2. Check if requester is a member of the project (any member can assign)
 	var requesterIsMember int
 	err = tx.QueryRow(`

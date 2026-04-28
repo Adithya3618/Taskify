@@ -383,6 +383,18 @@ func (s *AuthService) UpdateUserName(userID, name string) (*models.UserResponse,
 		return nil, fmt.Errorf("name must be 100 characters or less")
 	}
 
+	// Get current user to check redundant update
+	currentUser, err := s.userRepo.GetUserByID(userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %v", err)
+	}
+
+	// Skip update if name is the same
+	if currentUser.Name == name {
+		resp := currentUser.ToResponse()
+		return &resp, nil
+	}
+
 	if err := s.userRepo.UpdateName(userID, name); err != nil {
 		return nil, fmt.Errorf("failed to update name: %v", err)
 	}
