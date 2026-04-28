@@ -195,6 +195,104 @@ h1 {
   width: 40px;
 }
 
+.editSection {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.14);
+  margin-top: 18px;
+  padding: 24px;
+}
+
+.sectionHeader {
+  margin-bottom: 20px;
+}
+
+.sectionHeader h2 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.profileForm {
+  display: grid;
+  gap: 18px;
+}
+
+.profileForm label {
+  display: grid;
+  gap: 8px;
+}
+
+.profileForm label span {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.profileForm input {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  color: var(--input-text);
+  font: inherit;
+  min-height: 44px;
+  outline: none;
+  padding: 0 14px;
+  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.profileForm input:focus {
+  background: var(--input-bg-focus);
+  border-color: var(--input-border-focus);
+  box-shadow: 0 0 0 4px var(--input-shadow-focus);
+}
+
+.formMessage {
+  color: #4bce97;
+  font-weight: 800;
+  margin: 0;
+}
+
+.formActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.primaryButton,
+.secondaryButton {
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  min-height: 42px;
+  padding: 0 16px;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.primaryButton {
+  background: #0079bf;
+  border: 1px solid #0079bf;
+  color: #fff;
+}
+
+.secondaryButton {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+}
+
+.primaryButton:hover:not(:disabled),
+.secondaryButton:hover {
+  transform: translateY(-1px);
+}
+
+.primaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 @media (max-width: 820px) {
   .headerContent,
   .identityPanel {
@@ -236,5 +334,14 @@ h1 {
 
   .detailList dd {
     text-align: left;
+  }
+
+  .formActions {
+    justify-content: stretch;
+  }
+
+  .primaryButton,
+  .secondaryButton {
+    flex: 1 1 100%;
   }
 }

@@ -73,5 +73,43 @@
         </div>
       </article>
     </section>
+
+    <section class="editSection" aria-labelledby="editProfileTitle">
+      <div class="sectionHeader">
+        <p class="panelLabel">Edit profile</p>
+        <h2 id="editProfileTitle">Personal information</h2>
+      </div>
+
+      <form class="profileForm" (ngSubmit)="saveProfile()">
+        <label>
+          <span>Display name</span>
+          <input
+            type="text"
+            name="profileName"
+            [(ngModel)]="profileName"
+            autocomplete="name"
+            required
+          >
+        </label>
+
+        <label>
+          <span>Email</span>
+          <input
+            type="email"
+            name="profileEmail"
+            [(ngModel)]="profileEmail"
+            autocomplete="email"
+            required
+          >
+        </label>
+
+        <p class="formMessage" *ngIf="profileMessage">{{ profileMessage }}</p>
+
+        <div class="formActions">
+          <button class="secondaryButton" type="button" (click)="resetProfileForm()">Reset</button>
+          <button class="primaryButton" type="submit" [disabled]="!hasProfileChanges">Save changes</button>
+        </div>
+      </form>
+    </section>
   </div>
 </main>
