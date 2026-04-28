@@ -1,11 +1,13 @@
 package testcases
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"backend/internal/controllers"
@@ -131,6 +133,87 @@ func TestStageController_ReorderStagesReturnsUpdatedOrder(t *testing.T) {
 	assertStageOrder(t, stages, []int64{stageIDs[2], stageIDs[1], stageIDs[0]})
 }
 
+func TestStageController_ReorderStagesValidation(t *testing.T) {
+	db := newStageReorderTestDB(t)
+	defer db.Close()
+
+	projectID, stageIDs := seedStageReorderProject(t, db, "user-1")
+	_, otherStageIDs := seedStageReorderProject(t, db, "user-2")
+	service := services.NewStageService(db)
+	controller := controllers.NewStageController(service)
+
+	tests := []struct {
+		name       string
+		userID     string
+		projectID  string
+		body       interface{}
+		wantStatus int
+	}{
+		{
+			name:       "unauthenticated",
+			userID:     "",
+			projectID:  toString(projectID),
+			body:       map[string]interface{}{"stage_ids": stageIDs},
+			wantStatus: http.StatusUnauthorized,
+		},
+		{
+			name:       "invalid project ID",
+			userID:     "user-1",
+			projectID:  "abc",
+			body:       map[string]interface{}{"stage_ids": stageIDs},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "invalid JSON body",
+			userID:     "user-1",
+			projectID:  toString(projectID),
+			body:       rawJSON("not-json"),
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "empty stage list",
+			userID:     "user-1",
+			projectID:  toString(projectID),
+			body:       map[string]interface{}{"stage_ids": []int64{}},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "duplicate stage IDs",
+			userID:     "user-1",
+			projectID:  toString(projectID),
+			body:       map[string]interface{}{"stage_ids": []int64{stageIDs[0], stageIDs[0]}},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "stage from another project",
+			userID:     "user-1",
+			projectID:  toString(projectID),
+			body:       map[string]interface{}{"stage_ids": []int64{stageIDs[0], otherStageIDs[0]}},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "unknown project",
+			userID:     "user-1",
+			projectID:  "99999",
+			body:       map[string]interface{}{"stage_ids": stageIDs},
+			wantStatus: http.StatusNotFound,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := stageReorderRequest(tt.userID, tt.projectID, tt.body)
+			w := httptest.NewRecorder()
+
+			controller.ReorderStages(w, req)
+
+			if w.Code != tt.wantStatus {
+				t.Fatalf("ReorderStages() status = %d, want %d", w.Code, tt.wantStatus)
+			}
+		})
+	}
+}
+
 func newStageReorderTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 
@@ -230,6 +313,22 @@ func seedStageReorderStage(t *testing.T, db *sql.DB, userID string, projectID in
 		t.Fatalf("stage LastInsertId() error = %v", err)
 	}
 	return stageID
+}
+
+type rawJSON string
+
+func stageReorderRequest(userID, projectID string, body interface{}) *http.Request {
+	var req *http.Request
+	if raw, ok := body.(rawJSON); ok {
+		req = httptest.NewRequest(http.MethodPut, "/api/projects/1/stages/reorder", strings.NewReader(string(raw)))
+		req.Header.Set("Content-Type", "application/json")
+	} else {
+		req = createRequestWithUser(http.MethodPut, "/api/projects/1/stages/reorder", body, userID)
+	}
+	if userID != "" {
+		req = req.WithContext(context.WithValue(req.Context(), "user_id", userID))
+	}
+	return mux.SetURLVars(req, map[string]string{"id": projectID})
 }
 
 func assertStageOrder(t *testing.T, stages []models.Stage, wantIDs []int64) {
