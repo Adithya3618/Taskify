@@ -1,0 +1,119 @@
+<main class="profilePage">
+  <div class="profileShell">
+    <header class="profileHeader" aria-labelledby="profileTitle">
+      <a class="backLink" routerLink="/boards">
+        <span aria-hidden="true">←</span>
+        Back to boards
+      </a>
+
+      <div class="headerContent">
+        <div>
+          <p class="eyebrow">Account</p>
+          <h1 id="profileTitle">Profile</h1>
+          <p class="intro">
+            Manage your Taskify profile details and account preferences.
+          </p>
+        </div>
+
+        <div class="avatarPreview" aria-hidden="true">{{ userInitial }}</div>
+      </div>
+    </header>
+
+    <section class="profileGrid" aria-label="Profile overview">
+      <article class="identityPanel">
+        <div class="identityAvatar" aria-hidden="true">{{ userInitial }}</div>
+        <div>
+          <p class="panelLabel">Signed in as</p>
+          <h2>{{ displayName }}</h2>
+          <p class="mutedText">{{ email }}</p>
+        </div>
+      </article>
+
+      <article class="infoPanel">
+        <p class="panelLabel">Account details</p>
+        <dl class="detailList">
+          <div>
+            <dt>Display name</dt>
+            <dd>{{ displayName }}</dd>
+          </div>
+          <div>
+            <dt>Email</dt>
+            <dd>{{ email }}</dd>
+          </div>
+          <div>
+            <dt>Role</dt>
+            <dd>{{ role }}</dd>
+          </div>
+        </dl>
+      </article>
+    </section>
+
+    <section class="settingsGrid" aria-label="Profile settings">
+      <article class="settingsPanel">
+        <div class="panelIcon" aria-hidden="true">ID</div>
+        <div>
+          <h2>Personal information</h2>
+          <p class="mutedText">Keep your name and email current across Taskify.</p>
+        </div>
+      </article>
+
+      <article class="settingsPanel">
+        <div class="panelIcon" aria-hidden="true">PW</div>
+        <div>
+          <h2>Security</h2>
+          <p class="mutedText">Update your password and review account access.</p>
+        </div>
+      </article>
+
+      <article class="settingsPanel">
+        <div class="panelIcon" aria-hidden="true">UI</div>
+        <div>
+          <h2>Preferences</h2>
+          <p class="mutedText">Choose the workspace settings that fit how you work.</p>
+        </div>
+      </article>
+    </section>
+
+    <section class="editSection" aria-labelledby="editProfileTitle">
+      <div class="sectionHeader">
+        <p class="panelLabel">Edit profile</p>
+        <h2 id="editProfileTitle">Personal information</h2>
+      </div>
+
+      <form class="profileForm" (ngSubmit)="saveProfile()">
+        <label>
+          <span>Display name</span>
+          <input
+            type="text"
+            name="profileName"
+            [(ngModel)]="profileName"
+            autocomplete="name"
+            (ngModelChange)="profileMessage = ''"
+            required
+          >
+        </label>
+
+        <label>
+          <span>Email</span>
+          <input
+            type="email"
+            name="profileEmail"
+            [(ngModel)]="profileEmail"
+            autocomplete="email"
+            (ngModelChange)="profileMessage = ''"
+            required
+          >
+        </label>
+
+        <p class="formMessage" [class.error]="profileMessageType === 'error'" *ngIf="profileMessage">
+          {{ profileMessage }}
+        </p>
+
+        <div class="formActions">
+          <button class="secondaryButton" type="button" (click)="resetProfileForm()">Reset</button>
+          <button class="primaryButton" type="submit" [disabled]="!hasProfileChanges">Save changes</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</main>

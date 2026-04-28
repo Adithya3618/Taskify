@@ -140,6 +140,7 @@
             </div>
           </div>
           <div class="profileDropdownDivider"></div>
+          <a routerLink="/profile" class="profileDropdownItem" (click)="closeProfileMenu()">Profile</a>
           <button type="button" class="profileDropdownItem" (click)="openAccountSettings()">Account settings</button>
           <button type="button" class="profileDropdownItem" (click)="goBack()">My boards</button>
           <button type="button" class="profileDropdownItem danger" (click)="logout()">Log out</button>
