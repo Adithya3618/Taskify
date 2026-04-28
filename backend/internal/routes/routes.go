@@ -133,6 +133,7 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	protected.HandleFunc("/tasks/{id}", taskController.GetTask).Methods("GET")
 	protected.HandleFunc("/tasks/{id}", taskController.UpdateTask).Methods("PUT")
 	protected.HandleFunc("/tasks/{id}/move", taskController.MoveTask).Methods("PUT")
+	protected.HandleFunc("/tasks/{id}/assign", taskController.AssignTask).Methods("PUT")
 	protected.HandleFunc("/tasks/{id}", taskController.DeleteTask).Methods("DELETE")
 	protected.HandleFunc("/tasks/{id}/comments", commentController.CreateComment).Methods("POST")
 	protected.HandleFunc("/tasks/{id}/comments", commentController.GetCommentsByTask).Methods("GET")

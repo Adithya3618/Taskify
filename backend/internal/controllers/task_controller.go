@@ -249,6 +249,54 @@ func (c *TaskController) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// AssignTask handles PUT /api/tasks/:id/assign
+func (c *TaskController) AssignTask(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		helpers.WriteError(w, http.StatusUnauthorized, "Authentication required", helpers.ErrCodeUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	taskID, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		helpers.WriteError(w, http.StatusBadRequest, "Invalid task ID", helpers.ErrCodeBadRequest)
+		return
+	}
+
+	var req struct {
+		UserID string `json:"user_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		helpers.WriteError(w, http.StatusBadRequest, "Invalid request body", helpers.ErrCodeBadRequest)
+		return
+	}
+
+	if req.UserID == "" {
+		helpers.WriteError(w, http.StatusBadRequest, "user_id is required", helpers.ErrCodeValidationFailed)
+		return
+	}
+
+	err = c.service.AssignTask(taskID, req.UserID, userID)
+	if err != nil {
+		if se, ok := services.IsServiceError(err); ok {
+			switch se.Code {
+			case "TASK_NOT_FOUND":
+				helpers.WriteError(w, http.StatusNotFound, se.Message, helpers.ErrCodeNotFound)
+			case "ACCESS_DENIED", "USER_NOT_PROJECT_MEMBER":
+				helpers.WriteError(w, http.StatusForbidden, se.Message, helpers.ErrCodeForbidden)
+			default:
+				helpers.WriteError(w, http.StatusInternalServerError, se.Message, helpers.ErrCodeInternalError)
+			}
+			return
+		}
+		helpers.WriteError(w, http.StatusInternalServerError, "Failed to assign task", helpers.ErrCodeInternalError)
+		return
+	}
+
+	helpers.WriteSuccess(w, http.StatusOK, nil, "Task assigned successfully")
+}
+
 func taskAttributesFromRequest(req taskRequest) services.TaskAttributes {
 	return services.TaskAttributes{
 		Deadline:   req.Deadline,
