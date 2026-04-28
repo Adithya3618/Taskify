@@ -25,6 +25,7 @@ export class HomeComponent {
   apiErrorBody = '';
   showBackendRunHint = false;
   useDemoData = false;
+  boardSearchQuery = '';
   private readonly boardOwnersKey = 'taskify.board.owners';
   private boardOwners: Record<string, string> = {};
 
@@ -159,6 +160,17 @@ export class HomeComponent {
 
   getProjectColor(index: number): string {
     return this.boardColors[index % this.boardColors.length];
+  }
+
+  get visibleProjects(): Project[] {
+    const query = this.boardSearchQuery.trim().toLowerCase();
+    if (!query) return this.projects;
+
+    return this.projects.filter((project) => {
+      const name = project.name || '';
+      const description = project.description || '';
+      return `${name} ${description}`.toLowerCase().includes(query);
+    });
   }
 
   toggleProfileMenu() {
