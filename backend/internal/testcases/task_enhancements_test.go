@@ -127,6 +127,28 @@ func TestTaskService_InvalidPriorityRejected(t *testing.T) {
 	}
 }
 
+func TestTaskService_InvalidDateRangeRejected(t *testing.T) {
+	db := newTaskEnhancementTestDB(t)
+	defer db.Close()
+
+	stageID := seedTaskEnhancementStage(t, db, "user-1")
+	service := services.NewTaskService(db, nil)
+
+	startDate := time.Date(2026, 5, 10, 9, 0, 0, 0, time.UTC)
+	deadline := time.Date(2026, 5, 1, 9, 0, 0, 0, time.UTC)
+
+	_, err := service.CreateTask("user-1", stageID, "Task", "desc", 0, services.TaskAttributes{
+		StartDate: &startDate,
+		Deadline:  &deadline,
+	})
+	if err == nil {
+		t.Fatal("CreateTask() error = nil, want invalid date range error")
+	}
+	if err != services.ErrInvalidDateRange {
+		t.Fatalf("CreateTask() error = %v, want %v", err, services.ErrInvalidDateRange)
+	}
+}
+
 func TestTaskController_InvalidPriorityReturnsBadRequest(t *testing.T) {
 	db := newTaskEnhancementTestDB(t)
 	defer db.Close()
@@ -159,6 +181,52 @@ func TestTaskController_InvalidPriorityReturnsBadRequest(t *testing.T) {
 			"description": "desc",
 			"position":    0,
 			"priority":    "critical",
+		}, "user-1")
+		req = mux.SetURLVars(req, map[string]string{"id": toString(taskID)})
+		w := httptest.NewRecorder()
+
+		controller.UpdateTask(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("UpdateTask() status = %d, want %d", w.Code, http.StatusBadRequest)
+		}
+	})
+}
+
+func TestTaskController_InvalidDateRangeReturnsBadRequest(t *testing.T) {
+	db := newTaskEnhancementTestDB(t)
+	defer db.Close()
+
+	stageID := seedTaskEnhancementStage(t, db, "user-1")
+	service := services.NewTaskService(db, nil)
+	controller := controllers.NewTaskController(service)
+
+	t.Run("create rejects invalid date range", func(t *testing.T) {
+		req := createRequestWithUser(http.MethodPost, "/api/projects/1/stages/1/tasks", map[string]interface{}{
+			"title":       "Task",
+			"description": "desc",
+			"position":    0,
+			"start_date":  "2026-05-10T09:00:00Z",
+			"deadline":    "2026-05-01T09:00:00Z",
+		}, "user-1")
+		req = mux.SetURLVars(req, map[string]string{"stageId": toString(stageID)})
+		w := httptest.NewRecorder()
+
+		controller.CreateTask(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("CreateTask() status = %d, want %d", w.Code, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("update rejects invalid date range", func(t *testing.T) {
+		taskID := seedTaskEnhancementTask(t, db, "user-1", stageID)
+		req := createRequestWithUser(http.MethodPut, "/api/tasks/1", map[string]interface{}{
+			"title":       "Task",
+			"description": "desc",
+			"position":    0,
+			"start_date":  "2026-05-10T09:00:00Z",
+			"deadline":    "2026-05-01T09:00:00Z",
 		}, "user-1")
 		req = mux.SetURLVars(req, map[string]string{"id": toString(taskID)})
 		w := httptest.NewRecorder()

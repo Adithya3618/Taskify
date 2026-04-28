@@ -68,7 +68,7 @@ func (c *TaskController) CreateTask(w http.ResponseWriter, r *http.Request) {
 
 	task, err := c.service.CreateTask(userID, stageID, req.Title, req.Description, req.Position, taskAttributesFromRequest(req))
 	if err != nil {
-		if errors.Is(err, services.ErrInvalidTaskPriority) {
+		if errors.Is(err, services.ErrInvalidTaskPriority) || errors.Is(err, services.ErrInvalidDateRange) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -146,7 +146,7 @@ func (c *TaskController) GetProjectTimeline(w http.ResponseWriter, r *http.Reque
 
 	vars := mux.Vars(r)
 	projectID, err := strconv.ParseInt(vars["id"], 10, 64)
-	if err != nil {
+	if err != nil || projectID <= 0 {
 		http.Error(w, "Invalid project ID", http.StatusBadRequest)
 		return
 	}
@@ -221,7 +221,7 @@ func (c *TaskController) UpdateTask(w http.ResponseWriter, r *http.Request) {
 
 	task, err := c.service.UpdateTask(userID, id, req.Title, req.Description, req.Position, attrs)
 	if err != nil {
-		if errors.Is(err, services.ErrInvalidTaskPriority) {
+		if errors.Is(err, services.ErrInvalidTaskPriority) || errors.Is(err, services.ErrInvalidDateRange) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}

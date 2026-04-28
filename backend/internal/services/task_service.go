@@ -16,6 +16,7 @@ type TaskService struct {
 }
 
 var ErrInvalidTaskPriority = errors.New("invalid task priority")
+var ErrInvalidDateRange = errors.New("start date cannot be after deadline")
 
 func NewTaskService(db *sql.DB, activitySvc *ActivityService) *TaskService {
 	return &TaskService{db: db, activitySvc: activitySvc}
@@ -530,6 +531,12 @@ func normalizeTaskAttributes(attrs TaskAttributes) (TaskAttributes, error) {
 			attrs.AssignedTo = nil
 		} else {
 			attrs.AssignedTo = &normalized
+		}
+	}
+
+	if attrs.StartDate != nil && attrs.Deadline != nil {
+		if attrs.StartDate.After(*attrs.Deadline) {
+			return TaskAttributes{}, ErrInvalidDateRange
 		}
 	}
 

@@ -210,6 +210,23 @@ func TestTaskController_GetProjectTimelineRejectsInvalidProjectID(t *testing.T) 
 	}
 }
 
+func TestTaskController_GetProjectTimelineRejectsNegativeProjectID(t *testing.T) {
+	db := newTimelineTestDB(t)
+	defer db.Close()
+
+	service := services.NewTaskService(db, nil)
+	controller := controllers.NewTaskController(service)
+	req := createRequestWithUser(http.MethodGet, "/api/projects/-1/timeline", nil, "user-1")
+	req = mux.SetURLVars(req, map[string]string{"id": "-1"})
+	w := httptest.NewRecorder()
+
+	controller.GetProjectTimeline(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("GetProjectTimeline() status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
 func TestTaskController_GetProjectTimelineRequiresAuthentication(t *testing.T) {
 	db := newTimelineTestDB(t)
 	defer db.Close()

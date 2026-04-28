@@ -185,6 +185,7 @@ Behavior:
 - Requires project access through project membership or ownership.
 - Returns `404 Not Found` when the project does not exist.
 - Returns `403 Forbidden` when the user does not have project access.
+- Returns `400 Bad Request` when the project ID is negative or zero.
 - Returns only tasks with `start_date` or `deadline`.
 - Includes `stage_name` for timeline row grouping.
 - Orders deadline tasks by ascending deadline.
@@ -205,6 +206,7 @@ Updated backend behavior:
 - Added `start_date` to task update requests.
 - Preserves existing `start_date` when older clients update a task without
   sending the field.
+- Rejects task create/update with `400 Bad Request` if `start_date` comes strictly after `deadline`.
 - Returns `start_date` in task read responses.
 
 Supported task create/update field:
