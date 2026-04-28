@@ -227,14 +227,14 @@ func (s *TaskService) MoveTask(userID string, id int64, newStageID int64, newPos
 	return s.GetTaskByID(userID, id)
 }
 
-// AssignTask assigns a task to a user (must be project member)
-// Returns error codes: TASK_NOT_FOUND, ACCESS_DENIED, USER_NOT_PROJECT_MEMBER
-// Uses transaction for consistency, activity logging is non-blocking
-func (s *TaskService) AssignTask(taskID int64, assigneeID string, requesterID string) error {
+// AssignTask assigns/unassigns a task to a user
+// Returns error codes: TASK_NOT_FOUND, INVALID_ASSIGNEE
+// Updated to support unassignment (null), full task return, any member assignment
+func (s *TaskService) AssignTask(taskID int64, assignedTo *string, requesterID string) (*models.Task, error) {
 	// Start transaction for consistency
 	tx, err := s.db.Begin()
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %v", err)
+		return nil, fmt.Errorf("failed to begin transaction: %v", err)
 	}
 	committed := false
 	defer func() {
@@ -246,83 +246,96 @@ func (s *TaskService) AssignTask(taskID int64, assigneeID string, requesterID st
 	// 1. Get task and verify it exists (with row lock for concurrency)
 	var taskProjectID int64
 	var currentAssignee sql.NullString
+	var title string
+	var stageID int64
+	var updatedAt []byte
 	err = tx.QueryRow(`
-		SELECT stages.project_id, tasks.assigned_to 
+		SELECT stages.project_id, tasks.assigned_to, tasks.title, tasks.stage_id, tasks.updated_at
 		FROM tasks 
 		JOIN stages ON tasks.stage_id = stages.id 
 		WHERE tasks.id = ?`,
 		taskID,
-	).Scan(&taskProjectID, &currentAssignee)
+	).Scan(&taskProjectID, &currentAssignee, &title, &stageID, &updatedAt)
 
 	if err == sql.ErrNoRows {
-		return &ServiceError{Code: "TASK_NOT_FOUND", Message: "task not found"}
+		return nil, &ServiceError{Code: "TASK_NOT_FOUND", Message: "task not found"}
 	}
 	if err != nil {
-		return fmt.Errorf("failed to get task: %v", err)
+		return nil, fmt.Errorf("failed to get task: %v", err)
 	}
 
-	// 2. Check if requester is owner of the project (only owners can assign tasks)
-	var requesterRole string
-	err = tx.QueryRow(`
-		SELECT role FROM project_members 
-		WHERE project_id = ? AND user_id = ?`,
-		taskProjectID, requesterID,
-	).Scan(&requesterRole)
-	if err == sql.ErrNoRows {
-		return &ServiceError{Code: "ACCESS_DENIED", Message: "you are not a member of this project"}
-	}
-	if err != nil {
-		return fmt.Errorf("failed to check requester role: %v", err)
-	}
-	if requesterRole != "owner" {
-		return &ServiceError{Code: "ACCESS_DENIED", Message: "only project owner can assign tasks"}
-	}
-
-	// 3. Check if assignee is a member of the project
-	var assigneeIsMember int
+	// 2. Check if requester is a member of the project (any member can assign)
+	var requesterIsMember int
 	err = tx.QueryRow(`
 		SELECT COUNT(*) FROM project_members 
 		WHERE project_id = ? AND user_id = ?`,
-		taskProjectID, assigneeID,
-	).Scan(&assigneeIsMember)
+		taskProjectID, requesterID,
+	).Scan(&requesterIsMember)
 	if err != nil {
-		return fmt.Errorf("failed to check assignee membership: %v", err)
+		return nil, fmt.Errorf("failed to check membership: %v", err)
 	}
-	if assigneeIsMember == 0 {
-		return &ServiceError{Code: "USER_NOT_PROJECT_MEMBER", Message: "cannot assign to non-project member"}
-	}
-
-	// 4. Update task assignment
-	previousAssignee := ""
-	if currentAssignee.Valid {
-		previousAssignee = currentAssignee.String
+	if requesterIsMember == 0 {
+		return nil, &ServiceError{Code: "ACCESS_DENIED", Message: "you are not a member of this project"}
 	}
 
-	result, err := tx.Exec(`
-		UPDATE tasks SET assigned_to = ?, updated_at = CURRENT_TIMESTAMP 
-		WHERE id = ? AND (assigned_to != ? OR assigned_to IS NULL)`,
-		assigneeID, taskID, assigneeID,
-	)
+	// 3. If assignedTo is NOT null, check if user is a member of the project
+	if assignedTo != nil && *assignedTo != "" {
+		var assigneeIsMember int
+		err = tx.QueryRow(`
+			SELECT COUNT(*) FROM project_members 
+			WHERE project_id = ? AND user_id = ?`,
+			taskProjectID, *assignedTo,
+		).Scan(&assigneeIsMember)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check assignee membership: %v", err)
+		}
+		if assigneeIsMember == 0 {
+			return nil, &ServiceError{Code: "INVALID_ASSIGNEE", Message: "assignee is not a member of this project"}
+		}
+	}
+
+	// 4. Update task assignment (support null for unassign)
+	if assignedTo == nil || *assignedTo == "" {
+		// Unassign - set to NULL
+		_, err = tx.Exec(`
+			UPDATE tasks SET assigned_to = NULL, updated_at = CURRENT_TIMESTAMP 
+			WHERE id = ?`, taskID)
+	} else {
+		// Assign
+		_, err = tx.Exec(`
+			UPDATE tasks SET assigned_to = ?, updated_at = CURRENT_TIMESTAMP 
+			WHERE id = ? AND (assigned_to != ? OR assigned_to IS NULL)`,
+			*assignedTo, taskID, *assignedTo)
+	}
+
 	if err != nil {
-		return fmt.Errorf("failed to assign task: %v", err)
+		return nil, fmt.Errorf("failed to update assignment: %v", err)
 	}
-
-	rowsAffected, _ := result.RowsAffected()
 
 	// Commit transaction
 	if err = tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %v", err)
+		return nil, fmt.Errorf("failed to commit transaction: %v", err)
 	}
 	committed = true
 
-	// 5. Log activity (non-blocking with error handling)
-	if s.activitySvc != nil && rowsAffected > 0 {
-		go func() {
-			s.activitySvc.LogTaskAssigned(taskProjectID, requesterID, previousAssignee, assigneeID, taskID)
-		}()
+	// 5. Fetch updated task and return
+	var resultTask models.Task
+	var assignedToRes sql.NullString
+	var updatedAtRes []byte
+	err = s.db.QueryRow(`
+		SELECT id, title, assigned_to, stage_id, updated_at
+		FROM tasks WHERE id = ?`,
+		taskID,
+	).Scan(&resultTask.ID, &resultTask.Title, &assignedToRes, &resultTask.StageID, &updatedAtRes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch updated task: %v", err)
 	}
 
-	return nil
+	if assignedToRes.Valid {
+		resultTask.AssignedTo = &assignedToRes.String
+	}
+
+	return &resultTask, nil
 }
 
 // DeleteTask deletes a task (validates ownership)
