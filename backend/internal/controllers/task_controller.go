@@ -153,7 +153,7 @@ func (c *TaskController) GetProjectTimeline(w http.ResponseWriter, r *http.Reque
 
 	timeline, err := c.service.GetProjectTimeline(userID, projectID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		handleServiceError(w, err)
 		return
 	}
 

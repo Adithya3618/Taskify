@@ -154,6 +154,49 @@ func TestActivityController_GetActivityNormalizesPagination(t *testing.T) {
 	}
 }
 
+func TestActivityController_GetActivityCapsLargeLimit(t *testing.T) {
+	db := newActivityEndpointTestDB(t)
+	defer db.Close()
+
+	projectID := seedActivityEndpointProject(t, db, "user-1")
+	for i := 0; i < 105; i++ {
+		seedActivityEndpointLog(
+			t,
+			db,
+			projectID,
+			"user-1",
+			"Owner User",
+			models.ActivityTaskUpdated,
+			models.EntityTask,
+			int64(i+1),
+			"Activity item",
+			time.Date(2026, 4, 20, 9, 0, 0, 0, time.UTC).Add(time.Duration(i)*time.Minute),
+		)
+	}
+
+	controller := newActivityEndpointController(db)
+	req := createRequestWithUser(http.MethodGet, "/api/projects/1/activity?page=1&limit=200", nil, "user-1")
+	req = mux.SetURLVars(req, map[string]string{"id": toString(projectID)})
+	w := httptest.NewRecorder()
+
+	controller.GetActivity(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GetActivity() status = %d, want %d; body=%s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	var response activityFeedResponse
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+		t.Fatalf("decode response error = %v", err)
+	}
+	if response.Total != 105 {
+		t.Fatalf("response.Total = %d, want 105", response.Total)
+	}
+	if len(response.Logs) != 100 {
+		t.Fatalf("len(response.Logs) = %d, want 100", len(response.Logs))
+	}
+}
+
 func TestActivityController_GetActivityReturnsEmptyFeed(t *testing.T) {
 	db := newActivityEndpointTestDB(t)
 	defer db.Close()

@@ -16,11 +16,11 @@ This folder contains all unit tests for the Taskify backend, organized by functi
 | `services_test.go` | Service constructor tests | 4 tests |
 | `user_repository_test.go` | Database operations for users | 11 tests |
 | `database_test.go` | Database connection and SQL operations | 6 tests |
-| `timeline_test.go` | Timeline endpoint, project access, dated task filtering | 7 tests |
+| `timeline_test.go` | Timeline endpoint, project access, dated task filtering | 8 tests |
 | `task_enhancements_test.go` | Task deadline, priority, assignee, and start date behavior | 6 tests |
-| `stage_reorder_test.go` | Project stage reorder service and controller behavior | 4 tests |
-| `activity_endpoint_test.go` | Paginated project activity endpoint behavior | 5 tests |
-| `task_search_test.go` | Project-wide task search service and endpoint behavior | 6 tests |
+| `stage_reorder_test.go` | Project stage reorder service and controller behavior | 5 tests |
+| `activity_endpoint_test.go` | Paginated project activity endpoint behavior | 6 tests |
+| `task_search_test.go` | Project-wide task search service and endpoint behavior | 7 tests |
 
 **Total: 100+ unit tests**
 
@@ -125,6 +125,7 @@ go test ./internal/testcases -run Task.*Search
 - Rejects empty `stage_ids`.
 - Rejects duplicate stage IDs.
 - Rejects stage IDs from another project.
+- Rolls back partial updates when an invalid stage is found.
 - Rejects missing projects.
 - Rejects users without project access.
 
@@ -134,6 +135,7 @@ go test ./internal/testcases -run Task.*Search
 - Orders activity by `created_at` descending.
 - Returns the second page of activity.
 - Normalizes invalid page and limit values to defaults.
+- Caps oversized limits at 100 results while preserving the total count.
 - Returns an empty activity feed for projects without logs.
 - Rejects invalid project IDs.
 - Rejects unauthenticated requests.
@@ -145,6 +147,7 @@ go test ./internal/testcases -run Task.*Search
 - Searches across all stages in the requested project.
 - Performs case-insensitive matching.
 - Trims surrounding query whitespace before searching.
+- Treats SQL wildcard characters as literal search text.
 - Prevents tasks from other projects from leaking into results.
 - Allows project members to search shared project tasks.
 - Returns compact task result fields with `stage_name`.
@@ -196,6 +199,7 @@ The task search tests map directly to the Sprint 4 acceptance criteria:
 | Searches within the requested project only | `TestTaskService_SearchProjectTasksMatchesTitleAndDescription` |
 | Trims query whitespace | `TestTaskService_SearchProjectTasksTrimsQueryAndAllowsProjectMember` |
 | Allows project members to search | `TestTaskService_SearchProjectTasksTrimsQueryAndAllowsProjectMember` |
+| Treats `%` and `_` literally | `TestTaskService_SearchProjectTasksTreatsLikeWildcardsLiterally` |
 | Returns task metadata and stage name | `TestTaskService_SearchProjectTasksMatchesTitleAndDescription` |
 | Returns plain JSON array | `TestTaskController_SearchProjectTasksReturnsPlainArray` |
 | Returns empty array for no matches | `TestTaskService_SearchProjectTasksReturnsEmptyArray` |
@@ -215,6 +219,7 @@ The activity endpoint tests map directly to the Sprint 4 acceptance criteria:
 | Paginates with page and limit | `TestActivityController_GetActivityReturnsPaginatedFeed` |
 | Returns second page correctly | `TestActivityController_GetActivityReturnsSecondPage` |
 | Normalizes invalid pagination values | `TestActivityController_GetActivityNormalizesPagination` |
+| Caps large limits at 100 results | `TestActivityController_GetActivityCapsLargeLimit` |
 | Orders by created_at descending | `TestActivityController_GetActivityReturnsPaginatedFeed` |
 | Returns 404 if project not found | `TestActivityController_GetActivityValidation` |
 | Rejects missing auth | `TestActivityController_GetActivityValidation` |
@@ -232,6 +237,7 @@ The stage reorder tests map directly to the Sprint 4 acceptance criteria:
 | Uses persisted database order | `TestStageService_ReorderStagesUpdatesPositions` |
 | Returns updated stages in new order | `TestStageController_ReorderStagesReturnsUpdatedOrder` |
 | Rejects stage IDs from another project | `TestStageService_ReorderStagesRejectsInvalidRequests` |
+| Rolls back invalid reorder requests | `TestStageService_ReorderStagesRollsBackInvalidOrder` |
 | Returns error for missing project | `TestStageService_ReorderStagesRejectsInvalidRequests` |
 | Rejects invalid reorder input | `TestStageService_ReorderStagesRejectsInvalidRequests` |
 | Returns forbidden for inaccessible projects | `TestStageController_ReorderStagesValidation` |
@@ -248,6 +254,8 @@ The timeline tests map directly to the Sprint 4 acceptance criteria:
 | Returns empty array if no tasks have dates | `TestTaskService_GetProjectTimelineReturnsEmptyArray` |
 | Requires project access | `TestTaskService_GetProjectTimelineRequiresProjectAccess` |
 | Allows project members | `TestTaskService_GetProjectTimelineAllowsProjectMember` |
+| Maps missing projects to 404 | `TestTaskController_GetProjectTimelineMapsProjectErrors` |
+| Maps no access to 403 | `TestTaskController_GetProjectTimelineMapsProjectErrors` |
 | Returns plain JSON array | `TestTaskController_GetProjectTimelineReturnsPlainArray` |
 
 ## Manual API Check

@@ -187,12 +187,20 @@ func (s *TaskService) GetTaskByID(userID string, id int64) (*models.Task, error)
 
 // GetProjectTimeline returns dated tasks for a project timeline view.
 func (s *TaskService) GetProjectTimeline(userID string, projectID int64) ([]models.TimelineTaskResponse, error) {
+	exists, err := s.projectExists(projectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify project: %v", err)
+	}
+	if !exists {
+		return nil, &ServiceError{Code: "PROJECT_NOT_FOUND", Message: "project not found"}
+	}
+
 	hasAccess, err := s.hasProjectAccess(userID, projectID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify project access: %v", err)
 	}
 	if !hasAccess {
-		return nil, fmt.Errorf("project not found or access denied")
+		return nil, &ServiceError{Code: "ACCESS_DENIED", Message: "access denied to this project"}
 	}
 
 	rows, err := s.db.Query(
@@ -259,7 +267,7 @@ func (s *TaskService) SearchProjectTasks(userID string, projectID int64, query s
 		return nil, &ServiceError{Code: "ACCESS_DENIED", Message: "access denied to this project"}
 	}
 
-	pattern := "%" + strings.ToLower(query) + "%"
+	pattern := "%" + escapeLikePattern(strings.ToLower(query)) + "%"
 	rows, err := s.db.Query(
 		`SELECT
 			tasks.id,
@@ -274,8 +282,8 @@ func (s *TaskService) SearchProjectTasks(userID string, projectID int64, query s
 		JOIN stages ON stages.id = tasks.stage_id
 		WHERE stages.project_id = ?
 			AND (
-				LOWER(tasks.title) LIKE ?
-				OR LOWER(COALESCE(tasks.description, '')) LIKE ?
+				LOWER(tasks.title) LIKE ? ESCAPE '\'
+				OR LOWER(COALESCE(tasks.description, '')) LIKE ? ESCAPE '\'
 			)
 		ORDER BY stages.position ASC, tasks.position ASC, tasks.id ASC`,
 		projectID,
@@ -523,6 +531,11 @@ func normalizeTaskAttributes(attrs TaskAttributes) (TaskAttributes, error) {
 	}
 
 	return attrs, nil
+}
+
+func escapeLikePattern(value string) string {
+	replacer := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+	return replacer.Replace(value)
 }
 
 func (s *TaskService) projectExists(projectID int64) (bool, error) {

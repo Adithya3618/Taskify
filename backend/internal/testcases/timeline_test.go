@@ -197,6 +197,49 @@ func TestTaskController_GetProjectTimelineRequiresAuthentication(t *testing.T) {
 	}
 }
 
+func TestTaskController_GetProjectTimelineMapsProjectErrors(t *testing.T) {
+	db := newTimelineTestDB(t)
+	defer db.Close()
+
+	projectID, _, _ := seedTimelineProject(t, db, "user-1")
+	service := services.NewTaskService(db, nil)
+	controller := controllers.NewTaskController(service)
+
+	tests := []struct {
+		name       string
+		userID     string
+		projectID  string
+		wantStatus int
+	}{
+		{
+			name:       "missing project",
+			userID:     "user-1",
+			projectID:  toString(projectID + 100),
+			wantStatus: http.StatusNotFound,
+		},
+		{
+			name:       "no project access",
+			userID:     "user-2",
+			projectID:  toString(projectID),
+			wantStatus: http.StatusForbidden,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := createRequestWithUser(http.MethodGet, "/api/projects/1/timeline", nil, tt.userID)
+			req = mux.SetURLVars(req, map[string]string{"id": tt.projectID})
+			w := httptest.NewRecorder()
+
+			controller.GetProjectTimeline(w, req)
+
+			if w.Code != tt.wantStatus {
+				t.Fatalf("GetProjectTimeline() status = %d, want %d; body=%s", w.Code, tt.wantStatus, w.Body.String())
+			}
+		})
+	}
+}
+
 func newTimelineTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 

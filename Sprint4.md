@@ -37,6 +37,7 @@ Behavior:
 - Matches search text case-insensitively.
 - Trims surrounding whitespace from the search query.
 - Searches across all stages in the project.
+- Treats `%` and `_` in search text as literal characters instead of SQL wildcards.
 - Includes `stage_name` so results can show where each task belongs.
 - Orders results by stage position, task position, then task ID.
 - Returns an empty JSON array when no tasks match.
@@ -82,6 +83,7 @@ Behavior:
 - Clamps invalid page values to `1`.
 - Clamps invalid limit values to `20`.
 - Caps `limit` at `100`.
+- Keeps the total count independent from the capped page size.
 - Orders activity logs by `created_at` descending.
 - Returns `404 Not Found` when the project does not exist.
 - Returns `403 Forbidden` when the user does not have project access.
@@ -141,6 +143,7 @@ Behavior:
 - Rejects stage IDs that do not belong to the project.
 - Returns `404 Not Found` when the project does not exist.
 - Updates all stage positions inside a single database transaction.
+- Rolls back the transaction if any submitted stage ID is invalid.
 - Returns the updated stage list ordered by the new `position` values.
 
 ### Backend: Project Timeline Endpoint
@@ -177,6 +180,8 @@ Behavior:
 
 - Requires JWT authentication.
 - Requires project access through project membership or ownership.
+- Returns `404 Not Found` when the project does not exist.
+- Returns `403 Forbidden` when the user does not have project access.
 - Returns only tasks with `start_date` or `deadline`.
 - Includes `stage_name` for timeline row grouping.
 - Orders deadline tasks by ascending deadline.
@@ -454,6 +459,7 @@ Task search:
 - Performs case-insensitive matching.
 - Trims whitespace around the search query.
 - Allows project members to search shared project tasks.
+- Treats SQL wildcard characters as literal search text.
 - Includes task metadata needed by frontend search results.
 - Includes `stage_name` for result grouping and display.
 - Returns an empty array when no tasks match.
@@ -470,6 +476,7 @@ Activity feed:
 - Orders logs by `created_at` descending.
 - Returns the second page correctly.
 - Normalizes invalid page and limit values to defaults.
+- Caps overly large `limit` values at `100`.
 - Returns an empty `logs` array for projects with no activity.
 - Rejects invalid project IDs.
 - Rejects unauthenticated requests.
@@ -484,6 +491,7 @@ Stage reorder:
 - Rejects an empty `stage_ids` array.
 - Rejects duplicate stage IDs.
 - Rejects stage IDs from a different project.
+- Rolls back partial updates when validation fails during reorder.
 - Rejects missing projects.
 - Rejects users without project access.
 - Confirms the controller returns `403 Forbidden` for inaccessible projects.
@@ -498,6 +506,8 @@ Timeline:
 - Returns an empty array when there are no dated tasks.
 - Allows access for project members.
 - Rejects access for users outside the project.
+- Returns `404` for missing projects.
+- Maps project access errors to `403` and missing project errors to `404`.
 - Rejects invalid project IDs.
 - Rejects unauthenticated requests.
 - Confirms the controller returns a plain JSON array.

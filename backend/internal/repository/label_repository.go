@@ -20,6 +20,10 @@ func NewLabelRepository(db *sql.DB) *LabelRepository {
 
 // CreateLabel creates a new label in a project
 func (r *LabelRepository) CreateLabel(projectID int64, name, color, createdBy string) (*models.Label, error) {
+	if color == "" {
+		color = "#808080"
+	}
+
 	// Check for duplicate label name in project
 	var existingID int64
 	err := r.db.QueryRow(

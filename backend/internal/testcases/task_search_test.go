@@ -116,6 +116,33 @@ func TestTaskService_SearchProjectTasksTrimsQueryAndAllowsProjectMember(t *testi
 	}
 }
 
+func TestTaskService_SearchProjectTasksTreatsLikeWildcardsLiterally(t *testing.T) {
+	db := newTaskSearchTestDB(t)
+	defer db.Close()
+
+	projectID, stageID, _ := seedTaskSearchProject(t, db, "user-1")
+	percentTaskID := seedTaskSearchTask(t, db, "user-1", stageID, "Progress is 50% complete", "Release note", nil, nil, nil)
+	underscoreTaskID := seedTaskSearchTask(t, db, "user-1", stageID, "API cleanup", "Uses task_code field", nil, nil, nil)
+	seedTaskSearchTask(t, db, "user-1", stageID, "Ordinary task", "Should not match wildcard-only queries", nil, nil, nil)
+
+	service := services.NewTaskService(db, nil)
+	percentResults, err := service.SearchProjectTasks("user-1", projectID, "%")
+	if err != nil {
+		t.Fatalf("SearchProjectTasks(%%) error = %v", err)
+	}
+	if len(percentResults) != 1 || percentResults[0].TaskID != percentTaskID {
+		t.Fatalf("SearchProjectTasks(%%) = %+v, want only task %d", percentResults, percentTaskID)
+	}
+
+	underscoreResults, err := service.SearchProjectTasks("user-1", projectID, "_")
+	if err != nil {
+		t.Fatalf("SearchProjectTasks(_) error = %v", err)
+	}
+	if len(underscoreResults) != 1 || underscoreResults[0].TaskID != underscoreTaskID {
+		t.Fatalf("SearchProjectTasks(_) = %+v, want only task %d", underscoreResults, underscoreTaskID)
+	}
+}
+
 func TestTaskController_SearchProjectTasksReturnsPlainArray(t *testing.T) {
 	db := newTaskSearchTestDB(t)
 	defer db.Close()

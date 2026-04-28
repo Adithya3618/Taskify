@@ -107,6 +107,26 @@ func TestStageService_ReorderStagesRejectsInvalidRequests(t *testing.T) {
 	}
 }
 
+func TestStageService_ReorderStagesRollsBackInvalidOrder(t *testing.T) {
+	db := newStageReorderTestDB(t)
+	defer db.Close()
+
+	projectID, stageIDs := seedStageReorderProject(t, db, "user-1")
+	_, otherStageIDs := seedStageReorderProject(t, db, "user-2")
+	service := services.NewStageService(db)
+
+	_, err := service.ReorderStages("user-1", projectID, []int64{stageIDs[2], otherStageIDs[0], stageIDs[0]})
+	if err == nil {
+		t.Fatal("ReorderStages() error = nil, want invalid stage error")
+	}
+
+	persisted, err := service.GetStagesByProject("user-1", projectID)
+	if err != nil {
+		t.Fatalf("GetStagesByProject() error = %v", err)
+	}
+	assertStageOrder(t, persisted, []int64{stageIDs[0], stageIDs[1], stageIDs[2]})
+}
+
 func TestStageController_ReorderStagesReturnsUpdatedOrder(t *testing.T) {
 	db := newStageReorderTestDB(t)
 	defer db.Close()
