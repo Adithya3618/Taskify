@@ -35,6 +35,7 @@ Behavior:
 - Requires project access through project membership.
 - Searches task titles and descriptions.
 - Matches search text case-insensitively.
+- Trims surrounding whitespace from the search query.
 - Searches across all stages in the project.
 - Includes `stage_name` so results can show where each task belongs.
 - Orders results by stage position, task position, then task ID.
@@ -451,6 +452,8 @@ Task search:
 - Searches task titles and descriptions across a project.
 - Returns only tasks from the requested project.
 - Performs case-insensitive matching.
+- Trims whitespace around the search query.
+- Allows project members to search shared project tasks.
 - Includes task metadata needed by frontend search results.
 - Includes `stage_name` for result grouping and display.
 - Returns an empty array when no tasks match.
@@ -466,6 +469,7 @@ Activity feed:
 - Returns `logs`, `total`, and `page` fields.
 - Orders logs by `created_at` descending.
 - Returns the second page correctly.
+- Normalizes invalid page and limit values to defaults.
 - Returns an empty `logs` array for projects with no activity.
 - Rejects invalid project IDs.
 - Rejects unauthenticated requests.
@@ -482,6 +486,7 @@ Stage reorder:
 - Rejects stage IDs from a different project.
 - Rejects missing projects.
 - Rejects users without project access.
+- Confirms the controller returns `403 Forbidden` for inaccessible projects.
 - Confirms controller returns updated ordered stages.
 
 Timeline:

@@ -18,9 +18,9 @@ This folder contains all unit tests for the Taskify backend, organized by functi
 | `database_test.go` | Database connection and SQL operations | 6 tests |
 | `timeline_test.go` | Timeline endpoint, project access, dated task filtering | 7 tests |
 | `task_enhancements_test.go` | Task deadline, priority, assignee, and start date behavior | 6 tests |
-| `stage_reorder_test.go` | Project stage reorder service and controller behavior | 3 tests |
-| `activity_endpoint_test.go` | Paginated project activity endpoint behavior | 4 tests |
-| `task_search_test.go` | Project-wide task search service and endpoint behavior | 5 tests |
+| `stage_reorder_test.go` | Project stage reorder service and controller behavior | 4 tests |
+| `activity_endpoint_test.go` | Paginated project activity endpoint behavior | 5 tests |
+| `task_search_test.go` | Project-wide task search service and endpoint behavior | 6 tests |
 
 **Total: 100+ unit tests**
 
@@ -91,6 +91,7 @@ go test ./internal/testcases -run Task.*Search
 - Timeline endpoint response format and request validation
 - Stage reorder endpoint response format
 - Activity feed response format and pagination
+- Activity pagination default normalization
 - Task search endpoint response format and validation
 
 ### Model Tests
@@ -132,6 +133,7 @@ go test ./internal/testcases -run Task.*Search
 - Returns top-level `logs`, `total`, and `page` fields.
 - Orders activity by `created_at` descending.
 - Returns the second page of activity.
+- Normalizes invalid page and limit values to defaults.
 - Returns an empty activity feed for projects without logs.
 - Rejects invalid project IDs.
 - Rejects unauthenticated requests.
@@ -142,7 +144,9 @@ go test ./internal/testcases -run Task.*Search
 - Searches task titles and descriptions.
 - Searches across all stages in the requested project.
 - Performs case-insensitive matching.
+- Trims surrounding query whitespace before searching.
 - Prevents tasks from other projects from leaking into results.
+- Allows project members to search shared project tasks.
 - Returns compact task result fields with `stage_name`.
 - Returns an empty array when no tasks match.
 - Rejects missing or blank query text.
@@ -190,6 +194,8 @@ The task search tests map directly to the Sprint 4 acceptance criteria:
 | Searches tasks by title | `TestTaskService_SearchProjectTasksMatchesTitleAndDescription` |
 | Searches tasks by description | `TestTaskService_SearchProjectTasksMatchesTitleAndDescription` |
 | Searches within the requested project only | `TestTaskService_SearchProjectTasksMatchesTitleAndDescription` |
+| Trims query whitespace | `TestTaskService_SearchProjectTasksTrimsQueryAndAllowsProjectMember` |
+| Allows project members to search | `TestTaskService_SearchProjectTasksTrimsQueryAndAllowsProjectMember` |
 | Returns task metadata and stage name | `TestTaskService_SearchProjectTasksMatchesTitleAndDescription` |
 | Returns plain JSON array | `TestTaskController_SearchProjectTasksReturnsPlainArray` |
 | Returns empty array for no matches | `TestTaskService_SearchProjectTasksReturnsEmptyArray` |
@@ -208,6 +214,7 @@ The activity endpoint tests map directly to the Sprint 4 acceptance criteria:
 | Logs project actions | `TestActivityController_GetActivityReturnsPaginatedFeed` |
 | Paginates with page and limit | `TestActivityController_GetActivityReturnsPaginatedFeed` |
 | Returns second page correctly | `TestActivityController_GetActivityReturnsSecondPage` |
+| Normalizes invalid pagination values | `TestActivityController_GetActivityNormalizesPagination` |
 | Orders by created_at descending | `TestActivityController_GetActivityReturnsPaginatedFeed` |
 | Returns 404 if project not found | `TestActivityController_GetActivityValidation` |
 | Rejects missing auth | `TestActivityController_GetActivityValidation` |
@@ -227,6 +234,7 @@ The stage reorder tests map directly to the Sprint 4 acceptance criteria:
 | Rejects stage IDs from another project | `TestStageService_ReorderStagesRejectsInvalidRequests` |
 | Returns error for missing project | `TestStageService_ReorderStagesRejectsInvalidRequests` |
 | Rejects invalid reorder input | `TestStageService_ReorderStagesRejectsInvalidRequests` |
+| Returns forbidden for inaccessible projects | `TestStageController_ReorderStagesValidation` |
 
 ## Timeline Endpoint Acceptance Coverage
 

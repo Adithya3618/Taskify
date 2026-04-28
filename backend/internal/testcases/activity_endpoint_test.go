@@ -116,6 +116,44 @@ func TestActivityController_GetActivityReturnsSecondPage(t *testing.T) {
 	}
 }
 
+func TestActivityController_GetActivityNormalizesPagination(t *testing.T) {
+	db := newActivityEndpointTestDB(t)
+	defer db.Close()
+
+	projectID := seedActivityEndpointProject(t, db, "user-1")
+	seedActivityEndpointLog(t, db, projectID, "user-1", "Owner User", models.ActivityTaskCreated, models.EntityTask, 1, "First", time.Date(2026, 4, 20, 9, 0, 0, 0, time.UTC))
+	seedActivityEndpointLog(t, db, projectID, "user-1", "Owner User", models.ActivityTaskMoved, models.EntityTask, 2, "Second", time.Date(2026, 4, 21, 9, 0, 0, 0, time.UTC))
+	seedActivityEndpointLog(t, db, projectID, "user-1", "Owner User", models.ActivityTaskUpdated, models.EntityTask, 3, "Third", time.Date(2026, 4, 22, 9, 0, 0, 0, time.UTC))
+
+	controller := newActivityEndpointController(db)
+	req := createRequestWithUser(http.MethodGet, "/api/projects/1/activity?page=0&limit=0", nil, "user-1")
+	req = mux.SetURLVars(req, map[string]string{"id": toString(projectID)})
+	w := httptest.NewRecorder()
+
+	controller.GetActivity(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GetActivity() status = %d, want %d; body=%s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	var response activityFeedResponse
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+		t.Fatalf("decode response error = %v", err)
+	}
+	if response.Page != 1 {
+		t.Fatalf("response.Page = %d, want 1", response.Page)
+	}
+	if response.Total != 3 {
+		t.Fatalf("response.Total = %d, want 3", response.Total)
+	}
+	if len(response.Logs) != 3 {
+		t.Fatalf("len(response.Logs) = %d, want 3", len(response.Logs))
+	}
+	if response.Logs[0].EntityTitle != "Third" {
+		t.Fatalf("first entity_title = %q, want Third", response.Logs[0].EntityTitle)
+	}
+}
+
 func TestActivityController_GetActivityReturnsEmptyFeed(t *testing.T) {
 	db := newActivityEndpointTestDB(t)
 	defer db.Close()

@@ -90,6 +90,32 @@ func TestTaskService_SearchProjectTasksReturnsEmptyArray(t *testing.T) {
 	}
 }
 
+func TestTaskService_SearchProjectTasksTrimsQueryAndAllowsProjectMember(t *testing.T) {
+	db := newTaskSearchTestDB(t)
+	defer db.Close()
+
+	projectID, stageID, _ := seedTaskSearchProject(t, db, "user-1")
+	if _, err := db.Exec(
+		"INSERT INTO project_members (project_id, user_id, role, invited_by) VALUES (?, ?, ?, ?)",
+		projectID, "user-2", "member", "user-1",
+	); err != nil {
+		t.Fatalf("insert project member error = %v", err)
+	}
+	taskID := seedTaskSearchTask(t, db, "user-1", stageID, "Trimmed Search Task", "Member can find this", nil, nil, nil)
+
+	service := services.NewTaskService(db, nil)
+	results, err := service.SearchProjectTasks("user-2", projectID, "  SEARCH  ")
+	if err != nil {
+		t.Fatalf("SearchProjectTasks() error = %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("SearchProjectTasks() len = %d, want 1: %+v", len(results), results)
+	}
+	if results[0].TaskID != taskID {
+		t.Fatalf("result TaskID = %d, want %d", results[0].TaskID, taskID)
+	}
+}
+
 func TestTaskController_SearchProjectTasksReturnsPlainArray(t *testing.T) {
 	db := newTaskSearchTestDB(t)
 	defer db.Close()

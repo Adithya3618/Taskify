@@ -198,6 +198,13 @@ func TestStageController_ReorderStagesValidation(t *testing.T) {
 			body:       map[string]interface{}{"stage_ids": stageIDs},
 			wantStatus: http.StatusNotFound,
 		},
+		{
+			name:       "no project access",
+			userID:     "user-3",
+			projectID:  toString(projectID),
+			body:       map[string]interface{}{"stage_ids": stageIDs},
+			wantStatus: http.StatusForbidden,
+		},
 	}
 
 	for _, tt := range tests {
