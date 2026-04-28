@@ -127,6 +127,11 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	protected.HandleFunc("/invites/{id}/accept", projectMemberController.AcceptInvite).Methods("POST")
 
 	// Stage routes (protected)
+	stageReorderRoutes := api.PathPrefix("/projects/{id}/stages/reorder").Subrouter()
+	stageReorderRoutes.Use(jwtMiddleware)
+	stageReorderRoutes.Use(projectAccessMiddleware)
+	stageReorderRoutes.HandleFunc("", stageController.ReorderStages).Methods("PUT")
+
 	protected.HandleFunc("/projects/{projectId}/stages", stageController.CreateStage).Methods("POST")
 	protected.HandleFunc("/projects/{projectId}/stages", stageController.GetStagesByProject).Methods("GET")
 	protected.HandleFunc("/stages/{id}", stageController.GetStage).Methods("GET")
