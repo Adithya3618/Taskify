@@ -378,6 +378,11 @@ func (s *AuthService) UpdateUserName(userID, name string) (*models.UserResponse,
 		return nil, fmt.Errorf("name is required")
 	}
 
+	// Max length validation
+	if len(name) > 100 {
+		return nil, fmt.Errorf("name must be 100 characters or less")
+	}
+
 	if err := s.userRepo.UpdateName(userID, name); err != nil {
 		return nil, fmt.Errorf("failed to update name: %v", err)
 	}
