@@ -23,7 +23,7 @@ func TestTaskService_CreateTask_BackwardCompatibleWithoutEnhancements(t *testing
 	defer db.Close()
 
 	stageID := seedTaskEnhancementStage(t, db, "user-1")
-	service := services.NewTaskService(db)
+	service := services.NewTaskService(db, nil)
 
 	task, err := service.CreateTask("user-1", stageID, "Task", "desc", 0, services.TaskAttributes{})
 	if err != nil {
@@ -46,7 +46,7 @@ func TestTaskService_CreateUpdateAndReadEnhancements(t *testing.T) {
 	defer db.Close()
 
 	stageID := seedTaskEnhancementStage(t, db, "user-1")
-	service := services.NewTaskService(db)
+	service := services.NewTaskService(db, nil)
 
 	initialDeadline := time.Date(2026, 4, 20, 15, 0, 0, 0, time.UTC)
 	initialPriority := "high"
@@ -106,7 +106,7 @@ func TestTaskService_InvalidPriorityRejected(t *testing.T) {
 	defer db.Close()
 
 	stageID := seedTaskEnhancementStage(t, db, "user-1")
-	service := services.NewTaskService(db)
+	service := services.NewTaskService(db, nil)
 	invalidPriority := "critical"
 
 	_, err := service.CreateTask("user-1", stageID, "Task", "desc", 0, services.TaskAttributes{
@@ -125,7 +125,7 @@ func TestTaskController_InvalidPriorityReturnsBadRequest(t *testing.T) {
 	defer db.Close()
 
 	stageID := seedTaskEnhancementStage(t, db, "user-1")
-	service := services.NewTaskService(db)
+	service := services.NewTaskService(db, nil)
 	controller := controllers.NewTaskController(service)
 
 	t.Run("create rejects invalid priority", func(t *testing.T) {
@@ -169,7 +169,7 @@ func TestTaskController_EnhancementRoundTripAndBackwardCompatibleUpdate(t *testi
 	defer db.Close()
 
 	stageID := seedTaskEnhancementStage(t, db, "user-1")
-	service := services.NewTaskService(db)
+	service := services.NewTaskService(db, nil)
 	controller := controllers.NewTaskController(service)
 
 	createDeadline := "2026-06-10T12:30:00Z"
@@ -339,6 +339,7 @@ func newTaskEnhancementTestDB(t *testing.T) *sql.DB {
 			title TEXT NOT NULL,
 			description TEXT,
 			position INTEGER DEFAULT 0,
+			start_date DATETIME,
 			deadline DATETIME,
 			priority TEXT,
 			assigned_to TEXT,

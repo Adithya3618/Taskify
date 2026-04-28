@@ -159,6 +159,7 @@ type Task struct {
 	Title          string     `json:"title"`
 	Description    string     `json:"description"`
 	Position       int        `json:"position"`
+	StartDate      *time.Time `json:"start_date"`
 	Deadline       *time.Time `json:"deadline"`
 	Priority       *string    `json:"priority"`
 	AssignedTo     *string    `json:"assigned_to"`

@@ -29,6 +29,7 @@ var allowedTaskPriorities = map[string]struct{}{
 }
 
 type TaskAttributes struct {
+	StartDate  *time.Time
 	Deadline   *time.Time
 	Priority   *string
 	AssignedTo *string
@@ -68,8 +69,8 @@ func (s *TaskService) CreateTask(userID string, stageID int64, title, descriptio
 	}
 
 	result, err := s.db.Exec(
-		"INSERT INTO tasks (user_id, stage_id, title, description, position, deadline, priority, assigned_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-		userID, stageID, title, description, position, nullableTime(attrs.Deadline), nullableString(attrs.Priority), nullableString(attrs.AssignedTo),
+		"INSERT INTO tasks (user_id, stage_id, title, description, position, start_date, deadline, priority, assigned_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		userID, stageID, title, description, position, nullableTime(attrs.StartDate), nullableTime(attrs.Deadline), nullableString(attrs.Priority), nullableString(attrs.AssignedTo),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create task: %v", err)
@@ -92,6 +93,7 @@ func (s *TaskService) CreateTask(userID string, stageID int64, title, descriptio
 		Title:       title,
 		Description: description,
 		Position:    position,
+		StartDate:   attrs.StartDate,
 		Deadline:    attrs.Deadline,
 		Priority:    attrs.Priority,
 		AssignedTo:  attrs.AssignedTo,
@@ -119,6 +121,7 @@ func (s *TaskService) GetTasksByStage(userID string, stageID int64) ([]models.Ta
 			tasks.title,
 			tasks.description,
 			tasks.position,
+			tasks.start_date,
 			tasks.deadline,
 			tasks.priority,
 			tasks.assigned_to,
@@ -158,6 +161,7 @@ func (s *TaskService) GetTaskByID(userID string, id int64) (*models.Task, error)
 			tasks.title,
 			tasks.description,
 			tasks.position,
+			tasks.start_date,
 			tasks.deadline,
 			tasks.priority,
 			tasks.assigned_to,
@@ -189,8 +193,8 @@ func (s *TaskService) UpdateTask(userID string, id int64, title, description str
 	}
 
 	_, err = s.db.Exec(
-		"UPDATE tasks SET title = ?, description = ?, position = ?, deadline = ?, priority = ?, assigned_to = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?",
-		title, description, position, nullableTime(attrs.Deadline), nullableString(attrs.Priority), nullableString(attrs.AssignedTo), id, userID,
+		"UPDATE tasks SET title = ?, description = ?, position = ?, start_date = ?, deadline = ?, priority = ?, assigned_to = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?",
+		title, description, position, nullableTime(attrs.StartDate), nullableTime(attrs.Deadline), nullableString(attrs.Priority), nullableString(attrs.AssignedTo), id, userID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update task: %v", err)
@@ -270,6 +274,7 @@ type taskScanner interface {
 
 func scanTask(scanner taskScanner) (models.Task, error) {
 	var task models.Task
+	var startDate sql.NullTime
 	var deadline sql.NullTime
 	var priority sql.NullString
 	var assignedTo sql.NullString
@@ -281,6 +286,7 @@ func scanTask(scanner taskScanner) (models.Task, error) {
 		&task.Title,
 		&task.Description,
 		&task.Position,
+		&startDate,
 		&deadline,
 		&priority,
 		&assignedTo,
@@ -293,6 +299,7 @@ func scanTask(scanner taskScanner) (models.Task, error) {
 		return models.Task{}, err
 	}
 
+	task.StartDate = nullableTimePtr(startDate)
 	task.Deadline = nullableTimePtr(deadline)
 	task.Priority = nullableStringPtr(priority)
 	task.AssignedTo = nullableStringPtr(assignedTo)

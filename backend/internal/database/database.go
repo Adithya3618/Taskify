@@ -93,6 +93,7 @@ func (db *DB) createTables() error {
 		title TEXT NOT NULL,
 		description TEXT,
 		position INTEGER DEFAULT 0,
+		start_date DATETIME,
 		deadline DATETIME,
 		priority TEXT,
 		assigned_to TEXT,
@@ -295,6 +296,7 @@ func (db *DB) migrateLegacySchema() error {
 		},
 		"tasks": {
 			"user_id":     "TEXT",
+			"start_date":  "DATETIME",
 			"deadline":    "DATETIME",
 			"priority":    "TEXT",
 			"assigned_to": "TEXT",

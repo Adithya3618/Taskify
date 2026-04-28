@@ -22,6 +22,7 @@ type taskRequest struct {
 	Title       string     `json:"title"`
 	Description string     `json:"description"`
 	Position    int        `json:"position"`
+	StartDate   *time.Time `json:"start_date"`
 	Deadline    *time.Time `json:"deadline"`
 	Priority    *string    `json:"priority"`
 	AssignedTo  *string    `json:"assigned_to"`
@@ -29,6 +30,7 @@ type taskRequest struct {
 
 type taskUpdateRequest struct {
 	taskRequest
+	StartDateProvided  bool
 	DeadlineProvided   bool
 	PriorityProvided   bool
 	AssignedToProvided bool
@@ -251,6 +253,7 @@ func (c *TaskController) DeleteTask(w http.ResponseWriter, r *http.Request) {
 
 func taskAttributesFromRequest(req taskRequest) services.TaskAttributes {
 	return services.TaskAttributes{
+		StartDate:  req.StartDate,
 		Deadline:   req.Deadline,
 		Priority:   req.Priority,
 		AssignedTo: req.AssignedTo,
@@ -259,11 +262,15 @@ func taskAttributesFromRequest(req taskRequest) services.TaskAttributes {
 
 func mergeTaskAttributes(existing *models.Task, req taskUpdateRequest) services.TaskAttributes {
 	attrs := services.TaskAttributes{
+		StartDate:  existing.StartDate,
 		Deadline:   existing.Deadline,
 		Priority:   existing.Priority,
 		AssignedTo: existing.AssignedTo,
 	}
 
+	if req.StartDateProvided {
+		attrs.StartDate = req.StartDate
+	}
 	if req.DeadlineProvided {
 		attrs.Deadline = req.Deadline
 	}
@@ -299,6 +306,7 @@ func decodeTaskUpdateRequest(r *http.Request) (taskUpdateRequest, error) {
 		return taskUpdateRequest{}, err
 	}
 
+	_, req.StartDateProvided = raw["start_date"]
 	_, req.DeadlineProvided = raw["deadline"]
 	_, req.PriorityProvided = raw["priority"]
 	_, req.AssignedToProvided = raw["assigned_to"]
