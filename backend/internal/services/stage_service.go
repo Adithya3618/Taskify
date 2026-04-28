@@ -155,6 +155,14 @@ func (s *StageService) ReorderStages(userID string, projectID int64, stageIDs []
 		seen[stageID] = struct{}{}
 	}
 
+	var totalStages int
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM stages WHERE project_id = ?", projectID).Scan(&totalStages); err != nil {
+		return nil, fmt.Errorf("failed to count project stages: %v", err)
+	}
+	if len(stageIDs) != totalStages {
+		return nil, &ServiceError{Code: "INVALID_REQUEST", Message: "stage_ids must include exactly all stages in the project"}
+	}
+
 	tx, err := s.db.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin stage reorder transaction: %v", err)

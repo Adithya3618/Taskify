@@ -142,6 +142,7 @@ Behavior:
 - Allows project members with access to persist the shared stage order.
 - Accepts an ordered array of stage IDs.
 - Rejects an empty `stage_ids` array.
+- Rejects incomplete `stage_ids` arrays that omit existing project stages.
 - Rejects duplicate stage IDs.
 - Rejects stage IDs that do not belong to the project.
 - Returns `404 Not Found` when the project does not exist.

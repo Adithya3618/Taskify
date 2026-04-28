@@ -68,6 +68,13 @@ func TestStageService_ReorderStagesRejectsInvalidRequests(t *testing.T) {
 			wantCode:  "INVALID_REQUEST",
 		},
 		{
+			name:      "incomplete stage list",
+			userID:    "user-1",
+			projectID: projectID,
+			stageIDs:  []int64{stageIDs[0], stageIDs[1]},
+			wantCode:  "INVALID_REQUEST",
+		},
+		{
 			name:      "stage belongs to another project",
 			userID:    "user-1",
 			projectID: projectID,
@@ -222,6 +229,13 @@ func TestStageController_ReorderStagesValidation(t *testing.T) {
 			userID:     "user-1",
 			projectID:  toString(projectID),
 			body:       map[string]interface{}{"stage_ids": []int64{stageIDs[0], stageIDs[0]}},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "incomplete stage list",
+			userID:     "user-1",
+			projectID:  toString(projectID),
+			body:       map[string]interface{}{"stage_ids": []int64{stageIDs[0], stageIDs[1]}},
 			wantStatus: http.StatusBadRequest,
 		},
 		{
