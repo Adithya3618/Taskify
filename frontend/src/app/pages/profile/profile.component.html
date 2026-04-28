@@ -1,11 +1,77 @@
 <main class="profilePage">
-  <section class="profileShell" aria-labelledby="profileTitle">
-    <a class="backLink" routerLink="/boards">Back to boards</a>
+  <div class="profileShell">
+    <header class="profileHeader" aria-labelledby="profileTitle">
+      <a class="backLink" routerLink="/boards">
+        <span aria-hidden="true">←</span>
+        Back to boards
+      </a>
 
-    <p class="eyebrow">Account</p>
-    <h1 id="profileTitle">Profile</h1>
-    <p class="intro">
-      Manage your Taskify profile details and account preferences.
-    </p>
-  </section>
+      <div class="headerContent">
+        <div>
+          <p class="eyebrow">Account</p>
+          <h1 id="profileTitle">Profile</h1>
+          <p class="intro">
+            Manage your Taskify profile details and account preferences.
+          </p>
+        </div>
+
+        <div class="avatarPreview" aria-hidden="true">U</div>
+      </div>
+    </header>
+
+    <section class="profileGrid" aria-label="Profile overview">
+      <article class="identityPanel">
+        <div class="identityAvatar" aria-hidden="true">U</div>
+        <div>
+          <p class="panelLabel">Signed in as</p>
+          <h2>Taskify User</h2>
+          <p class="mutedText">user@example.com</p>
+        </div>
+      </article>
+
+      <article class="infoPanel">
+        <p class="panelLabel">Account details</p>
+        <dl class="detailList">
+          <div>
+            <dt>Display name</dt>
+            <dd>Taskify User</dd>
+          </div>
+          <div>
+            <dt>Email</dt>
+            <dd>user@example.com</dd>
+          </div>
+          <div>
+            <dt>Role</dt>
+            <dd>Member</dd>
+          </div>
+        </dl>
+      </article>
+    </section>
+
+    <section class="settingsGrid" aria-label="Profile settings">
+      <article class="settingsPanel">
+        <div class="panelIcon" aria-hidden="true">ID</div>
+        <div>
+          <h2>Personal information</h2>
+          <p class="mutedText">Keep your name and email current across Taskify.</p>
+        </div>
+      </article>
+
+      <article class="settingsPanel">
+        <div class="panelIcon" aria-hidden="true">PW</div>
+        <div>
+          <h2>Security</h2>
+          <p class="mutedText">Update your password and review account access.</p>
+        </div>
+      </article>
+
+      <article class="settingsPanel">
+        <div class="panelIcon" aria-hidden="true">UI</div>
+        <div>
+          <h2>Preferences</h2>
+          <p class="mutedText">Choose the workspace settings that fit how you work.</p>
+        </div>
+      </article>
+    </section>
+  </div>
 </main>
