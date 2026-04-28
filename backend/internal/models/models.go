@@ -105,6 +105,23 @@ type ActivityLogResponse struct {
 	CreatedAt   time.Time      `json:"created_at"`
 }
 
+// ActivityFeedLog is the compact response shape for dashboard activity feeds.
+type ActivityFeedLog struct {
+	ID          int64          `json:"id"`
+	UserName    string         `json:"user_name,omitempty"`
+	Action      ActivityAction `json:"action"`
+	EntityType  EntityType     `json:"entity_type"`
+	EntityTitle string         `json:"entity_title"`
+	CreatedAt   time.Time      `json:"created_at"`
+}
+
+// ActivityFeedResponse is the paginated project activity response.
+type ActivityFeedResponse struct {
+	Logs  []ActivityFeedLog `json:"logs"`
+	Total int64             `json:"total"`
+	Page  int               `json:"page"`
+}
+
 // Permission constants for project access
 const (
 	PermissionViewProject   = "view_project"

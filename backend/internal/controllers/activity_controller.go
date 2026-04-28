@@ -1,11 +1,13 @@
 package controllers
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
 
 	"backend/internal/helpers"
+	"backend/internal/models"
 	"backend/internal/repository"
 	"backend/internal/services"
 
@@ -80,7 +82,13 @@ func (c *ActivityController) GetActivity(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	helpers.WritePaginated(w, http.StatusOK, logs, params.Page, params.Limit, total)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(models.ActivityFeedResponse{
+		Logs:  toActivityFeedLogs(logs),
+		Total: total,
+		Page:  params.Page,
+	})
 }
 
 // GetRecentActivity handles GET /api/projects/:id/activity/recent
@@ -116,4 +124,19 @@ func (c *ActivityController) GetRecentActivity(w http.ResponseWriter, r *http.Re
 	}
 
 	helpers.WriteSuccess(w, http.StatusOK, logs, "")
+}
+
+func toActivityFeedLogs(logs []models.ActivityLogResponse) []models.ActivityFeedLog {
+	feedLogs := make([]models.ActivityFeedLog, 0, len(logs))
+	for _, log := range logs {
+		feedLogs = append(feedLogs, models.ActivityFeedLog{
+			ID:          log.ID,
+			UserName:    log.UserName,
+			Action:      log.Action,
+			EntityType:  log.EntityType,
+			EntityTitle: log.Description,
+			CreatedAt:   log.CreatedAt,
+		})
+	}
+	return feedLogs
 }
