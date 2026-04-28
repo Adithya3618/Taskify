@@ -371,6 +371,31 @@ func (s *AuthService) completeGoogleSignIn(identity *GoogleIdentityPayload, refr
 	}, nil
 }
 
+// UpdateUserName updates the authenticated user's name
+func (s *AuthService) UpdateUserName(userID, name string) (*models.UserResponse, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, fmt.Errorf("name is required")
+	}
+
+	// Max length validation
+	if len(name) > 100 {
+		return nil, fmt.Errorf("name must be 100 characters or less")
+	}
+
+	if err := s.userRepo.UpdateName(userID, name); err != nil {
+		return nil, fmt.Errorf("failed to update name: %v", err)
+	}
+
+	user, err := s.userRepo.GetUserByID(userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get updated user: %v", err)
+	}
+
+	resp := user.ToResponse()
+	return &resp, nil
+}
+
 // validateRegisterInput validates the registration input
 func (s *AuthService) validateRegisterInput(req RegisterRequest) error {
 	if req.Name == "" {

@@ -262,3 +262,24 @@ func nullablePasswordHash(value string) interface{} {
 	}
 	return value
 }
+
+// UpdateName updates a user's name by ID
+func (r *UserRepository) UpdateName(id, name string) error {
+	query := `
+		UPDATE users
+		SET name = ?, updated_at = CURRENT_TIMESTAMP
+		WHERE id = ?
+	`
+	result, err := r.db.Exec(query, name, id)
+	if err != nil {
+		return fmt.Errorf("failed to update name: %v", err)
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %v", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("user not found")
+	}
+	return nil
+}

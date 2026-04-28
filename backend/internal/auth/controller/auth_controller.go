@@ -153,6 +153,35 @@ func (c *AuthController) GetMe(w http.ResponseWriter, r *http.Request) {
 	c.writeJSON(w, http.StatusOK, user.ToResponse())
 }
 
+// UpdateMe handles PUT /api/auth/me
+func (c *AuthController) UpdateMe(w http.ResponseWriter, r *http.Request) {
+	// Get user ID from context (set by JWT middleware)
+	userID, ok := r.Context().Value("user_id").(string)
+	if !ok || userID == "" {
+		c.writeError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	// Parse request body
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		c.writeError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	// Update user name
+	user, err := c.authService.UpdateUserName(userID, req.Name)
+	if err != nil {
+		c.writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Return updated user
+	c.writeJSON(w, http.StatusOK, user)
+}
+
 // ForgotPassword handles POST /api/auth/forgot-password
 func (c *AuthController) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	var req struct {
@@ -289,6 +318,7 @@ func (c *AuthController) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/google/login", c.GoogleLoginRedirect).Methods("GET")
 	router.HandleFunc("/google/callback", c.GoogleCallback).Methods("GET")
 	router.HandleFunc("/me", c.GetMe).Methods("GET")
+	router.HandleFunc("/me", c.UpdateMe).Methods("PUT")
 	router.HandleFunc("/forgot-password", c.ForgotPassword).Methods("POST")
 	router.HandleFunc("/verify-otp", c.VerifyOTP).Methods("POST")
 	router.HandleFunc("/reset-password", c.ResetPassword).Methods("POST")

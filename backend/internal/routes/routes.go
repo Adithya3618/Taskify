@@ -92,8 +92,9 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	protected := api.PathPrefix("").Subrouter()
 	protected.Use(jwtMiddleware)
 
-	// Protected auth route (GET /me)
+	// Protected auth route (GET /me, PUT /me)
 	protected.HandleFunc("/auth/me", authController.GetMe).Methods("GET")
+	protected.HandleFunc("/auth/me", authController.UpdateMe).Methods("PUT")
 
 	// Project routes (protected)
 	protected.HandleFunc("/projects", projectController.CreateProject).Methods("POST")
