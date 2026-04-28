@@ -559,7 +559,7 @@
           </tbody>
         </table>
         <div class="tableEmpty" *ngIf="dashTotalTasks === 0">No tasks yet. Switch to Board view to add some.</div>
-        <div class="tableEmpty" *ngIf="dashTotalTasks > 0 && hasActiveFilters && !stages.some(s => getFilteredTasks(s).length > 0)">No tasks match your search.</div>
+        <div class="tableEmpty" *ngIf="dashTotalTasks > 0 && hasActiveFilters && !hasVisibleTasks">No tasks match your search.</div>
       </div>
     </div>
 

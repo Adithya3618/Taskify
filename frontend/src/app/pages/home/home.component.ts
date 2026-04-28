@@ -8,6 +8,8 @@ import { AuthService } from '../../services/auth.service';
 import { ThemeService } from '../../services/theme.service';
 import { NotificationBellComponent } from '../../components/notification-bell/notification-bell.component';
 
+type BoardFilter = 'all' | 'solo' | 'shared';
+
 @Component({
   selector: 'app-home',
   standalone: true,
@@ -25,6 +27,8 @@ export class HomeComponent {
   apiErrorBody = '';
   showBackendRunHint = false;
   useDemoData = false;
+  boardSearchQuery = '';
+  boardFilter: BoardFilter = 'all';
   private readonly boardOwnersKey = 'taskify.board.owners';
   private boardOwners: Record<string, string> = {};
 
@@ -159,6 +163,60 @@ export class HomeComponent {
 
   getProjectColor(index: number): string {
     return this.boardColors[index % this.boardColors.length];
+  }
+
+  get visibleProjects(): Project[] {
+    const query = this.boardSearchQuery.trim().toLowerCase();
+
+    return this.projects
+      .filter((project) => this.matchesBoardFilter(project))
+      .filter((project) => this.matchesBoardSearch(project, query));
+  }
+
+  get hasBoardRefinements(): boolean {
+    return !!this.boardSearchQuery.trim() || this.boardFilter !== 'all';
+  }
+
+  get boardResultSummary(): string {
+    const count = this.visibleProjects.length;
+    const label = count === 1 ? 'board' : 'boards';
+
+    if (!this.hasBoardRefinements) {
+      return `Showing ${count} ${label} you can access, ${this.userDisplayName}.`;
+    }
+
+    return `Found ${count} ${label} matching your view.`;
+  }
+
+  get emptyBoardTitle(): string {
+    return this.hasBoardRefinements ? 'No boards match' : 'No boards yet';
+  }
+
+  get emptyBoardBody(): string {
+    return this.hasBoardRefinements
+      ? 'Try a different search or filter.'
+      : 'Create your first board to get started.';
+  }
+
+  clearBoardRefinements(): void {
+    this.boardSearchQuery = '';
+    this.boardFilter = 'all';
+  }
+
+  private matchesBoardFilter(project: Project): boolean {
+    const memberCount = project.member_count || 1;
+
+    if (this.boardFilter === 'solo') return memberCount <= 1;
+    if (this.boardFilter === 'shared') return memberCount > 1;
+    return true;
+  }
+
+  private matchesBoardSearch(project: Project, query: string): boolean {
+    if (!query) return true;
+
+    const name = project.name || '';
+    const description = project.description || '';
+    return `${name} ${description}`.toLowerCase().includes(query);
   }
 
   toggleProfileMenu() {
