@@ -15,17 +15,17 @@
           </p>
         </div>
 
-        <div class="avatarPreview" aria-hidden="true">U</div>
+        <div class="avatarPreview" aria-hidden="true">{{ userInitial }}</div>
       </div>
     </header>
 
     <section class="profileGrid" aria-label="Profile overview">
       <article class="identityPanel">
-        <div class="identityAvatar" aria-hidden="true">U</div>
+        <div class="identityAvatar" aria-hidden="true">{{ userInitial }}</div>
         <div>
           <p class="panelLabel">Signed in as</p>
-          <h2>Taskify User</h2>
-          <p class="mutedText">user@example.com</p>
+          <h2>{{ displayName }}</h2>
+          <p class="mutedText">{{ email }}</p>
         </div>
       </article>
 
@@ -34,15 +34,15 @@
         <dl class="detailList">
           <div>
             <dt>Display name</dt>
-            <dd>Taskify User</dd>
+            <dd>{{ displayName }}</dd>
           </div>
           <div>
             <dt>Email</dt>
-            <dd>user@example.com</dd>
+            <dd>{{ email }}</dd>
           </div>
           <div>
             <dt>Role</dt>
-            <dd>Member</dd>
+            <dd>{{ role }}</dd>
           </div>
         </dl>
       </article>
