@@ -132,6 +132,32 @@
             </svg>
           </button>
         </div>
+        <div class="boardFilters" aria-label="Filter boards">
+          <button
+            type="button"
+            [class.active]="boardFilter === 'all'"
+            [attr.aria-pressed]="boardFilter === 'all'"
+            (click)="boardFilter = 'all'"
+          >
+            All
+          </button>
+          <button
+            type="button"
+            [class.active]="boardFilter === 'solo'"
+            [attr.aria-pressed]="boardFilter === 'solo'"
+            (click)="boardFilter = 'solo'"
+          >
+            Solo
+          </button>
+          <button
+            type="button"
+            [class.active]="boardFilter === 'shared'"
+            [attr.aria-pressed]="boardFilter === 'shared'"
+            (click)="boardFilter = 'shared'"
+          >
+            Shared
+          </button>
+        </div>
         <div class="status">
           <span *ngIf="loading" class="badge">Loading</span>
           <span *ngIf="useDemoData" class="badge warn">Demo mode</span>
