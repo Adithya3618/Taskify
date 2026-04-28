@@ -16,6 +16,8 @@ import { NotificationBellComponent } from '../../components/notification-bell/no
   styleUrls: ['./home.component.scss']
 })
 /** Home page: boards list, navbar with profile, login/signup links, footer. */
+type BoardFilter = 'all' | 'solo' | 'shared';
+
 export class HomeComponent {
   projects: Project[] = [];
   loading = true;
@@ -26,6 +28,7 @@ export class HomeComponent {
   showBackendRunHint = false;
   useDemoData = false;
   boardSearchQuery = '';
+  boardFilter: BoardFilter = 'all';
   private readonly boardOwnersKey = 'taskify.board.owners';
   private boardOwners: Record<string, string> = {};
 
@@ -164,13 +167,26 @@ export class HomeComponent {
 
   get visibleProjects(): Project[] {
     const query = this.boardSearchQuery.trim().toLowerCase();
-    if (!query) return this.projects;
 
-    return this.projects.filter((project) => {
-      const name = project.name || '';
-      const description = project.description || '';
-      return `${name} ${description}`.toLowerCase().includes(query);
-    });
+    return this.projects
+      .filter((project) => this.matchesBoardFilter(project))
+      .filter((project) => this.matchesBoardSearch(project, query));
+  }
+
+  private matchesBoardFilter(project: Project): boolean {
+    const memberCount = project.member_count || 1;
+
+    if (this.boardFilter === 'solo') return memberCount <= 1;
+    if (this.boardFilter === 'shared') return memberCount > 1;
+    return true;
+  }
+
+  private matchesBoardSearch(project: Project, query: string): boolean {
+    if (!query) return true;
+
+    const name = project.name || '';
+    const description = project.description || '';
+    return `${name} ${description}`.toLowerCase().includes(query);
   }
 
   toggleProfileMenu() {
