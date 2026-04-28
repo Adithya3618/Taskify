@@ -198,6 +198,18 @@ type TimelineTaskResponse struct {
 	AssignedTo *string    `json:"assigned_to"`
 }
 
+// TaskSearchResult is the compact task shape used by project-wide search.
+type TaskSearchResult struct {
+	TaskID      int64      `json:"task_id"`
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	StageID     int64      `json:"stage_id"`
+	StageName   string     `json:"stage_name"`
+	Deadline    *time.Time `json:"deadline"`
+	Priority    *string    `json:"priority"`
+	AssignedTo  *string    `json:"assigned_to"`
+}
+
 // Comment represents a task comment.
 type Comment struct {
 	ID         int64     `json:"id"`

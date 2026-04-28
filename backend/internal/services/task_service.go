@@ -236,6 +236,72 @@ func (s *TaskService) GetProjectTimeline(userID string, projectID int64) ([]mode
 	return timeline, nil
 }
 
+// SearchProjectTasks returns project tasks matching the title or description.
+func (s *TaskService) SearchProjectTasks(userID string, projectID int64, query string) ([]models.TaskSearchResult, error) {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return nil, &ServiceError{Code: "INVALID_REQUEST", Message: "query is required"}
+	}
+
+	exists, err := s.projectExists(projectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify project: %v", err)
+	}
+	if !exists {
+		return nil, &ServiceError{Code: "PROJECT_NOT_FOUND", Message: "project not found"}
+	}
+
+	hasAccess, err := s.hasProjectAccess(userID, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify project access: %v", err)
+	}
+	if !hasAccess {
+		return nil, &ServiceError{Code: "ACCESS_DENIED", Message: "access denied to this project"}
+	}
+
+	pattern := "%" + strings.ToLower(query) + "%"
+	rows, err := s.db.Query(
+		`SELECT
+			tasks.id,
+			tasks.title,
+			COALESCE(tasks.description, ''),
+			tasks.stage_id,
+			stages.name,
+			tasks.deadline,
+			tasks.priority,
+			tasks.assigned_to
+		FROM tasks
+		JOIN stages ON stages.id = tasks.stage_id
+		WHERE stages.project_id = ?
+			AND (
+				LOWER(tasks.title) LIKE ?
+				OR LOWER(COALESCE(tasks.description, '')) LIKE ?
+			)
+		ORDER BY stages.position ASC, tasks.position ASC, tasks.id ASC`,
+		projectID,
+		pattern,
+		pattern,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search project tasks: %v", err)
+	}
+	defer rows.Close()
+
+	results := []models.TaskSearchResult{}
+	for rows.Next() {
+		result, err := scanTaskSearchResult(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan task search result: %v", err)
+		}
+		results = append(results, result)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate task search results: %v", err)
+	}
+
+	return results, nil
+}
+
 // UpdateTask updates a task (validates ownership)
 func (s *TaskService) UpdateTask(userID string, id int64, title, description string, position int, attrs TaskAttributes) (*models.Task, error) {
 	attrs, err := normalizeTaskAttributes(attrs)
@@ -378,6 +444,33 @@ func scanTask(scanner taskScanner) (models.Task, error) {
 	return task, nil
 }
 
+func scanTaskSearchResult(scanner taskScanner) (models.TaskSearchResult, error) {
+	var result models.TaskSearchResult
+	var deadline sql.NullTime
+	var priority sql.NullString
+	var assignedTo sql.NullString
+
+	err := scanner.Scan(
+		&result.TaskID,
+		&result.Title,
+		&result.Description,
+		&result.StageID,
+		&result.StageName,
+		&deadline,
+		&priority,
+		&assignedTo,
+	)
+	if err != nil {
+		return models.TaskSearchResult{}, err
+	}
+
+	result.Deadline = nullableTimePtr(deadline)
+	result.Priority = nullableStringPtr(priority)
+	result.AssignedTo = nullableStringPtr(assignedTo)
+
+	return result, nil
+}
+
 func scanTimelineTask(scanner taskScanner) (models.TimelineTaskResponse, error) {
 	var item models.TimelineTaskResponse
 	var startDate sql.NullTime
@@ -430,6 +523,15 @@ func normalizeTaskAttributes(attrs TaskAttributes) (TaskAttributes, error) {
 	}
 
 	return attrs, nil
+}
+
+func (s *TaskService) projectExists(projectID int64) (bool, error) {
+	var count int
+	err := s.db.QueryRow("SELECT COUNT(*) FROM projects WHERE id = ?", projectID).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 func nullableTime(value *time.Time) interface{} {
