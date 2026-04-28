@@ -204,17 +204,17 @@ func (s *ProjectService) GetProjectStats(projectID int64, userID string) (*model
 	}
 
 	// 3. Get total tasks, completed, and overdue in single query
-	// Note: Using final stage for completion (max position) since no status column exists
+	// Note: Using stages.is_final column for completion tracking
 	var totalTasks, completedTasks, overdueTasks int64
 	err = s.db.QueryRow(`
 		SELECT 
-			COUNT(*) as total,
-			COALESCE(SUM(CASE WHEN t.stage_id = (SELECT id FROM stages WHERE project_id = ? ORDER BY position DESC LIMIT 1) THEN 1 ELSE 0 END), 0) as completed,
-			COALESCE(SUM(CASE WHEN t.deadline IS NOT NULL AND t.deadline < datetime('now') AND t.stage_id != (SELECT id FROM stages WHERE project_id = ? ORDER BY position DESC LIMIT 1) THEN 1 ELSE 0 END), 0) as overdue
+			COUNT(t.id) as total,
+			COALESCE(SUM(CASE WHEN st.is_final = 1 THEN 1 ELSE 0 END), 0) as completed,
+			COALESCE(SUM(CASE WHEN t.deadline IS NOT NULL AND t.deadline < CURRENT_TIMESTAMP AND st.is_final != 1 THEN 1 ELSE 0 END), 0) as overdue
 		FROM tasks t
-		JOIN stages s ON t.stage_id = s.id
-		WHERE s.project_id = ?`,
-		projectID, projectID, projectID,
+		JOIN stages st ON t.stage_id = st.id
+		WHERE st.project_id = ?`,
+		projectID,
 	).Scan(&totalTasks, &completedTasks, &overdueTasks)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get task stats: %v", err)
