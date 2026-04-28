@@ -99,6 +99,7 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	protected.HandleFunc("/projects", projectController.CreateProject).Methods("POST")
 	protected.HandleFunc("/projects", projectController.GetAllProjects).Methods("GET")
 	protected.HandleFunc("/projects/{id}", projectController.GetProject).Methods("GET")
+	protected.HandleFunc("/projects/{id}/stats", projectController.GetProjectStats).Methods("GET")
 	protected.HandleFunc("/projects/{id}", projectController.UpdateProject).Methods("PUT")
 	protected.HandleFunc("/projects/{id}", projectController.DeleteProject).Methods("DELETE")
 
