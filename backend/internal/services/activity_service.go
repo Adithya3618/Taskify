@@ -63,7 +63,14 @@ func (s *ActivityService) GetProjectActivity(
 	requesterID string,
 	params repository.ActivityLogParams,
 ) ([]models.ActivityLogResponse, int64, error) {
-	// Validate user has access
+	exists, err := s.projectExists(projectID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to check project: %v", err)
+	}
+	if !exists {
+		return nil, 0, &ServiceError{Code: "PROJECT_NOT_FOUND", Message: "project not found"}
+	}
+
 	hasAccess, err := s.memberService.HasAccess(projectID, requesterID)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to check access: %v", err)
@@ -87,6 +94,15 @@ func (s *ActivityService) GetProjectActivity(
 	}
 
 	return logs, total, nil
+}
+
+func (s *ActivityService) projectExists(projectID int64) (bool, error) {
+	var count int
+	err := s.db.QueryRow("SELECT COUNT(*) FROM projects WHERE id = ?", projectID).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 // GetRecentActivity retrieves recent activity for a project

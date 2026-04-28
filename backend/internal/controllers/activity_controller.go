@@ -58,6 +58,7 @@ func (c *ActivityController) GetActivity(w http.ResponseWriter, r *http.Request)
 			params.Limit = l
 		}
 	}
+	params.Page, params.Limit = normalizeActivityPagination(params.Page, params.Limit)
 
 	if userID := r.URL.Query().Get("user_id"); userID != "" {
 		params.UserID = userID
@@ -139,4 +140,17 @@ func toActivityFeedLogs(logs []models.ActivityLogResponse) []models.ActivityFeed
 		})
 	}
 	return feedLogs
+}
+
+func normalizeActivityPagination(page, limit int) (int, int) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	return page, limit
 }
