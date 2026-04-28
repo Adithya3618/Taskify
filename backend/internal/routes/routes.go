@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"time"
@@ -19,6 +20,12 @@ import (
 
 // SetupRoutes configures all API routes
 func SetupRoutes(router *mux.Router, db *database.DB) {
+	// Health check endpoint
+	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	}).Methods("GET")
+
 	// Initialize auth repository and create users table
 	userRepo := repository.NewUserRepository(db.DB)
 	if err := userRepo.InitTable(); err != nil {
