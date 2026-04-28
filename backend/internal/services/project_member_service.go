@@ -222,16 +222,9 @@ func (s *ProjectMemberService) RemoveMember(projectID int64, targetUserID, remov
 	return nil
 }
 
-// GetMembersResult represents the result of GetMembers
-type GetMembersResult struct {
-	Members []models.ProjectMemberResponse
-	Page    int
-	Limit   int
-	Total   int64
-}
-
 // GetMembers retrieves all members of a project with their user info
-func (s *ProjectMemberService) GetMembers(projectID int64, requesterID string, page, limit int) (*GetMembersResult, error) {
+// Returns simple array: [{user_id, name, email, role}] - no pagination
+func (s *ProjectMemberService) GetMembers(projectID int64, requesterID string) ([]models.ProjectMemberAPIResponse, error) {
 	// Validate project exists
 	exists, err := s.projectExists(projectID)
 	if err != nil {
@@ -250,34 +243,24 @@ func (s *ProjectMemberService) GetMembers(projectID int64, requesterID string, p
 		return nil, &ServiceError{Code: "ACCESS_DENIED", Message: "access denied"}
 	}
 
-	// Apply pagination defaults
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 {
-		limit = 20
-	}
-	if limit > 100 {
-		limit = 100
-	}
-
-	// Get members with user info (paginated)
-	members, total, err := s.pmRepo.GetMembersWithUserInfoPaginated(projectID, page, limit)
+	// Get members with user info (no pagination - simple array)
+	members, err := s.pmRepo.GetMembersWithUserInfo(projectID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Return empty array if no members found
-	if members == nil {
-		members = []models.ProjectMemberResponse{}
+	// Transform to API response format: [{user_id, name, email, role}]
+	result := make([]models.ProjectMemberAPIResponse, 0, len(members))
+	for _, m := range members {
+		result = append(result, models.ProjectMemberAPIResponse{
+			UserID: m.UserID,
+			Name:   m.UserName,
+			Email:  m.UserEmail,
+			Role:   string(m.Role),
+		})
 	}
 
-	return &GetMembersResult{
-		Members: members,
-		Page:    page,
-		Limit:   limit,
-		Total:   total,
-	}, nil
+	return result, nil
 }
 
 // IsMember checks if a user is a member of a project

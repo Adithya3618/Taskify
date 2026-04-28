@@ -32,6 +32,15 @@ type ProjectMemberResponse struct {
 	JoinedAt  time.Time         `json:"joined_at"`
 }
 
+// ProjectMemberAPIResponse is the API response for GET /api/projects/:id/members
+// Matches frontend contract: [{user_id, name, email, role}]
+type ProjectMemberAPIResponse struct {
+	UserID string `json:"user_id"`
+	Name   string `json:"name"`
+	Email  string `json:"email"`
+	Role   string `json:"role"`
+}
+
 // ActivityAction represents the type of activity action
 type ActivityAction string
 
