@@ -16,6 +16,7 @@ export class ProfileComponent {
   profileName = '';
   profileEmail = '';
   profileMessage = '';
+  profileMessageType: 'success' | 'error' = 'success';
 
   constructor(private authService: AuthService) {
     this.currentUser = this.authService.getCurrentUser();
@@ -48,24 +49,39 @@ export class ProfileComponent {
     const email = this.profileEmail.trim();
 
     if (!name || !email) {
-      this.profileMessage = 'Name and email are required.';
+      this.setProfileMessage('Name and email are required.', 'error');
+      return;
+    }
+
+    if (!this.isValidEmail(email)) {
+      this.setProfileMessage('Enter a valid email address.', 'error');
       return;
     }
 
     const updatedUser = this.authService.updateCurrentUser({ name, email });
     if (!updatedUser) {
-      this.profileMessage = 'Unable to update profile right now.';
+      this.setProfileMessage('Unable to update profile right now.', 'error');
       return;
     }
 
     this.currentUser = updatedUser;
     this.resetProfileForm();
-    this.profileMessage = 'Profile updated.';
+    this.setProfileMessage('Profile updated.', 'success');
   }
 
   resetProfileForm(): void {
     this.profileName = this.displayName;
     this.profileEmail = this.emailValue;
+    this.profileMessage = '';
+  }
+
+  private isValidEmail(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  private setProfileMessage(message: string, type: 'success' | 'error'): void {
+    this.profileMessage = message;
+    this.profileMessageType = type;
   }
 
   private get emailValue(): string {

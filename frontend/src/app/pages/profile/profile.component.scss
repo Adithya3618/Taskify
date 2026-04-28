@@ -253,6 +253,10 @@ h1 {
   margin: 0;
 }
 
+.formMessage.error {
+  color: #f87171;
+}
+
 .formActions {
   display: flex;
   flex-wrap: wrap;

@@ -88,6 +88,7 @@
             name="profileName"
             [(ngModel)]="profileName"
             autocomplete="name"
+            (ngModelChange)="profileMessage = ''"
             required
           >
         </label>
@@ -99,11 +100,14 @@
             name="profileEmail"
             [(ngModel)]="profileEmail"
             autocomplete="email"
+            (ngModelChange)="profileMessage = ''"
             required
           >
         </label>
 
-        <p class="formMessage" *ngIf="profileMessage">{{ profileMessage }}</p>
+        <p class="formMessage" [class.error]="profileMessageType === 'error'" *ngIf="profileMessage">
+          {{ profileMessage }}
+        </p>
 
         <div class="formActions">
           <button class="secondaryButton" type="button" (click)="resetProfileForm()">Reset</button>
