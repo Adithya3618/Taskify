@@ -344,6 +344,19 @@
             </span>
           </div>
           <div class="column-header-actions">
+            <select
+              class="column-sort-select"
+              [ngModel]="getColumnSortMode(stage.id)"
+              (ngModelChange)="setColumnSortMode(stage.id, $event)"
+              (click)="$event.stopPropagation()"
+              aria-label="Sort tasks in this list"
+            >
+              <option value="manual">Manual</option>
+              <option value="due">Due date</option>
+              <option value="priority">Priority</option>
+              <option value="updated">Recently updated</option>
+              <option value="alphabetical">A-Z</option>
+            </select>
             <button
               type="button"
               class="btn-collapse-column"
@@ -368,24 +381,24 @@
         </div>
 
         <!-- Tasks: static when filtered; drag-drop when not filtered -->
-        <ng-container *ngIf="hasActiveFilters">
+        <ng-container *ngIf="hasActiveFilters || !isManualColumnSort(stage.id)">
           <div class="tasks-list tasks-list--static">
             <div
               class="task-card"
-              *ngFor="let task of getFilteredTasks(stage); trackBy: trackByTaskId"
+              *ngFor="let task of getDisplayTasks(stage); trackBy: trackByTaskId"
               [ngClass]="getPriorityClass(task)"
               [class.task-completed]="isTaskDone(task)"
             >
               <ng-container *ngTemplateOutlet="taskCardInner; context: { task: task, stage: stage }"></ng-container>
             </div>
-            <p *ngIf="!getFilteredTasks(stage).length" class="no-tasks">
+            <p *ngIf="!getDisplayTasks(stage).length" class="no-tasks">
               {{ stage.tasks?.length ? 'No tasks match the filter' : 'No tasks yet' }}
             </p>
           </div>
         </ng-container>
 
         <div
-          *ngIf="!hasActiveFilters"
+          *ngIf="!hasActiveFilters && isManualColumnSort(stage.id)"
           class="tasks-list"
           cdkDropList
           [id]="stageDropListId(stage.id)"

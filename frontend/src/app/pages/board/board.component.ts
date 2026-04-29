@@ -18,6 +18,8 @@ import { TaskCompletionStorageService } from '../../services/task-completion-sto
 import { NotificationService } from '../../services/notification.service';
 import { NotificationBellComponent } from '../../components/notification-bell/notification-bell.component';
 
+type TaskSortMode = 'manual' | 'due' | 'priority' | 'updated' | 'alphabetical';
+
 @Component({
   selector: 'app-board',
   standalone: true,
@@ -72,6 +74,8 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   /** Collapsed stage columns (narrow vertical strip with vertical title). Persisted per project in sessionStorage. */
   collapsedStages: Record<number, boolean> = {};
+  /** Per-column task sort mode. */
+  columnSortModes: Record<number, TaskSortMode> = {};
 
   // Filter state
   showFilterPanel = false;
@@ -322,6 +326,7 @@ export class BoardComponent implements OnInit, OnDestroy {
         console.log('Stages loaded:', stages);
         this.stages = (stages || []).map((s) => ({ ...s, tasks: s.tasks ?? [] }));
         this.loadCollapsedColumnState();
+        this.loadColumnSortState();
         // Load tasks and members in parallel
         if (this.stages.length > 0) {
           this.stages.forEach(stage => this.loadTasks(stage));
@@ -339,6 +344,7 @@ export class BoardComponent implements OnInit, OnDestroy {
           { id: 3, project_id: this.projectId, name: 'Done', position: 2, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), tasks: [] }
         ];
         this.loadCollapsedColumnState();
+        this.loadColumnSortState();
         this.loading = false;
       }
     });
@@ -370,6 +376,59 @@ export class BoardComponent implements OnInit, OnDestroy {
     stage.tasks.sort((a, b) => a.position - b.position);
   }
 
+  getColumnSortMode(stageId: number): TaskSortMode {
+    return this.columnSortModes[stageId] || 'manual';
+  }
+
+  setColumnSortMode(stageId: number, mode: TaskSortMode): void {
+    this.columnSortModes[stageId] = mode;
+    this.saveColumnSortState();
+  }
+
+  isManualColumnSort(stageId: number): boolean {
+    return this.getColumnSortMode(stageId) === 'manual';
+  }
+
+  getDisplayTasks(stage: Stage): Task[] {
+    const tasks = this.getFilteredTasks(stage);
+    const mode = this.getColumnSortMode(stage.id);
+    if (mode === 'manual') return tasks;
+    return this.getSortedTasks(tasks, mode);
+  }
+
+  private getSortedTasks(tasks: Task[], mode: TaskSortMode): Task[] {
+    const copy = [...tasks];
+    if (mode === 'alphabetical') {
+      return copy.sort((a, b) => a.title.localeCompare(b.title));
+    }
+    if (mode === 'updated') {
+      return copy.sort((a, b) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime());
+    }
+    if (mode === 'priority') {
+      const rank: Record<string, number> = { urgent: 4, critical: 4, high: 3, medium: 2, low: 1 };
+      return copy.sort((a, b) => {
+        const pa = rank[this.getEffectivePriority(a).toLowerCase()] || 0;
+        const pb = rank[this.getEffectivePriority(b).toLowerCase()] || 0;
+        if (pb !== pa) return pb - pa;
+        return a.title.localeCompare(b.title);
+      });
+    }
+    if (mode === 'due') {
+      return copy.sort((a, b) => {
+        const ad = this.getTaskDue(a);
+        const bd = this.getTaskDue(b);
+        if (!ad && !bd) return a.title.localeCompare(b.title);
+        if (!ad) return 1;
+        if (!bd) return -1;
+        const at = new Date(ad).getTime();
+        const bt = new Date(bd).getTime();
+        if (at !== bt) return at - bt;
+        return a.title.localeCompare(b.title);
+      });
+    }
+    return copy;
+  }
+
   /** CDK drop list ids for connecting columns (drag tasks between lists). */
   get dropListIds(): string[] {
     return this.stages.map((s) => this.stageDropListId(s.id));
@@ -396,6 +455,7 @@ export class BoardComponent implements OnInit, OnDestroy {
     const prevStageId = this.parseDropListId(event.previousContainer.id);
     const nextStageId = this.parseDropListId(event.container.id);
     if (prevStageId === null || nextStageId === null) return;
+    if (!this.isManualColumnSort(prevStageId) || !this.isManualColumnSort(nextStageId)) return;
 
     const task = event.item.data as Task | undefined;
     if (!task) return;
@@ -630,6 +690,10 @@ export class BoardComponent implements OnInit, OnDestroy {
     return `taskify.board.collapsedColumns.v1.${this.projectId}`;
   }
 
+  private columnSortStorageKey(): string {
+    return `taskify.board.columnSort.v1.${this.projectId}`;
+  }
+
   private loadCollapsedColumnState(): void {
     this.collapsedStages = {};
     try {
@@ -645,6 +709,35 @@ export class BoardComponent implements OnInit, OnDestroy {
     } catch {
       /* ignore */
     }
+  }
+
+  private loadColumnSortState(): void {
+    this.columnSortModes = {};
+    try {
+      const raw = sessionStorage.getItem(this.columnSortStorageKey());
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Record<string, TaskSortMode>;
+      Object.entries(parsed || {}).forEach(([stageId, mode]) => {
+        const id = Number(stageId);
+        if (!Number.isNaN(id) && this.isValidTaskSortMode(mode)) {
+          this.columnSortModes[id] = mode;
+        }
+      });
+    } catch {
+      /* ignore */
+    }
+  }
+
+  private saveColumnSortState(): void {
+    try {
+      sessionStorage.setItem(this.columnSortStorageKey(), JSON.stringify(this.columnSortModes));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  private isValidTaskSortMode(value: string): value is TaskSortMode {
+    return value === 'manual' || value === 'due' || value === 'priority' || value === 'updated' || value === 'alphabetical';
   }
 
   private saveCollapsedColumnState(): void {
