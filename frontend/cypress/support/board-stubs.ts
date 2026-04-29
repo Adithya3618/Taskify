@@ -607,6 +607,7 @@ export function visitBoard(opts: VisitBoardOptions = {}) {
     },
   });
   cy.get('.board-content', { timeout: 15000 }).should('be.visible');
+  cy.contains('[data-testid="board-view-nav"] a.viewTab', 'Board').click();
   if (!skipTaskCardAssert) {
     cy.get('.task-card', { timeout: 10000 }).should('have.length.at.least', 1);
   }

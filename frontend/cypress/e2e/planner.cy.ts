@@ -37,7 +37,7 @@ describe('Planner — board ↔ planner tabs', () => {
   it('navigates from board to planner without full reload', () => {
     visitBoard();
     cy.url().should('not.include', '/planner');
-    cy.get('nav.viewTabs a.viewTab').contains('Planner').click();
+    cy.get('[data-testid="board-view-nav"] a.viewTab').contains('Planner').click();
     cy.url().should('include', `/board/${PROJECT_ID}/planner`);
     cy.get('.planner-main').should('be.visible');
   });
