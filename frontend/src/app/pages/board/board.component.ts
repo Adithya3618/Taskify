@@ -1799,7 +1799,7 @@ export class BoardComponent implements OnInit, OnDestroy {
   }
 
   get dashCompletedTasks(): number {
-    return this.stages.reduce((sum, s) => sum + (s.tasks?.filter(t => t.completed).length || 0), 0);
+    return this.stages.reduce((sum, s) => sum + (s.tasks?.filter(t => this.isTaskDone(t)).length || 0), 0);
   }
 
   get dashOverdueTasks(): number {
