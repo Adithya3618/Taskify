@@ -453,15 +453,13 @@
 
         <ng-container *ngIf="!isColumnCollapsed(stage.id)">
         <div class="column-header">
-          <div class="column-header-title-row">
-            <h3 class="column-header-title" [attr.title]="stage.name">{{ stage.name }}</h3>
-            <span class="column-task-count" [attr.title]="'completed / total'">
-              {{ getStageDoneCount(stage) }}/{{ getStageTotalCount(stage) }}
-            </span>
-            <span *ngIf="activeSearchQuery.trim()" class="stageMatchCount">
-              {{ getStageMatchCount(stage) }} match{{ getStageMatchCount(stage) === 1 ? '' : 'es' }}
-            </span>
-          </div>
+          <h3 class="column-header-title" [attr.title]="stage.name">{{ stage.name }}</h3>
+          <span class="column-task-count" [attr.title]="'completed / total'">
+            {{ getStageDoneCount(stage) }}/{{ getStageTotalCount(stage) }}
+          </span>
+          <span *ngIf="activeSearchQuery.trim()" class="stageMatchCount column-header-match">
+            {{ getStageMatchCount(stage) }} match{{ getStageMatchCount(stage) === 1 ? '' : 'es' }}
+          </span>
           <div class="column-header-actions">
             <select
               class="column-sort-select"
