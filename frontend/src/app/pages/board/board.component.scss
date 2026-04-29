@@ -2270,6 +2270,39 @@
   }
 }
 
+.tableSortBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0.85;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.tableSortBtn:hover {
+  opacity: 1;
+}
+
+.tableSortBtn.active {
+  color: var(--text-1);
+  opacity: 1;
+}
+
+.tableSortGlyph {
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0.75;
+}
+
+.tableSortBtn.active .tableSortGlyph {
+  opacity: 1;
+}
+
 .taskRow {
   cursor: pointer;
   transition: background 0.12s;

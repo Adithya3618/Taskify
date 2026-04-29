@@ -19,6 +19,8 @@ import { NotificationService } from '../../services/notification.service';
 import { NotificationBellComponent } from '../../components/notification-bell/notification-bell.component';
 
 type TaskSortMode = 'manual' | 'due' | 'priority' | 'updated' | 'alphabetical';
+type TableSortKey = 'title' | 'stage' | 'priority' | 'due' | 'subtasks' | 'assignee';
+type TableSortDir = 'asc' | 'desc';
 
 @Component({
   selector: 'app-board',
@@ -67,6 +69,8 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   /** Active board view tab. */
   viewMode: 'kanban' | 'table' | 'dashboard' | 'timeline' = 'kanban';
+  tableSortKey: TableSortKey = 'title';
+  tableSortDir: TableSortDir = 'asc';
 
   setView(mode: 'kanban' | 'table' | 'dashboard' | 'timeline'): void {
     this.viewMode = mode;
@@ -224,6 +228,7 @@ export class BoardComponent implements OnInit, OnDestroy {
       const id = params['id'];
       if (id) {
         this.projectId = +id;
+        this.loadTableSortState();
         if (!this.canAccessBoard(this.projectId, currentUser.email)) {
           this.router.navigate(['/boards']);
           return;
@@ -694,6 +699,10 @@ export class BoardComponent implements OnInit, OnDestroy {
     return `taskify.board.columnSort.v1.${this.projectId}`;
   }
 
+  private tableSortStorageKey(): string {
+    return `taskify.board.tableSort.v1.${this.projectId}`;
+  }
+
   private loadCollapsedColumnState(): void {
     this.collapsedStages = {};
     try {
@@ -728,6 +737,28 @@ export class BoardComponent implements OnInit, OnDestroy {
     }
   }
 
+  private loadTableSortState(): void {
+    this.tableSortKey = 'title';
+    this.tableSortDir = 'asc';
+    try {
+      const raw = sessionStorage.getItem(this.tableSortStorageKey());
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { key?: TableSortKey; dir?: TableSortDir };
+      if (parsed.key && this.isValidTableSortKey(parsed.key)) this.tableSortKey = parsed.key;
+      if (parsed.dir === 'asc' || parsed.dir === 'desc') this.tableSortDir = parsed.dir;
+    } catch {
+      /* ignore */
+    }
+  }
+
+  private saveTableSortState(): void {
+    try {
+      sessionStorage.setItem(this.tableSortStorageKey(), JSON.stringify({ key: this.tableSortKey, dir: this.tableSortDir }));
+    } catch {
+      /* ignore */
+    }
+  }
+
   private saveColumnSortState(): void {
     try {
       sessionStorage.setItem(this.columnSortStorageKey(), JSON.stringify(this.columnSortModes));
@@ -738,6 +769,10 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   private isValidTaskSortMode(value: string): value is TaskSortMode {
     return value === 'manual' || value === 'due' || value === 'priority' || value === 'updated' || value === 'alphabetical';
+  }
+
+  private isValidTableSortKey(value: string): value is TableSortKey {
+    return value === 'title' || value === 'stage' || value === 'priority' || value === 'due' || value === 'subtasks' || value === 'assignee';
   }
 
   private saveCollapsedColumnState(): void {
@@ -1986,6 +2021,71 @@ export class BoardComponent implements OnInit, OnDestroy {
     const due = this.getTaskDue(task);
     if (!due) return '—';
     return new Date(due).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  toggleTableSort(key: TableSortKey): void {
+    if (this.tableSortKey === key) {
+      this.tableSortDir = this.tableSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.tableSortKey = key;
+      this.tableSortDir = key === 'due' || key === 'priority' || key === 'subtasks' ? 'desc' : 'asc';
+    }
+    this.saveTableSortState();
+  }
+
+  isTableSortActive(key: TableSortKey): boolean {
+    return this.tableSortKey === key;
+  }
+
+  tableSortIndicator(key: TableSortKey): string {
+    if (!this.isTableSortActive(key)) return '';
+    return this.tableSortDir === 'asc' ? '↑' : '↓';
+  }
+
+  get tableRows(): Array<{ task: Task; stage: Stage }> {
+    const rows: Array<{ task: Task; stage: Stage }> = [];
+    this.stages.forEach((stage) => {
+      this.getFilteredTasks(stage).forEach((task) => rows.push({ task, stage }));
+    });
+    return rows.sort((a, b) => this.compareTableRows(a, b));
+  }
+
+  private compareTableRows(a: { task: Task; stage: Stage }, b: { task: Task; stage: Stage }): number {
+    const dir = this.tableSortDir === 'asc' ? 1 : -1;
+    const at = a.task;
+    const bt = b.task;
+
+    if (this.tableSortKey === 'title') return at.title.localeCompare(bt.title) * dir;
+    if (this.tableSortKey === 'stage') return a.stage.name.localeCompare(b.stage.name) * dir;
+    if (this.tableSortKey === 'priority') {
+      const rank: Record<string, number> = { urgent: 4, critical: 4, high: 3, medium: 2, low: 1 };
+      const av = rank[this.getEffectivePriority(at).toLowerCase()] || 0;
+      const bv = rank[this.getEffectivePriority(bt).toLowerCase()] || 0;
+      if (av !== bv) return (av - bv) * dir;
+      return at.title.localeCompare(bt.title) * dir;
+    }
+    if (this.tableSortKey === 'due') {
+      const ad = this.getTaskDue(at);
+      const bd = this.getTaskDue(bt);
+      if (!ad && !bd) return at.title.localeCompare(bt.title) * dir;
+      if (!ad) return 1 * dir;
+      if (!bd) return -1 * dir;
+      const diff = new Date(ad).getTime() - new Date(bd).getTime();
+      if (diff !== 0) return diff * dir;
+      return at.title.localeCompare(bt.title) * dir;
+    }
+    if (this.tableSortKey === 'subtasks') {
+      const av = at.subtask_count || 0;
+      const bv = bt.subtask_count || 0;
+      if (av !== bv) return (av - bv) * dir;
+      return at.title.localeCompare(bt.title) * dir;
+    }
+    if (this.tableSortKey === 'assignee') {
+      const an = this.getTaskAssignee(at)?.user_name || this.getTaskAssignee(at)?.user_email || '';
+      const bn = this.getTaskAssignee(bt)?.user_name || this.getTaskAssignee(bt)?.user_email || '';
+      return an.localeCompare(bn) * dir;
+    }
+    return 0;
   }
 
   private migrateBoardOwnersEmail(oldEmail: string, newEmail: string) {

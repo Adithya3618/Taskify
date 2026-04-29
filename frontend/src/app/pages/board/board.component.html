@@ -553,32 +553,56 @@
         <table class="taskTable">
           <thead>
             <tr>
-              <th>Title</th>
-              <th>Stage</th>
-              <th>Priority</th>
-              <th>Due Date</th>
-              <th>Subtasks</th>
-              <th>Assignee</th>
+              <th>
+                <button type="button" class="tableSortBtn" [class.active]="isTableSortActive('title')" (click)="toggleTableSort('title')">
+                  Title <span class="tableSortGlyph">{{ isTableSortActive('title') ? tableSortIndicator('title') : '↕' }}</span>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="tableSortBtn" [class.active]="isTableSortActive('stage')" (click)="toggleTableSort('stage')">
+                  Stage <span class="tableSortGlyph">{{ isTableSortActive('stage') ? tableSortIndicator('stage') : '↕' }}</span>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="tableSortBtn" [class.active]="isTableSortActive('priority')" (click)="toggleTableSort('priority')">
+                  Priority <span class="tableSortGlyph">{{ isTableSortActive('priority') ? tableSortIndicator('priority') : '↕' }}</span>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="tableSortBtn" [class.active]="isTableSortActive('due')" (click)="toggleTableSort('due')">
+                  Due Date <span class="tableSortGlyph">{{ isTableSortActive('due') ? tableSortIndicator('due') : '↕' }}</span>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="tableSortBtn" [class.active]="isTableSortActive('subtasks')" (click)="toggleTableSort('subtasks')">
+                  Subtasks <span class="tableSortGlyph">{{ isTableSortActive('subtasks') ? tableSortIndicator('subtasks') : '↕' }}</span>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="tableSortBtn" [class.active]="isTableSortActive('assignee')" (click)="toggleTableSort('assignee')">
+                  Assignee <span class="tableSortGlyph">{{ isTableSortActive('assignee') ? tableSortIndicator('assignee') : '↕' }}</span>
+                </button>
+              </th>
             </tr>
           </thead>
           <tbody>
-            <ng-container *ngFor="let s of stages">
-              <tr *ngFor="let t of getFilteredTasks(s)" (click)="openTaskDetail(t)" class="taskRow">
+            <ng-container *ngFor="let row of tableRows">
+              <tr (click)="openTaskDetail(row.task)" class="taskRow">
                 <td class="taskRowTitle">
-                  <span class="taskRowDot" [class]="'priority-dot priority-dot--' + getEffectivePriority(t)"></span>
-                  {{ t.title }}
+                  <span class="taskRowDot" [class]="'priority-dot priority-dot--' + getEffectivePriority(row.task)"></span>
+                  {{ row.task.title }}
                 </td>
-                <td><span class="stagePill">{{ s.name }}</span></td>
-                <td><span class="priorityBadge priorityBadge--{{ getEffectivePriority(t) }}">{{ getEffectivePriority(t) }}</span></td>
-                <td [class.overdue]="isDueOverdue(t)" [class.due-today]="isDueToday(t)">{{ getTaskDueLabel(t) }}</td>
-                <td>{{ t.subtask_count ? (t.completed_count || 0) + '/' + t.subtask_count : '—' }}</td>
+                <td><span class="stagePill">{{ row.stage.name }}</span></td>
+                <td><span class="priorityBadge priorityBadge--{{ getEffectivePriority(row.task) }}">{{ getEffectivePriority(row.task) }}</span></td>
+                <td [class.overdue]="isDueOverdue(row.task)" [class.due-today]="isDueToday(row.task)">{{ getTaskDueLabel(row.task) }}</td>
+                <td>{{ row.task.subtask_count ? (row.task.completed_count || 0) + '/' + row.task.subtask_count : '—' }}</td>
                 <td>
-                  <span class="tableAssigneeChip" *ngIf="getTaskAssignee(t) as assignee"
+                  <span class="tableAssigneeChip" *ngIf="getTaskAssignee(row.task) as assignee"
                         [title]="assignee.user_name || assignee.user_email || ''">
                     <span class="tableAssigneeAvatar">{{ getMemberInitials(assignee) }}</span>
                     {{ assignee.user_name || assignee.user_email }}
                   </span>
-                  <span *ngIf="!getTaskAssignee(t)" class="tableUnassigned">—</span>
+                  <span *ngIf="!getTaskAssignee(row.task)" class="tableUnassigned">—</span>
                 </td>
               </tr>
             </ng-container>
