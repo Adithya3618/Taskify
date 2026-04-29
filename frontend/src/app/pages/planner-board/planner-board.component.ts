@@ -100,6 +100,7 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
   editingCommentId: number | string | null = null;
   editingCommentContent = '';
   deletingCommentId: number | string | null = null;
+  deleteCommentPending: Comment | null = null;
 
   private routeSub?: Subscription;
   private allTasks: TaskWithStage[] = [];
@@ -530,6 +531,7 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
     this.editingCommentId = null;
     this.editingCommentContent = '';
     this.deletingCommentId = null;
+    this.deleteCommentPending = null;
     this.loadTaskSubtasks(task.id);
     this.loadTaskComments(task.id, true);
   }
@@ -548,6 +550,7 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
     this.editingCommentId = null;
     this.editingCommentContent = '';
     this.deletingCommentId = null;
+    this.deleteCommentPending = null;
   }
 
   saveTaskDetail(): void {
@@ -764,7 +767,17 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
 
   confirmDeleteComment(comment: Comment): void {
     if (!this.detailTask) return;
-    if (!window.confirm('Delete this comment?')) return;
+    this.deleteCommentPending = comment;
+  }
+
+  cancelDeleteComment(): void {
+    this.deleteCommentPending = null;
+  }
+
+  executeDeleteComment(): void {
+    if (!this.detailTask || !this.deleteCommentPending) return;
+    const comment = this.deleteCommentPending;
+    this.deleteCommentPending = null;
     this.commentError = '';
     this.deletingCommentId = comment.id;
     this.apiService.deleteComment(comment.id, this.detailTask.id).subscribe({

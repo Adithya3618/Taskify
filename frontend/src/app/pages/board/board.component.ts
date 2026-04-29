@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -244,6 +244,21 @@ export class BoardComponent implements OnInit, OnDestroy {
     if (this.pendingMemberRemoval) {
       clearTimeout(this.pendingMemberRemoval.timeoutId);
     }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    if (this.showAccountModal) this.closeAccountModal();
+    if (this.showLabelManager) this.showLabelManager = false;
+    if (this.showShareModal) this.closeShareModal();
+    if (this.showProjectSettingsModal) this.closeProjectSettings();
+    if (this.detailTask) this.closeTaskDetail();
+    if (this.deleteTaskPending) this.cancelDeleteTask();
+    if (this.deleteStagePending) this.cancelDeleteStage();
+    if (this.deleteSubtaskPending) this.cancelDeleteSubtask();
+    if (this.deleteCommentPending) this.cancelDeleteComment();
+    if (this.showProfileMenu) this.closeProfileMenu();
+    if (this.showBoardSwitcher) this.showBoardSwitcher = false;
   }
 
   private loadAllBoards() {

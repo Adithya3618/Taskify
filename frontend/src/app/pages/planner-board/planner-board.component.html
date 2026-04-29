@@ -74,6 +74,9 @@
   </div>
 
   <main class="planner-main" *ngIf="!loading">
+    <section *ngIf="!stages.length" class="planner-scheduled-empty" aria-live="polite">
+      No lists found for this board yet. Create a list in Board view to start planning tasks here.
+    </section>
     <div class="planner-layout planner-layout--viewport">
       <!-- Left: month navigation (always visible, high contrast) -->
       <aside class="planner-month-aside" aria-label="Month navigation">
@@ -581,6 +584,24 @@
     <div class="task-modal-footer">
       <button type="button" class="btn-modal-ghost" (click)="closeTaskDetail()">Cancel</button>
       <button type="button" class="btn-modal-primary" (click)="saveTaskDetail()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="task-modal-backdrop" *ngIf="deleteCommentPending" (click)="cancelDeleteComment()">
+  <div class="task-modal delete-confirm-modal" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="deleteCommentTitle">
+    <div class="task-modal-header">
+      <div>
+        <h3 id="deleteCommentTitle">Delete comment?</h3>
+        <p class="planner-modal-sub">This conversation entry will be removed.</p>
+      </div>
+    </div>
+    <div class="task-modal-body">
+      <p>{{ deleteCommentPending!.content }}</p>
+    </div>
+    <div class="task-modal-footer">
+      <button type="button" class="btn-modal-ghost" (click)="cancelDeleteComment()">Cancel</button>
+      <button type="button" class="btn-modal-primary" (click)="executeDeleteComment()">Delete</button>
     </div>
   </div>
 </div>
