@@ -52,21 +52,38 @@
   gap: 10px;
 }
 
-.btn-back {
-  border: none;
-  cursor: pointer;
-  border-radius: 8px;
-  padding: 8px 14px;
-  font-weight: 600;
-  font-size: 14px;
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  transition: background 0.2s, color 0.2s;
+.board-brand {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.92);
+  transition: opacity 0.2s;
+  flex-shrink: 0;
   &:hover {
-    background: rgba(255, 255, 255, 0.18);
-    color: #fff;
+    opacity: 0.88;
   }
+}
+.board-brand-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+.board-brand-logo .logoSvgFull {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.board-brand-name {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-left: -2px;
+  color: inherit;
 }
 
 .boardSwitcher {
@@ -260,13 +277,10 @@
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
 }
 
-[data-theme='light'] .btn-back {
-  background: #f8fafc;
-  color: #334155;
-  border-color: #e2e8f0;
+[data-theme='light'] .board-brand {
+  color: #0f172a;
   &:hover {
-    background: #f1f5f9;
-    color: #0f172a;
+    opacity: 0.85;
   }
 }
 

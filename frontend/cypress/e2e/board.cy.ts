@@ -526,13 +526,13 @@ describe('Board — delete stage', () => {
   });
 });
 
-// ── Top bar: back, theme, share, switcher, profile ─────────────────────────
+// ── Top bar: brand, theme, share, switcher, profile ─────────────────────────
 
 describe('Board — top bar', () => {
-  it('navigates to My boards when clicking Back', () => {
+  it('navigates to home when clicking Taskify brand', () => {
     visitBoard();
-    cy.get('button.btn-back').contains('Back').click();
-    cy.url().should('include', '/boards');
+    cy.get('a.board-brand[aria-label="Taskify home"]').click();
+    cy.location('pathname').should('eq', '/');
   });
 
   it('toggles theme (data-theme on html)', () => {

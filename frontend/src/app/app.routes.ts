@@ -66,6 +66,14 @@ export const routes: Routes = [
 
   // Kanban board view
   {
+    path: 'board/:id/:section',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/board/board.component').then((m) => m.BoardComponent),
+  },
+
+  // Backward-compatible board route
+  {
     path: 'board/:id',
     canActivate: [authGuard],
     loadComponent: () =>

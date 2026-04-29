@@ -21,6 +21,7 @@ import { NotificationBellComponent } from '../../components/notification-bell/no
 type TaskSortMode = 'manual' | 'due' | 'priority' | 'updated' | 'alphabetical';
 type TableSortKey = 'title' | 'stage' | 'priority' | 'due' | 'updated' | 'subtasks' | 'assignee';
 type TableSortDir = 'asc' | 'desc';
+type WorkspaceSection = 'overview' | 'tasks' | 'notes' | 'activity';
 
 @Component({
   selector: 'app-board',
@@ -71,9 +72,36 @@ export class BoardComponent implements OnInit, OnDestroy {
   viewMode: 'kanban' | 'table' | 'dashboard' | 'timeline' = 'kanban';
   tableSortKey: TableSortKey = 'title';
   tableSortDir: TableSortDir = 'asc';
+  workspaceSection: WorkspaceSection = 'overview';
+  workspaceNotes = '';
 
   setView(mode: 'kanban' | 'table' | 'dashboard' | 'timeline'): void {
     this.viewMode = mode;
+  }
+
+  private normalizeWorkspaceSection(value?: string): WorkspaceSection {
+    if (value === 'tasks' || value === 'notes' || value === 'activity' || value === 'overview') return value;
+    return 'overview';
+  }
+
+  private workspaceNotesStorageKey(): string {
+    return `taskify.board.workspace-notes.v1.${this.projectId}`;
+  }
+
+  private loadWorkspaceNotes(): void {
+    try {
+      this.workspaceNotes = localStorage.getItem(this.workspaceNotesStorageKey()) || '';
+    } catch {
+      this.workspaceNotes = '';
+    }
+  }
+
+  saveWorkspaceNotes(): void {
+    try {
+      localStorage.setItem(this.workspaceNotesStorageKey(), this.workspaceNotes);
+    } catch {
+      /* ignore */
+    }
   }
 
   /** Collapsed stage columns (narrow vertical strip with vertical title). Persisted per project in sessionStorage. */
@@ -226,8 +254,11 @@ export class BoardComponent implements OnInit, OnDestroy {
 
     this.routeSub = this.route.params.subscribe(params => {
       const id = params['id'];
+      const section = params['section'];
       if (id) {
         this.projectId = +id;
+        this.workspaceSection = this.normalizeWorkspaceSection(section);
+        this.loadWorkspaceNotes();
         this.loadTableSortState();
         if (!this.canAccessBoard(this.projectId, currentUser.email)) {
           this.router.navigate(['/boards']);

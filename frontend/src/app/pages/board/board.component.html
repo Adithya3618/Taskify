@@ -2,7 +2,41 @@
   <!-- Trello-like board top bar -->
   <header class="board-topbar">
     <div class="left">
-      <button class="btn-back" type="button" aria-label="Back to boards" (click)="goBack()">← Back</button>
+      <a class="board-brand" routerLink="/" aria-label="Taskify home">
+        <div class="board-brand-logo">
+          <svg class="logoSvgFull" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="boardTopbarLg" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%"   stop-color="#22D3EE"/>
+                <stop offset="55%"  stop-color="#818CF8"/>
+                <stop offset="100%" stop-color="#E879F9"/>
+              </linearGradient>
+              <clipPath id="boardTopbarTc">
+                <path d="M10 8 H90 V30 H60 V92 H40 V30 H10 Z"/>
+              </clipPath>
+            </defs>
+            <g class="ptGroup">
+              <circle class="pt pt1"  cx="-6"  cy="10"  r="4"   fill="#22D3EE"/>
+              <circle class="pt pt2"  cx="106" cy="14"  r="3"   fill="#818CF8"/>
+              <circle class="pt pt3"  cx="104" cy="65"  r="3.5" fill="#E879F9"/>
+              <circle class="pt pt4"  cx="-4"  cy="80"  r="3"   fill="#22D3EE"/>
+              <circle class="pt pt5"  cx="50"  cy="-9"  r="2.5" fill="#818CF8"/>
+              <circle class="pt pt6"  cx="92"  cy="104" r="3"   fill="#E879F9"/>
+              <line   class="pt pt7"  x1="96"  y1="26" x2="110" y2="36" stroke="#22D3EE" stroke-width="3.5" stroke-linecap="round"/>
+              <line   class="pt pt8"  x1="-10" y1="40" x2="2"   y2="52" stroke="#818CF8" stroke-width="3"   stroke-linecap="round"/>
+              <circle class="pt pt9"  cx="18"  cy="110" r="2.5" fill="#818CF8"/>
+              <line   class="pt pt10" x1="76"  y1="108" x2="90" y2="120" stroke="#E879F9" stroke-width="2.5" stroke-linecap="round"/>
+            </g>
+            <g class="logoGroup">
+              <path d="M10 8 H90 V30 H60 V92 H40 V30 H10 Z" fill="url(#boardTopbarLg)"/>
+              <line x1="14" y1="5"  x2="34" y2="96" stroke="rgba(255,255,255,0.18)" stroke-width="14" clip-path="url(#boardTopbarTc)"/>
+              <line x1="48" y1="5"  x2="64" y2="33" stroke="rgba(255,255,255,0.25)" stroke-width="10" clip-path="url(#boardTopbarTc)"/>
+              <path class="checkPath" d="M30 60 L46 78 L86 18" stroke="rgba(255,255,255,0.92)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            </g>
+          </svg>
+        </div>
+        <span class="board-brand-name">Taskify</span>
+      </a>
 
       <!-- Board switcher -->
       <div class="boardSwitcher">
@@ -44,29 +78,39 @@
       <nav class="viewTabs" aria-label="Board views">
         <a
           class="viewTab"
-          [routerLink]="['/board', projectId]"
-          routerLinkActive="viewTab--active"
-          [routerLinkActiveOptions]="{ exact: true }"
+          [routerLink]="['/board', projectId, 'tasks']"
+          [class.viewTab--active]="workspaceSection === 'tasks' && viewMode === 'kanban'"
           (click)="setView('kanban')"
         >
           Board
         </a>
-        <a
-          class="viewTab"
-          [routerLink]="['/board', projectId, 'planner']"
-          routerLinkActive="viewTab--active"
-        >
+        <a class="viewTab" [routerLink]="['/board', projectId, 'planner']" routerLinkActive="viewTab--active">
           Planner
         </a>
-        <button class="viewTab" [class.viewTab--active]="viewMode === 'dashboard'" (click)="setView('dashboard')">
-          Dashboard
-        </button>
-        <button class="viewTab" [class.viewTab--active]="viewMode === 'table'" (click)="setView('table')">
+        <a
+          class="viewTab"
+          [routerLink]="['/board', projectId, 'tasks']"
+          [class.viewTab--active]="workspaceSection === 'tasks' && viewMode === 'table'"
+          (click)="setView('table')"
+        >
           Table
-        </button>
-        <button class="viewTab" [class.viewTab--active]="viewMode === 'timeline'" (click)="setView('timeline')">
+        </a>
+        <a
+          class="viewTab"
+          [routerLink]="['/board', projectId, 'tasks']"
+          [class.viewTab--active]="workspaceSection === 'tasks' && viewMode === 'timeline'"
+          (click)="setView('timeline')"
+        >
           Timeline
-        </button>
+        </a>
+        <a
+          class="viewTab"
+          [routerLink]="['/board', projectId, 'tasks']"
+          [class.viewTab--active]="workspaceSection === 'tasks' && viewMode === 'dashboard'"
+          (click)="setView('dashboard')"
+        >
+          Dashboard
+        </a>
       </nav>
     </div>
 
@@ -309,8 +353,16 @@
     </div>
   </ng-template>
 
-  <div class="board-content" *ngIf="!loading">
-    <div class="columns-container" *ngIf="viewMode === 'kanban'">
+  <div class="board-shell" *ngIf="!loading">
+    <aside class="workspace-sidebar">
+      <a class="workspace-link" [class.active]="workspaceSection === 'overview'" [routerLink]="['/board', projectId, 'overview']">Overview</a>
+      <a class="workspace-link" [class.active]="workspaceSection === 'tasks'" [routerLink]="['/board', projectId, 'tasks']">Tasks</a>
+      <a class="workspace-link" [class.active]="workspaceSection === 'notes'" [routerLink]="['/board', projectId, 'notes']">Notes</a>
+      <a class="workspace-link" [class.active]="workspaceSection === 'activity'" [routerLink]="['/board', projectId, 'activity']">Activity</a>
+    </aside>
+
+    <div class="board-content">
+    <div class="columns-container" *ngIf="workspaceSection === 'tasks' && viewMode === 'kanban'">
       <!-- Stage Columns -->
       <div
         class="column"
@@ -518,7 +570,7 @@
     </div>
 
     <!-- ── Dashboard View ── -->
-    <div class="viewPanel" *ngIf="viewMode === 'dashboard'">
+    <div class="viewPanel" *ngIf="workspaceSection === 'overview' || (workspaceSection === 'tasks' && viewMode === 'dashboard')">
       <div class="dashGrid">
         <div class="dashCard">
           <span class="dashCardLabel">Total Tasks</span>
@@ -549,7 +601,7 @@
     </div>
 
     <!-- ── Table View ── -->
-    <div class="viewPanel" *ngIf="viewMode === 'table'">
+    <div class="viewPanel" *ngIf="workspaceSection === 'tasks' && viewMode === 'table'">
       <div class="tableWrap">
         <table class="taskTable">
           <thead>
@@ -621,7 +673,7 @@
     </div>
 
     <!-- ── Timeline View ── -->
-    <div class="viewPanel" *ngIf="viewMode === 'timeline'">
+    <div class="viewPanel" *ngIf="workspaceSection === 'tasks' && viewMode === 'timeline'">
       <div class="timelineWrap">
         <div class="timelineEmpty" *ngIf="timelineTasks.length === 0 && !searchQuery.trim()">
           No tasks with due dates found. Add due dates in Board view to see them here.
@@ -642,6 +694,28 @@
       </div>
     </div>
 
+    <div class="viewPanel" *ngIf="workspaceSection === 'notes'">
+      <div class="tableWrap">
+        <div class="tableEmpty" style="text-align:left;">
+          <h3 style="margin-top:0;">Board notes</h3>
+          <p style="margin-bottom:12px;">Capture quick documentation for this board. Saved locally in your browser.</p>
+          <textarea rows="12" [(ngModel)]="workspaceNotes" placeholder="Write your board notes..." style="width:100%; padding:12px; border-radius:10px; border:1px solid var(--border); background: var(--surface); color: var(--text-1);"></textarea>
+          <div style="margin-top:12px;">
+            <button type="button" class="btn-modal-primary" (click)="saveWorkspaceNotes()">Save notes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="viewPanel" *ngIf="workspaceSection === 'activity'">
+      <div class="tableWrap">
+        <div class="tableEmpty" style="text-align:left;">
+          <h3 style="margin-top:0;">Activity</h3>
+          <p>Use <b>Project settings → Activity</b> for the detailed log in this release. A full routed activity timeline page comes next.</p>
+        </div>
+      </div>
+    </div>
+    </div>
   </div>
 
   <!-- Delete task confirmation -->
