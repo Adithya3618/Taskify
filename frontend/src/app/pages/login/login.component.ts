@@ -20,6 +20,8 @@ export class LoginComponent implements OnDestroy {
   password = '';
   loading = false;
   error = '';
+  emailError = '';
+  passwordError = '';
   showPassword = false;
   googleLoading = false;
   googleError = '';
@@ -228,12 +230,21 @@ export class LoginComponent implements OnDestroy {
 
   onSubmit() {
     this.error = '';
+    this.emailError = '';
+    this.passwordError = '';
     if (!this.email.trim()) {
-      this.error = 'Please enter your email.';
+      this.emailError = 'Please enter your email.';
+      this.error = 'Please fix the highlighted fields.';
+      return;
+    }
+    if (!this.isValidEmail(this.email.trim())) {
+      this.emailError = 'Please enter a valid email address.';
+      this.error = 'Please fix the highlighted fields.';
       return;
     }
     if (!this.password) {
-      this.error = 'Please enter your password.';
+      this.passwordError = 'Please enter your password.';
+      this.error = 'Please fix the highlighted fields.';
       return;
     }
     this.loading = true;

@@ -28,6 +28,44 @@
 .board-topbar .left  { display: flex; align-items: center; gap: 12px; }
 .board-topbar .right { display: flex; align-items: center; gap: 10px; }
 
+@media (max-width: 1200px) {
+  .board-topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .board-topbar .left,
+  .board-topbar .right {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .board-topbar .right {
+    justify-content: flex-start;
+  }
+  .searchInput {
+    width: 180px;
+    &:focus { width: 220px; }
+  }
+}
+
+@media (max-width: 768px) {
+  .board-topbar {
+    padding: 10px 12px;
+  }
+  .searchWrap {
+    flex: 1 1 100%;
+  }
+  .searchInput {
+    width: 100%;
+    min-width: 0;
+    &:focus { width: 100%; }
+  }
+  .viewTabs {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+}
+
 .board-title { margin: 0; font-size: 18px; font-weight: 700; color: #f1f5f9; letter-spacing: -0.02em; }
 .pill { font-size: 12px; color: rgba(255,255,255,0.7); padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); }
 

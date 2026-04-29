@@ -50,32 +50,40 @@
       <label class="field">
         <span>Name</span>
         <input
+          data-testid="signup-name"
           type="text"
           [(ngModel)]="name"
           name="name"
           placeholder="Your name"
           autocomplete="name"
+          [attr.aria-invalid]="!!nameError"
         />
+        <small *ngIf="nameError" class="error">{{ nameError }}</small>
       </label>
       <label class="field">
         <span>Email</span>
         <input
+          data-testid="signup-email"
           type="email"
           [(ngModel)]="email"
           name="email"
           placeholder="you@example.com"
           autocomplete="email"
+          [attr.aria-invalid]="!!emailError"
         />
+        <small *ngIf="emailError" class="error">{{ emailError }}</small>
       </label>
       <label class="field">
         <span>Password</span>
         <div class="passwordWrap">
           <input
+            data-testid="signup-password"
             [type]="showPassword ? 'text' : 'password'"
             [(ngModel)]="password"
             name="password"
             placeholder="••••••••"
             autocomplete="new-password"
+            [attr.aria-invalid]="!!passwordError"
           />
           <button type="button" class="eyeBtn" (click)="showPassword = !showPassword" [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'">
             <svg *ngIf="!showPassword" class="eyeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -90,16 +98,19 @@
             </svg>
           </button>
         </div>
+        <small *ngIf="passwordError" class="error">{{ passwordError }}</small>
       </label>
       <label class="field">
         <span>Confirm password</span>
         <div class="passwordWrap">
           <input
+            data-testid="signup-confirm-password"
             [type]="showConfirmPassword ? 'text' : 'password'"
             [(ngModel)]="confirmPassword"
             name="confirmPassword"
             placeholder="••••••••"
             autocomplete="new-password"
+            [attr.aria-invalid]="!!confirmPasswordError"
           />
           <button type="button" class="eyeBtn" (click)="showConfirmPassword = !showConfirmPassword" [attr.aria-label]="showConfirmPassword ? 'Hide password' : 'Show password'">
             <svg *ngIf="!showConfirmPassword" class="eyeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -114,9 +125,10 @@
             </svg>
           </button>
         </div>
+        <small *ngIf="confirmPasswordError" class="error">{{ confirmPasswordError }}</small>
       </label>
       <p *ngIf="error" class="error">{{ error }}</p>
-      <button type="submit" class="btn primary" [disabled]="loading">
+      <button type="submit" data-testid="signup-submit" class="btn primary" [disabled]="loading">
         {{ loading ? 'Creating account...' : 'Sign up' }}
       </button>
     </form>
@@ -139,7 +151,7 @@
 
     <p class="footerText">
       Already have an account?
-      <a routerLink="/login">Log in</a>
+      <a routerLink="/login" data-testid="signup-go-login">Log in</a>
     </p>
   </div>
 </div>

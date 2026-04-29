@@ -1,7 +1,7 @@
 <div class="planner-page trello-bg">
   <header class="planner-topbar">
     <div class="left">
-      <button type="button" class="btn-back" (click)="goBack()">← Back</button>
+      <button type="button" class="btn-back" aria-label="Back to boards" (click)="goBack()">← Back</button>
 
       <div class="boardSwitcher">
         <button type="button" class="boardSwitcherBtn" (click)="toggleBoardSwitcher()" [class.open]="showBoardSwitcher">
@@ -140,6 +140,7 @@
           <button
             type="button"
             class="planner-collapsible-trigger"
+            data-testid="planner-nodue-toggle"
             (click)="toggleNoDueOpen()"
             [attr.aria-expanded]="noDueOpen"
             id="planner-nodue-toggle"
@@ -194,6 +195,7 @@
           <button
             type="button"
             class="planner-collapsible-trigger"
+            data-testid="planner-scheduled-toggle"
             (click)="toggleScheduledOpen()"
             [attr.aria-expanded]="scheduledOpen"
             id="planner-scheduled-toggle"
@@ -398,6 +400,7 @@
       <button
         type="button"
         class="btn-modal-primary"
+        data-testid="planner-add-task-submit"
         [disabled]="!newTaskTitle.trim() || !addTaskStageId"
         (click)="createTaskFromPlanner()"
       >

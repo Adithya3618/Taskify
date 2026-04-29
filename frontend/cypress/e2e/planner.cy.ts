@@ -53,15 +53,15 @@ describe('Planner — board ↔ planner tabs', () => {
 describe('Planner — sidebar lists', () => {
   it('opens the No due date panel and lists tasks without a due date', () => {
     visitPlanner();
-    cy.get('#planner-nodue-toggle').click();
-    cy.get('#planner-nodue-toggle').should('have.attr', 'aria-expanded', 'true');
+    cy.get('[data-testid="planner-nodue-toggle"]').click();
+    cy.get('[data-testid="planner-nodue-toggle"]').should('have.attr', 'aria-expanded', 'true');
     cy.contains('.planner-no-due-list .planner-task-title', 'Test task').should('be.visible');
   });
 
   it('opens the Scheduled panel', () => {
     visitPlanner();
-    cy.get('#planner-scheduled-toggle').click();
-    cy.get('#planner-scheduled-toggle').should('have.attr', 'aria-expanded', 'true');
+    cy.get('[data-testid="planner-scheduled-toggle"]').click();
+    cy.get('[data-testid="planner-scheduled-toggle"]').should('have.attr', 'aria-expanded', 'true');
   });
 });
 
@@ -100,7 +100,7 @@ describe('Planner — task on calendar', () => {
     cy.contains('.planner-task-title', 'Completable')
       .closest('.planner-task-chip')
       .find('input.board-checkbox')
-      .check({ force: true });
+      .check();
     cy.contains('.planner-task-title', 'Completable')
       .closest('.planner-task-chip')
       .should('have.class', 'planner-task-chip--done');
@@ -141,7 +141,7 @@ describe('Planner — add task from calendar', () => {
   });
 });
 
-describe('Planner â€” checklist subtasks', () => {
+describe('Planner — checklist subtasks', () => {
   it('shows and updates checklist items inside the planner task modal', () => {
     visitPlanner({
       subtasksByTaskId: {
@@ -152,10 +152,10 @@ describe('Planner â€” checklist subtasks', () => {
       },
     });
 
-    cy.get('#planner-nodue-toggle').click();
+    cy.get('[data-testid="planner-nodue-toggle"]').click();
     cy.contains('.planner-task-title', 'Test task').click();
     cy.get('.plannerSubtaskItemTitle').eq(0).should('contain', 'First step');
-    cy.contains('.plannerSubtaskItem', 'First step').find('input[type="checkbox"]').check({ force: true });
+    cy.contains('.plannerSubtaskItem', 'First step').find('input[type="checkbox"]').check();
     cy.wait('@updateSubtask').its('request.body.is_completed').should('eq', true);
     cy.get('.plannerSubtaskSectionMeta').should('contain', '2/2 done');
   });
