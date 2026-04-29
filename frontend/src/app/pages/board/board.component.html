@@ -41,32 +41,42 @@
         <div *ngIf="showBoardSwitcher" class="boardSwitcherBackdrop" (click)="showBoardSwitcher = false"></div>
       </div>
 
-      <nav class="viewTabs" aria-label="Board views">
+      <nav class="viewTabs" aria-label="Workspace views">
         <a
           class="viewTab"
-          [routerLink]="['/board', projectId]"
+          [routerLink]="['/board', projectId, 'overview']"
           routerLinkActive="viewTab--active"
-          [routerLinkActiveOptions]="{ exact: true }"
-          (click)="setView('kanban')"
         >
-          Board
+          Overview
+        </a>
+        <a
+          class="viewTab"
+          [routerLink]="['/board', projectId, 'tasks']"
+          routerLinkActive="viewTab--active"
+        >
+          Tasks
+        </a>
+        <a
+          class="viewTab"
+          [routerLink]="['/board', projectId, 'notes']"
+          routerLinkActive="viewTab--active"
+        >
+          Notes
+        </a>
+        <a
+          class="viewTab"
+          [routerLink]="['/board', projectId, 'activity']"
+          routerLinkActive="viewTab--active"
+        >
+          Activity
         </a>
         <a
           class="viewTab"
           [routerLink]="['/board', projectId, 'planner']"
-          routerLinkActive="viewTab--active"
+          routerLinkActive="viewTab--active plannerLink"
         >
           Planner
         </a>
-        <button class="viewTab" [class.viewTab--active]="viewMode === 'dashboard'" (click)="setView('dashboard')">
-          Dashboard
-        </button>
-        <button class="viewTab" [class.viewTab--active]="viewMode === 'table'" (click)="setView('table')">
-          Table
-        </button>
-        <button class="viewTab" [class.viewTab--active]="viewMode === 'timeline'" (click)="setView('timeline')">
-          Timeline
-        </button>
       </nav>
     </div>
 
@@ -309,8 +319,23 @@
     </div>
   </ng-template>
 
-  <div class="board-content" *ngIf="!loading">
-    <div class="columns-container" *ngIf="viewMode === 'kanban'">
+  <div class="board-shell" *ngIf="!loading">
+    <aside class="workspace-sidebar">
+      <a class="workspace-link" [class.active]="workspaceSection === 'overview'" [routerLink]="['/board', projectId, 'overview']">Overview</a>
+      <a class="workspace-link" [class.active]="workspaceSection === 'tasks'" [routerLink]="['/board', projectId, 'tasks']">Tasks</a>
+      <a class="workspace-link" [class.active]="workspaceSection === 'notes'" [routerLink]="['/board', projectId, 'notes']">Notes</a>
+      <a class="workspace-link" [class.active]="workspaceSection === 'activity'" [routerLink]="['/board', projectId, 'activity']">Activity</a>
+    </aside>
+
+    <div class="board-content">
+    <div class="taskViewTabs" *ngIf="workspaceSection === 'tasks'">
+      <button class="viewTab" [class.viewTab--active]="viewMode === 'kanban'" (click)="setView('kanban')">Board</button>
+      <button class="viewTab" [class.viewTab--active]="viewMode === 'table'" (click)="setView('table')">Table</button>
+      <button class="viewTab" [class.viewTab--active]="viewMode === 'timeline'" (click)="setView('timeline')">Timeline</button>
+      <button class="viewTab" [class.viewTab--active]="viewMode === 'dashboard'" (click)="setView('dashboard')">Dashboard</button>
+    </div>
+
+    <div class="columns-container" *ngIf="workspaceSection === 'tasks' && viewMode === 'kanban'">
       <!-- Stage Columns -->
       <div
         class="column"
@@ -518,7 +543,7 @@
     </div>
 
     <!-- ── Dashboard View ── -->
-    <div class="viewPanel" *ngIf="viewMode === 'dashboard'">
+    <div class="viewPanel" *ngIf="workspaceSection === 'overview' || (workspaceSection === 'tasks' && viewMode === 'dashboard')">
       <div class="dashGrid">
         <div class="dashCard">
           <span class="dashCardLabel">Total Tasks</span>
@@ -549,7 +574,7 @@
     </div>
 
     <!-- ── Table View ── -->
-    <div class="viewPanel" *ngIf="viewMode === 'table'">
+    <div class="viewPanel" *ngIf="workspaceSection === 'tasks' && viewMode === 'table'">
       <div class="tableWrap">
         <table class="taskTable">
           <thead>
@@ -621,7 +646,7 @@
     </div>
 
     <!-- ── Timeline View ── -->
-    <div class="viewPanel" *ngIf="viewMode === 'timeline'">
+    <div class="viewPanel" *ngIf="workspaceSection === 'tasks' && viewMode === 'timeline'">
       <div class="timelineWrap">
         <div class="timelineEmpty" *ngIf="timelineTasks.length === 0 && !searchQuery.trim()">
           No tasks with due dates found. Add due dates in Board view to see them here.
@@ -642,6 +667,28 @@
       </div>
     </div>
 
+    <div class="viewPanel" *ngIf="workspaceSection === 'notes'">
+      <div class="tableWrap">
+        <div class="tableEmpty" style="text-align:left;">
+          <h3 style="margin-top:0;">Board notes</h3>
+          <p style="margin-bottom:12px;">Capture quick documentation for this board. Saved locally in your browser.</p>
+          <textarea rows="12" [(ngModel)]="workspaceNotes" placeholder="Write your board notes..." style="width:100%; padding:12px; border-radius:10px; border:1px solid var(--border); background: var(--surface); color: var(--text-1);"></textarea>
+          <div style="margin-top:12px;">
+            <button type="button" class="btn-modal-primary" (click)="saveWorkspaceNotes()">Save notes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="viewPanel" *ngIf="workspaceSection === 'activity'">
+      <div class="tableWrap">
+        <div class="tableEmpty" style="text-align:left;">
+          <h3 style="margin-top:0;">Activity</h3>
+          <p>Use <b>Project settings → Activity</b> for the detailed log in this release. A full routed activity timeline page comes next.</p>
+        </div>
+      </div>
+    </div>
+    </div>
   </div>
 
   <!-- Delete task confirmation -->
