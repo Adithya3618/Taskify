@@ -15,7 +15,7 @@ import {
 } from '../support/board-stubs';
 
 function openFilterPanel() {
-  cy.get('button.btn-ghost').contains('Filter').click();
+  cy.get('[data-testid="board-filter-toggle"]').click();
   cy.get('.filterPanel').should('be.visible');
 }
 
@@ -165,14 +165,14 @@ describe('Board — filter panel', () => {
 
   it('opens and closes when clicking Filter again', () => {
     openFilterPanel();
-    cy.get('button.btn-ghost').contains('Filter').click();
+    cy.get('[data-testid="board-filter-toggle"]').click();
     cy.get('.filterPanel').should('not.exist');
   });
 
   it('shows active state on Filter when a chip is selected', () => {
     openFilterPanel();
     clickFilterChip('Completion', 'Active');
-    cy.get('button.btn-ghost').contains('Filter').should('have.class', 'btn-ghost-active');
+    cy.get('[data-testid="board-filter-toggle"]').should('have.class', 'btn-ghost-active');
   });
 
   it('Active hides a completed task', () => {
@@ -562,7 +562,7 @@ describe('Board — top bar', () => {
         { id: 2, name: 'Beta', description: '', created_at: isoNow(), updated_at: isoNow() },
       ],
     });
-    cy.get('.boardSwitcherBtn').click();
+    cy.get('[data-testid="board-switcher-toggle"]').click();
     cy.contains('.boardSwitcherItem', 'Beta').click();
     cy.url().should('include', '/board/2');
     cy.get('.board-title').should('contain', 'E2E Board 2');
@@ -643,7 +643,7 @@ describe('Board — checklist subtasks', () => {
     cy.wait('@createSubtask');
     cy.get('.task-modal .btn-close-modal').click();
     cy.get('nav.viewTabs a.viewTab').contains('Planner').click({ force: true });
-    cy.get('#planner-nodue-toggle').click();
+    cy.get('[data-testid="planner-nodue-toggle"]').click();
     cy.contains('.planner-task-title', 'Test task').click();
     cy.get('.plannerSubtaskItemTitle').should('contain', 'Planner sync item');
   });

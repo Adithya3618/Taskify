@@ -20,6 +20,10 @@ export class SignupComponent {
   confirmPassword = '';
   loading = false;
   error = '';
+  nameError = '';
+  emailError = '';
+  passwordError = '';
+  confirmPasswordError = '';
   showPassword = false;
   showConfirmPassword = false;
   googleLoading = false;
@@ -45,24 +49,38 @@ export class SignupComponent {
 
   onSubmit() {
     this.error = '';
+    this.nameError = '';
+    this.emailError = '';
+    this.passwordError = '';
+    this.confirmPasswordError = '';
     if (!this.name.trim()) {
-      this.error = 'Please enter your name.';
+      this.nameError = 'Please enter your name.';
+      this.error = 'Please fix the highlighted fields.';
       return;
     }
     if (!this.email.trim()) {
-      this.error = 'Please enter your email.';
+      this.emailError = 'Please enter your email.';
+      this.error = 'Please fix the highlighted fields.';
+      return;
+    }
+    if (!this.isValidEmail(this.email.trim())) {
+      this.emailError = 'Please enter a valid email address.';
+      this.error = 'Please fix the highlighted fields.';
       return;
     }
     if (!this.password) {
-      this.error = 'Please enter a password.';
+      this.passwordError = 'Please enter a password.';
+      this.error = 'Please fix the highlighted fields.';
       return;
     }
     if (this.password.length < 8) {
-      this.error = 'Password must be at least 8 characters.';
+      this.passwordError = 'Password must be at least 8 characters.';
+      this.error = 'Please fix the highlighted fields.';
       return;
     }
     if (this.password !== this.confirmPassword) {
-      this.error = 'Passwords do not match.';
+      this.confirmPasswordError = 'Passwords do not match.';
+      this.error = 'Please fix the highlighted fields.';
       return;
     }
     this.loading = true;
@@ -81,5 +99,9 @@ export class SignupComponent {
         this.error = err.error?.error || 'Signup failed.';
       }
     });
+  }
+
+  private isValidEmail(value: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
   }
 }

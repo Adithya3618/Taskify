@@ -40,6 +40,8 @@ export class HomeComponent {
   renameProjectId: number | null = null;
   renameName = '';
   renameDesc = '';
+  renameOriginalName = '';
+  renameOriginalDesc = '';
 
   // Profile menu
   showProfileMenu = false;
@@ -335,6 +337,8 @@ export class HomeComponent {
     this.renameProjectId = project.id;
     this.renameName = project.name || '';
     this.renameDesc = project.description || '';
+    this.renameOriginalName = this.renameName;
+    this.renameOriginalDesc = this.renameDesc;
   }
 
   closeRenameModal() {
@@ -342,16 +346,16 @@ export class HomeComponent {
     this.renameProjectId = null;
     this.renameName = '';
     this.renameDesc = '';
+    this.renameOriginalName = '';
+    this.renameOriginalDesc = '';
   }
 
   /** Save rename (calls backend if available, otherwise updates UI optimistically) */
   saveRename() {
-    if (!this.renameProjectId) return;
+    if (!this.renameProjectId || !this.canSaveRename) return;
 
     const id = this.renameProjectId;
     const payload = { name: this.renameName.trim(), description: this.renameDesc.trim() };
-
-    if (!payload.name) return;
 
     // Optimistic UI update (works without backend too)
     const idx = this.projects.findIndex(p => p.id === id);
@@ -369,6 +373,13 @@ export class HomeComponent {
     });
 
     this.closeRenameModal();
+  }
+
+  get canSaveRename(): boolean {
+    const nextName = this.renameName.trim();
+    const nextDesc = this.renameDesc.trim();
+    if (!nextName || !this.renameProjectId) return false;
+    return nextName !== this.renameOriginalName.trim() || nextDesc !== this.renameOriginalDesc.trim();
   }
 
   openBoard(projectId: number) {

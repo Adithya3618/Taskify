@@ -8,42 +8,42 @@ describe('Signup Page', () => {
 
   it('should display the signup form', () => {
     cy.get('h1').should('contain.text', 'Create your account');
-    cy.get('input[name="name"]').should('be.visible');
-    cy.get('input[name="email"]').should('be.visible');
-    cy.get('input[name="password"]').should('be.visible');
-    cy.get('input[name="confirmPassword"]').should('be.visible');
-    cy.get('button[type="submit"]').should('be.visible');
+    cy.get('[data-testid="signup-name"]').should('be.visible');
+    cy.get('[data-testid="signup-email"]').should('be.visible');
+    cy.get('[data-testid="signup-password"]').should('be.visible');
+    cy.get('[data-testid="signup-confirm-password"]').should('be.visible');
+    cy.get('[data-testid="signup-submit"]').should('be.visible');
   });
 
   it('should fill in the name field', () => {
-    cy.get('input[name="name"]').type('Test User');
-    cy.get('input[name="name"]').should('have.value', 'Test User');
+    cy.get('[data-testid="signup-name"]').type('Test User');
+    cy.get('[data-testid="signup-name"]').should('have.value', 'Test User');
   });
 
   it('should fill in the email field', () => {
-    cy.get('input[name="email"]').type('test@example.com');
-    cy.get('input[name="email"]').should('have.value', 'test@example.com');
+    cy.get('[data-testid="signup-email"]').type('test@example.com');
+    cy.get('[data-testid="signup-email"]').should('have.value', 'test@example.com');
   });
 
   it('should fill in the full signup form', () => {
-    cy.get('input[name="name"]').type('Test User');
-    cy.get('input[name="email"]').type('test@example.com');
-    cy.get('input[name="password"]').type('password123');
-    cy.get('input[name="confirmPassword"]').type('password123');
-    cy.get('button[type="submit"]').should('not.be.disabled');
+    cy.get('[data-testid="signup-name"]').type('Test User');
+    cy.get('[data-testid="signup-email"]').type('test@example.com');
+    cy.get('[data-testid="signup-password"]').type('password123');
+    cy.get('[data-testid="signup-confirm-password"]').type('password123');
+    cy.get('[data-testid="signup-submit"]').should('not.be.disabled');
   });
 
   it('should show error when passwords do not match', () => {
-    cy.get('input[name="name"]').type('Test User');
-    cy.get('input[name="email"]').type('test@example.com');
-    cy.get('input[name="password"]').type('password123');
-    cy.get('input[name="confirmPassword"]').type('different456');
-    cy.get('button[type="submit"]').click();
+    cy.get('[data-testid="signup-name"]').type('Test User');
+    cy.get('[data-testid="signup-email"]').type('test@example.com');
+    cy.get('[data-testid="signup-password"]').type('password123');
+    cy.get('[data-testid="signup-confirm-password"]').type('different456');
+    cy.get('[data-testid="signup-submit"]').click();
     cy.get('.error').should('be.visible');
   });
 
   it('should navigate to login page via the log in link', () => {
-    cy.get('a[routerlink="/login"]').click();
+    cy.get('[data-testid="signup-go-login"]').click();
     cy.url().should('include', '/login');
   });
 

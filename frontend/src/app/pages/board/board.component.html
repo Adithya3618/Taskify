@@ -2,13 +2,14 @@
   <!-- Trello-like board top bar -->
   <header class="board-topbar">
     <div class="left">
-      <button class="btn-back" (click)="goBack()">← Back</button>
+      <button class="btn-back" type="button" aria-label="Back to boards" (click)="goBack()">← Back</button>
 
       <!-- Board switcher -->
       <div class="boardSwitcher">
         <button
           type="button"
           class="boardSwitcherBtn"
+          data-testid="board-switcher-toggle"
           (click)="toggleBoardSwitcher()"
           [class.open]="showBoardSwitcher"
           [attr.aria-expanded]="showBoardSwitcher"
@@ -108,7 +109,7 @@
         </svg>
         Labels
       </button>
-      <button class="btn-ghost" [class.btn-ghost-active]="hasActiveFilters" (click)="toggleFilterPanel()">
+      <button class="btn-ghost" type="button" data-testid="board-filter-toggle" [class.btn-ghost-active]="hasActiveFilters" (click)="toggleFilterPanel()">
         <svg class="topbarIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M3 6h18M7 12h10M11 18h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
@@ -443,8 +444,9 @@
             <div *ngIf="projectLabels.length" class="newTaskLabelPicker">
               <span class="newTaskLabelTitle">Labels</span>
               <div class="labelChipPicker">
-                <div *ngFor="let label of projectLabels"
+            <div *ngFor="let label of projectLabels"
                      class="labelPickerChip"
+                     data-testid="board-newtask-label-chip"
                      role="button"
                      tabindex="0"
                      [class.selected]="isLabelSelectedForNew(stage.id, label.id)"
@@ -704,6 +706,7 @@
               <div class="labelChipPicker">
                 <div *ngFor="let label of projectLabels"
                      class="labelPickerChip"
+                     data-testid="board-detail-label-chip"
                      role="button"
                      tabindex="0"
                      [class.selected]="isLabelOnTask(detailTask!.id, label.id)"

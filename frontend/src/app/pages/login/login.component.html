@@ -50,24 +50,29 @@
       <label class="field">
         <span>Email</span>
         <input
+          data-testid="login-email"
           type="email"
           [(ngModel)]="email"
           name="email"
           placeholder="you@example.com"
           autocomplete="email"
+          [attr.aria-invalid]="!!emailError"
         />
+        <small *ngIf="emailError" class="error">{{ emailError }}</small>
       </label>
       <label class="field">
         <span>Password</span>
         <div class="passwordWrap">
           <input
+            data-testid="login-password"
             [type]="showPassword ? 'text' : 'password'"
             [(ngModel)]="password"
             name="password"
             placeholder="••••••••"
             autocomplete="current-password"
+            [attr.aria-invalid]="!!passwordError"
           />
-          <button type="button" class="eyeBtn" (click)="showPassword = !showPassword" [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'">
+          <button type="button" data-testid="login-toggle-password" class="eyeBtn" (click)="showPassword = !showPassword" [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'">
             <svg *ngIf="!showPassword" class="eyeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M1.5 12s3.8-7 10.5-7 10.5 7 10.5 7-3.8 7-10.5 7S1.5 12 1.5 12Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
               <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
@@ -80,12 +85,13 @@
             </svg>
           </button>
         </div>
+        <small *ngIf="passwordError" class="error">{{ passwordError }}</small>
       </label>
       <button type="button" class="forgotLink" (click)="openForgotPassword()">
         Forgot password? Change password
       </button>
       <p *ngIf="error" class="error">{{ error }}</p>
-      <button type="submit" class="btn primary" [disabled]="loading">
+      <button type="submit" data-testid="login-submit" class="btn primary" [disabled]="loading">
         {{ loading ? 'Signing in...' : 'Log in' }}
       </button>
     </form>
@@ -108,7 +114,7 @@
 
     <p class="footerText">
       Don't have an account?
-      <a routerLink="/signup">Sign up</a>
+      <a routerLink="/signup" data-testid="login-go-signup">Sign up</a>
     </p>
   </div>
 

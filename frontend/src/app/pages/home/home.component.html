@@ -43,7 +43,7 @@
           </g>
         </svg>
       </div>
-      <span class="brandName">askify</span>
+      <span class="brandName">Taskify</span>
     </a>
     <div class="navTabs">
       <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="navTab">Home</a>
@@ -252,8 +252,8 @@
       <div class="footerLinks">
         <a routerLink="/features">Features</a>
         <a routerLink="/about">About</a>
-        <a href="#">Contact</a>
-        <a href="#">Privacy</a>
+        <span aria-disabled="true">Contact</span>
+        <span aria-disabled="true">Privacy</span>
       </div>
       <p class="footerCopy">© {{ currentYear }} Taskify. Your project management tool.</p>
     </div>
@@ -400,7 +400,7 @@
     <div class="modal" (click)="$event.stopPropagation()">
       <div class="modalHeader">
         <h3>Rename board</h3>
-        <button class="closeBtn" (click)="closeRenameModal()">✕</button>
+        <button type="button" class="closeBtn" (click)="closeRenameModal()">✕</button>
       </div>
 
       <div class="modalBody">
@@ -412,8 +412,8 @@
       </div>
 
       <div class="modalFooter">
-        <button class="btn secondary" (click)="closeRenameModal()">Cancel</button>
-        <button class="btn danger" (click)="saveRename()">Save</button>
+        <button type="button" class="btn secondary" (click)="closeRenameModal()">Cancel</button>
+        <button type="button" class="btn danger" (click)="saveRename()" [disabled]="!canSaveRename">Save</button>
       </div>
     </div>
   </div>
