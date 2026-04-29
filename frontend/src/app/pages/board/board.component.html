@@ -440,8 +440,8 @@
 
         <ng-container *ngIf="!isColumnCollapsed(stage.id)">
         <div class="column-header">
-          <div class="column-header-main">
-            <h3>{{ stage.name }}</h3>
+          <div class="column-header-title-row">
+            <h3 class="column-header-title" [attr.title]="stage.name">{{ stage.name }}</h3>
             <span class="column-task-count" [attr.title]="'completed / total'">
               {{ getStageDoneCount(stage) }}/{{ getStageTotalCount(stage) }}
             </span>
