@@ -6,14 +6,21 @@
 
       <!-- Board switcher -->
       <div class="boardSwitcher">
-        <button class="boardSwitcherBtn" (click)="toggleBoardSwitcher()" [class.open]="showBoardSwitcher">
+        <button
+          type="button"
+          class="boardSwitcherBtn"
+          (click)="toggleBoardSwitcher()"
+          [class.open]="showBoardSwitcher"
+          [attr.aria-expanded]="showBoardSwitcher"
+          aria-controls="board-switcher-dropdown"
+        >
           <span class="board-title">{{ project?.name || 'Board' }}</span>
           <svg class="switcherChevron" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
 
-        <div *ngIf="showBoardSwitcher" class="boardSwitcherDropdown">
+        <div *ngIf="showBoardSwitcher" id="board-switcher-dropdown" class="boardSwitcherDropdown">
           <div class="boardSwitcherHeader">Switch board</div>
           <button
             *ngFor="let board of allBoards"
@@ -438,11 +445,15 @@
               <div class="labelChipPicker">
                 <div *ngFor="let label of projectLabels"
                      class="labelPickerChip"
+                     role="button"
+                     tabindex="0"
                      [class.selected]="isLabelSelectedForNew(stage.id, label.id)"
                      [style.border-color]="label.color"
                      [style.background]="isLabelSelectedForNew(stage.id, label.id) ? label.color : 'transparent'"
                      [style.color]="isLabelSelectedForNew(stage.id, label.id) ? '#fff' : label.color"
-                     (click)="toggleNewTaskLabel(stage.id, label.id)">
+                     (click)="toggleNewTaskLabel(stage.id, label.id)"
+                     (keydown.enter)="toggleNewTaskLabel(stage.id, label.id)"
+                     (keydown.space)="$event.preventDefault(); toggleNewTaskLabel(stage.id, label.id)">
                   <span class="labelPickerDot"
                         *ngIf="!isLabelSelectedForNew(stage.id, label.id)"
                         [style.background]="label.color"></span>
@@ -693,11 +704,15 @@
               <div class="labelChipPicker">
                 <div *ngFor="let label of projectLabels"
                      class="labelPickerChip"
+                     role="button"
+                     tabindex="0"
                      [class.selected]="isLabelOnTask(detailTask!.id, label.id)"
                      [style.border-color]="label.color"
                      [style.background]="isLabelOnTask(detailTask!.id, label.id) ? label.color : 'transparent'"
                      [style.color]="isLabelOnTask(detailTask!.id, label.id) ? '#fff' : label.color"
-                     (click)="toggleLabelOnTask(detailTask!.id, label.id)">
+                     (click)="toggleLabelOnTask(detailTask!.id, label.id)"
+                     (keydown.enter)="toggleLabelOnTask(detailTask!.id, label.id)"
+                     (keydown.space)="$event.preventDefault(); toggleLabelOnTask(detailTask!.id, label.id)">
                   <span class="labelPickerDot"
                         *ngIf="!isLabelOnTask(detailTask!.id, label.id)"
                         [style.background]="label.color"></span>

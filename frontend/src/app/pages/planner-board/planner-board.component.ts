@@ -100,6 +100,7 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
   editingCommentId: number | string | null = null;
   editingCommentContent = '';
   deletingCommentId: number | string | null = null;
+  deleteCommentPending: Comment | null = null;
 
   private routeSub?: Subscription;
   private allTasks: TaskWithStage[] = [];
@@ -353,10 +354,10 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
     return all.slice(0, 1);
   }
 
-  /** Higher number = higher priority (Critical … none). */
+  /** Higher number = higher priority (Urgent … none). */
   private priorityRank(task: Task): number {
     const p = this.getTaskPriority(task).toLowerCase();
-    if (p === 'critical') return 5;
+    if (p === 'urgent') return 5;
     if (p === 'high' || p === 'highest') return 4;
     if (p === 'medium' || p === 'mid') return 3;
     if (p === 'low' || p === 'lowest') return 2;
@@ -476,7 +477,7 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
 
   getCreatePriorityClass(): string {
     const priority = (this.newTaskPriority || '').toLowerCase();
-    if (priority === 'critical' || priority === 'high') return 'priority-high';
+    if (priority === 'urgent' || priority === 'critical' || priority === 'high') return 'priority-high';
     if (priority === 'medium') return 'priority-mid';
     if (priority === 'low') return 'priority-low';
     return 'priority-none';
@@ -515,7 +516,7 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
     this.detailTitle = task.title || '';
     this.detailDesc = parsed.desc;
     this.detailDue = parsed.due;
-    this.detailPriority = parsed.priority;
+    this.detailPriority = this.normalizePriorityValue(parsed.priority);
     this.detailNotes = parsed.notes;
     this.detailCompleted =
       task.completed ?? this.taskCompletionStorage.getCompleted(this.projectId, task.id);
@@ -530,6 +531,7 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
     this.editingCommentId = null;
     this.editingCommentContent = '';
     this.deletingCommentId = null;
+    this.deleteCommentPending = null;
     this.loadTaskSubtasks(task.id);
     this.loadTaskComments(task.id, true);
   }
@@ -548,6 +550,7 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
     this.editingCommentId = null;
     this.editingCommentContent = '';
     this.deletingCommentId = null;
+    this.deleteCommentPending = null;
   }
 
   saveTaskDetail(): void {
@@ -764,7 +767,17 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
 
   confirmDeleteComment(comment: Comment): void {
     if (!this.detailTask) return;
-    if (!window.confirm('Delete this comment?')) return;
+    this.deleteCommentPending = comment;
+  }
+
+  cancelDeleteComment(): void {
+    this.deleteCommentPending = null;
+  }
+
+  executeDeleteComment(): void {
+    if (!this.detailTask || !this.deleteCommentPending) return;
+    const comment = this.deleteCommentPending;
+    this.deleteCommentPending = null;
     this.commentError = '';
     this.deletingCommentId = comment.id;
     this.apiService.deleteComment(comment.id, this.detailTask.id).subscribe({
@@ -890,15 +903,19 @@ export class PlannerBoardComponent implements OnInit, OnDestroy {
   }
 
   getTaskPriority(task: Task): string {
-    return parseCardMeta(task.description || '').priority;
+    return this.normalizePriorityValue(parseCardMeta(task.description || '').priority);
   }
 
   getPriorityClass(task: Task): string {
     const priority = this.getTaskPriority(task).toLowerCase();
-    if (priority === 'critical' || priority === 'high' || priority === 'highest') return 'priority-high';
+    if (priority === 'urgent' || priority === 'critical' || priority === 'high' || priority === 'highest') return 'priority-high';
     if (priority === 'medium' || priority === 'mid') return 'priority-mid';
     if (priority === 'low' || priority === 'lowest') return 'priority-low';
     return 'priority-none';
+  }
+
+  private normalizePriorityValue(priority: string): string {
+    return priority?.toLowerCase() === 'critical' ? 'Urgent' : priority;
   }
 
   /** Same behavior as board task cards (localStorage completion). */

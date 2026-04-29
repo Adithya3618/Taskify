@@ -74,6 +74,9 @@
   </div>
 
   <main class="planner-main" *ngIf="!loading">
+    <section *ngIf="!stages.length" class="planner-scheduled-empty" aria-live="polite">
+      No lists found for this board yet. Create a list in Board view to start planning tasks here.
+    </section>
     <div class="planner-layout planner-layout--viewport">
       <!-- Left: month navigation (always visible, high contrast) -->
       <aside class="planner-month-aside" aria-label="Month navigation">
@@ -224,18 +227,6 @@
                       <span class="planner-task-title">{{ task.title }}</span>
                       <span class="planner-task-meta" *ngIf="getTaskPriority(task)">
                         <span class="meta-pill priority-pill" [ngClass]="getPriorityClass(task)">{{ getTaskPriority(task) }}</span>
-                      </span>
-                      <span class="planner-task-comment-meta">
-                        <svg class="planner-task-comment-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                          <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H7l-4 3v-5.5A8.5 8.5 0 1 1 21 11.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        <span>{{ getTaskCommentCount(task.id) }}</span>
-                      </span>
-                      <span class="planner-task-comment-meta">
-                        <svg class="planner-task-comment-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                          <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H7l-4 3v-5.5A8.5 8.5 0 1 1 21 11.5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        <span>{{ getTaskCommentCount(task.id) }}</span>
                       </span>
                       <span class="planner-task-comment-meta">
                         <svg class="planner-task-comment-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -396,7 +387,7 @@
             <option value="Low">Low</option>
             <option value="Medium">Medium</option>
             <option value="High">High</option>
-            <option value="Critical">Critical</option>
+            <option value="Urgent">Urgent</option>
           </select>
         </div>
         <textarea rows="2" [(ngModel)]="newTaskNotes" placeholder="Notes (optional)"></textarea>
@@ -451,7 +442,7 @@
             <option value="Low">Low</option>
             <option value="Medium">Medium</option>
             <option value="High">High</option>
-            <option value="Critical">Critical</option>
+            <option value="Urgent">Urgent</option>
           </select>
         </div>
       </div>
@@ -593,6 +584,24 @@
     <div class="task-modal-footer">
       <button type="button" class="btn-modal-ghost" (click)="closeTaskDetail()">Cancel</button>
       <button type="button" class="btn-modal-primary" (click)="saveTaskDetail()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="task-modal-backdrop" *ngIf="deleteCommentPending" (click)="cancelDeleteComment()">
+  <div class="task-modal delete-confirm-modal" (click)="$event.stopPropagation()" role="dialog" aria-labelledby="deleteCommentTitle">
+    <div class="task-modal-header">
+      <div>
+        <h3 id="deleteCommentTitle">Delete comment?</h3>
+        <p class="planner-modal-sub">This conversation entry will be removed.</p>
+      </div>
+    </div>
+    <div class="task-modal-body">
+      <p>{{ deleteCommentPending!.content }}</p>
+    </div>
+    <div class="task-modal-footer">
+      <button type="button" class="btn-modal-ghost" (click)="cancelDeleteComment()">Cancel</button>
+      <button type="button" class="btn-modal-primary" (click)="executeDeleteComment()">Delete</button>
     </div>
   </div>
 </div>
