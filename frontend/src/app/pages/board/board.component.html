@@ -74,44 +74,6 @@
         <!-- click-outside backdrop -->
         <div *ngIf="showBoardSwitcher" class="boardSwitcherBackdrop" (click)="showBoardSwitcher = false"></div>
       </div>
-
-      <nav class="viewTabs" aria-label="Board views">
-        <a
-          class="viewTab"
-          [routerLink]="['/board', projectId, 'tasks']"
-          [class.viewTab--active]="workspaceSection === 'tasks' && viewMode === 'kanban'"
-          (click)="setView('kanban')"
-        >
-          Board
-        </a>
-        <a class="viewTab" [routerLink]="['/board', projectId, 'planner']" routerLinkActive="viewTab--active">
-          Planner
-        </a>
-        <a
-          class="viewTab"
-          [routerLink]="['/board', projectId, 'tasks']"
-          [class.viewTab--active]="workspaceSection === 'tasks' && viewMode === 'table'"
-          (click)="setView('table')"
-        >
-          Table
-        </a>
-        <a
-          class="viewTab"
-          [routerLink]="['/board', projectId, 'tasks']"
-          [class.viewTab--active]="workspaceSection === 'tasks' && viewMode === 'timeline'"
-          (click)="setView('timeline')"
-        >
-          Timeline
-        </a>
-        <a
-          class="viewTab"
-          [routerLink]="['/board', projectId, 'tasks']"
-          [class.viewTab--active]="workspaceSection === 'tasks' && viewMode === 'dashboard'"
-          (click)="setView('dashboard')"
-        >
-          Dashboard
-        </a>
-      </nav>
     </div>
 
     <div class="right">
@@ -153,11 +115,24 @@
         </svg>
         Labels
       </button>
-      <button class="btn-ghost" type="button" data-testid="board-filter-toggle" [class.btn-ghost-active]="hasActiveFilters" (click)="toggleFilterPanel()">
-        <svg class="topbarIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M3 6h18M7 12h10M11 18h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <button
+        class="btn-ghost btn-ghost--iconOnly"
+        type="button"
+        data-testid="board-filter-toggle"
+        [class.btn-ghost-active]="hasActiveFilters"
+        (click)="toggleFilterPanel()"
+        aria-label="Filter tasks"
+        title="Filter"
+      >
+        <svg class="topbarIcon topbarIcon--solo" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
         </svg>
-        Filter
         <span *ngIf="hasActiveFilters" class="filterBadge">{{ activeFilterCount }}</span>
       </button>
       <button class="btn-ghost" type="button" (click)="openProjectSettings('members')">
@@ -354,14 +329,106 @@
   </ng-template>
 
   <div class="board-shell" *ngIf="!loading">
-    <aside class="workspace-sidebar">
-      <a class="workspace-link" [class.active]="workspaceSection === 'overview'" [routerLink]="['/board', projectId, 'overview']">Overview</a>
-      <a class="workspace-link" [class.active]="workspaceSection === 'tasks'" [routerLink]="['/board', projectId, 'tasks']">Tasks</a>
-      <a class="workspace-link" [class.active]="workspaceSection === 'notes'" [routerLink]="['/board', projectId, 'notes']">Notes</a>
-      <a class="workspace-link" [class.active]="workspaceSection === 'activity'" [routerLink]="['/board', projectId, 'activity']">Activity</a>
-    </aside>
-
     <div class="board-content">
+    <nav class="board-view-nav" *ngIf="workspaceSection === 'tasks'" data-testid="board-view-nav" aria-label="Switch board view">
+      <a
+        class="viewTab"
+        [routerLink]="['/board', projectId, 'tasks']"
+        [class.viewTab--active]="workspaceSection === 'tasks' && viewMode === 'kanban'"
+        (click)="setView('kanban')"
+      >
+        Board
+      </a>
+      <a class="viewTab" [routerLink]="['/board', projectId, 'planner']" routerLinkActive="viewTab--active">
+        Planner
+      </a>
+      <a
+        class="viewTab"
+        [routerLink]="['/board', projectId, 'tasks']"
+        [class.viewTab--active]="workspaceSection === 'tasks' && viewMode === 'table'"
+        (click)="setView('table')"
+      >
+        Table
+      </a>
+      <a
+        class="viewTab"
+        [routerLink]="['/board', projectId, 'tasks']"
+        [class.viewTab--active]="workspaceSection === 'tasks' && viewMode === 'timeline'"
+        (click)="setView('timeline')"
+      >
+        Timeline
+      </a>
+      <a
+        class="viewTab"
+        [routerLink]="['/board', projectId, 'tasks']"
+        [class.viewTab--active]="workspaceSection === 'tasks' && viewMode === 'dashboard'"
+        (click)="setView('dashboard')"
+      >
+        Dashboard
+      </a>
+    </nav>
+
+    <div class="task-metrics-panel" *ngIf="workspaceSection === 'tasks' && viewMode === 'dashboard'">
+      <div class="dashGrid">
+        <div class="dashCard">
+          <span class="dashCardLabel">Total Tasks</span>
+          <span class="dashCardValue">{{ dashTotalTasks }}</span>
+        </div>
+        <div class="dashCard dashCard--danger">
+          <span class="dashCardLabel">Overdue</span>
+          <span class="dashCardValue">{{ dashOverdueTasks }}</span>
+        </div>
+        <div class="dashCard dashCard--warn">
+          <span class="dashCardLabel">Due Today</span>
+          <span class="dashCardValue">{{ dashDueTodayTasks }}</span>
+        </div>
+        <div class="dashCard dashCard--success">
+          <span class="dashCardLabel">Completed</span>
+          <span class="dashCardValue">{{ dashCompletedTasks }}</span>
+        </div>
+      </div>
+      <div class="dashStages">
+        <div class="dashStageRow" *ngFor="let s of stages">
+          <span class="dashStageName">{{ s.name }}</span>
+          <div class="dashStageBar">
+            <div class="dashStageBarFill" [style.width.%]="dashStagePercent(s)"></div>
+          </div>
+          <span class="dashStageCount">{{ s.tasks?.length || 0 }} tasks</span>
+        </div>
+      </div>
+    </div>
+
+    <section class="board-preview" *ngIf="workspaceSection === 'tasks' && viewMode === 'dashboard'" aria-labelledby="board-preview-heading">
+      <div class="board-preview-toolbar">
+        <h2 id="board-preview-heading" class="board-preview-heading">Board preview</h2>
+        <button type="button" class="btn-open-full-board" (click)="setView('kanban')">Open full board</button>
+      </div>
+      <div class="board-preview-scroll" *ngIf="stages.length">
+        <div class="board-preview-column" *ngFor="let stage of stages">
+          <div class="board-preview-column-head">
+            <span class="board-preview-stage-name">{{ stage.name }}</span>
+            <span class="board-preview-count">{{ getStageDoneCount(stage) }}/{{ getStageTotalCount(stage) }}</span>
+          </div>
+          <div class="board-preview-tasks">
+            <div
+              class="task-card board-preview-task-card"
+              *ngFor="let task of getPreviewTasks(stage)"
+              [ngClass]="getPriorityClass(task)"
+              [class.task-completed]="isTaskDone(task)"
+              (click)="openTaskDetail(task)"
+            >
+              <ng-container *ngTemplateOutlet="taskCardInner; context: { task: task, stage: stage }"></ng-container>
+            </div>
+            <div class="board-preview-more" *ngIf="previewMoreCount(stage) > 0">
+              +{{ previewMoreCount(stage) }} more — <button type="button" class="board-preview-more-btn" (click)="setView('kanban'); $event.stopPropagation()">show in board</button>
+            </div>
+            <p *ngIf="!getPreviewTasks(stage).length" class="board-preview-empty">No tasks</p>
+          </div>
+        </div>
+      </div>
+      <p *ngIf="!stages.length" class="board-preview-empty board-preview-empty--wide">Add a list from the full board view to get started.</p>
+    </section>
+
     <div class="columns-container" *ngIf="workspaceSection === 'tasks' && viewMode === 'kanban'">
       <!-- Stage Columns -->
       <div
@@ -386,15 +453,13 @@
 
         <ng-container *ngIf="!isColumnCollapsed(stage.id)">
         <div class="column-header">
-          <div class="column-header-main">
-            <h3>{{ stage.name }}</h3>
-            <span class="column-task-count" [attr.title]="'completed / total'">
-              {{ getStageDoneCount(stage) }}/{{ getStageTotalCount(stage) }}
-            </span>
-            <span *ngIf="activeSearchQuery.trim()" class="stageMatchCount">
-              {{ getStageMatchCount(stage) }} match{{ getStageMatchCount(stage) === 1 ? '' : 'es' }}
-            </span>
-          </div>
+          <h3 class="column-header-title" [attr.title]="stage.name">{{ stage.name }}</h3>
+          <span class="column-task-count" [attr.title]="'completed / total'">
+            {{ getStageDoneCount(stage) }}/{{ getStageTotalCount(stage) }}
+          </span>
+          <span *ngIf="activeSearchQuery.trim()" class="stageMatchCount column-header-match">
+            {{ getStageMatchCount(stage) }} match{{ getStageMatchCount(stage) === 1 ? '' : 'es' }}
+          </span>
           <div class="column-header-actions">
             <select
               class="column-sort-select"
@@ -569,8 +634,8 @@
       </div>
     </div>
 
-    <!-- ── Dashboard View ── -->
-    <div class="viewPanel" *ngIf="workspaceSection === 'overview' || (workspaceSection === 'tasks' && viewMode === 'dashboard')">
+    <!-- ── Overview workspace (metrics only; Tasks uses metrics above main content) ── -->
+    <div class="viewPanel viewPanel--overview" *ngIf="workspaceSection === 'overview'">
       <div class="dashGrid">
         <div class="dashCard">
           <span class="dashCardLabel">Total Tasks</span>

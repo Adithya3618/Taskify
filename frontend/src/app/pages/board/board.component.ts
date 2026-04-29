@@ -68,11 +68,12 @@ export class BoardComponent implements OnInit, OnDestroy {
   private searchSub?: Subscription;
   private searchSubject = new Subject<string>();
 
-  /** Active board view tab. */
-  viewMode: 'kanban' | 'table' | 'dashboard' | 'timeline' = 'kanban';
+  /** Active board view tab — tasks section defaults to dashboard + board preview. */
+  viewMode: 'kanban' | 'table' | 'dashboard' | 'timeline' = 'dashboard';
+  readonly previewTaskLimit = 4;
   tableSortKey: TableSortKey = 'title';
   tableSortDir: TableSortDir = 'asc';
-  workspaceSection: WorkspaceSection = 'overview';
+  workspaceSection: WorkspaceSection = 'tasks';
   workspaceNotes = '';
 
   setView(mode: 'kanban' | 'table' | 'dashboard' | 'timeline'): void {
@@ -81,7 +82,15 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   private normalizeWorkspaceSection(value?: string): WorkspaceSection {
     if (value === 'tasks' || value === 'notes' || value === 'activity' || value === 'overview') return value;
-    return 'overview';
+    return 'tasks';
+  }
+
+  getPreviewTasks(stage: Stage): Task[] {
+    return this.getDisplayTasks(stage).slice(0, this.previewTaskLimit);
+  }
+
+  previewMoreCount(stage: Stage): number {
+    return Math.max(0, this.getDisplayTasks(stage).length - this.previewTaskLimit);
   }
 
   private workspaceNotesStorageKey(): string {

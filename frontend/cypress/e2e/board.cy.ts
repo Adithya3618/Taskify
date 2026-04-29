@@ -642,7 +642,7 @@ describe('Board — checklist subtasks', () => {
     cy.contains('.subtaskComposer button', 'Add').click();
     cy.wait('@createSubtask');
     cy.get('.task-modal .btn-close-modal').click();
-    cy.get('nav.viewTabs a.viewTab').contains('Planner').click({ force: true });
+    cy.get('[data-testid="board-view-nav"] a.viewTab').contains('Planner').click({ force: true });
     cy.get('[data-testid="planner-nodue-toggle"]').click();
     cy.contains('.planner-task-title', 'Test task').click();
     cy.get('.plannerSubtaskItemTitle').should('contain', 'Planner sync item');
@@ -822,7 +822,7 @@ describe('Board — table sorting', () => {
       },
     });
 
-    cy.contains('button.viewTab', 'Table').click();
+    cy.contains('[data-testid="board-view-nav"] a.viewTab', 'Table').click();
     cy.get('.taskTable tbody .taskRow').eq(0).should('contain', 'Alpha');
     cy.get('[data-testid="table-sort-title"]').click();
     cy.get('.taskTable tbody .taskRow').eq(0).should('contain', 'Bravo');
@@ -839,7 +839,7 @@ describe('Board — table sorting', () => {
       },
     });
 
-    cy.contains('button.viewTab', 'Table').click();
+    cy.contains('[data-testid="board-view-nav"] a.viewTab', 'Table').click();
     cy.get('[data-testid="table-sort-due"]').click();
     cy.get('.taskTable tbody .taskRow').eq(0).should('contain', 'Later due');
     cy.get('[data-testid="table-sort-due"]').click();
@@ -863,7 +863,7 @@ describe('Board — table sorting', () => {
       },
     });
 
-    cy.contains('button.viewTab', 'Table').click();
+    cy.contains('[data-testid="board-view-nav"] a.viewTab', 'Table').click();
     cy.get('[data-testid="table-sort-updated"]').click();
     cy.get('.taskTable tbody .taskRow').eq(0).should('contain', 'Old update');
     cy.get('[data-testid="table-sort-updated"]').click();
