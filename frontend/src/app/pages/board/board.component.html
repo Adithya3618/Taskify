@@ -316,13 +316,6 @@
   </ng-template>
 
   <div class="board-shell" *ngIf="!loading">
-    <aside class="workspace-sidebar">
-      <a class="workspace-link" [class.active]="workspaceSection === 'overview'" [routerLink]="['/board', projectId, 'overview']">Overview</a>
-      <a class="workspace-link" [class.active]="workspaceSection === 'tasks'" [routerLink]="['/board', projectId, 'tasks']">Tasks</a>
-      <a class="workspace-link" [class.active]="workspaceSection === 'notes'" [routerLink]="['/board', projectId, 'notes']">Notes</a>
-      <a class="workspace-link" [class.active]="workspaceSection === 'activity'" [routerLink]="['/board', projectId, 'activity']">Activity</a>
-    </aside>
-
     <div class="board-content">
     <nav class="board-view-nav" *ngIf="workspaceSection === 'tasks'" data-testid="board-view-nav" aria-label="Switch board view">
       <a
