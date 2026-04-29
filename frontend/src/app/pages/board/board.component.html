@@ -41,41 +41,41 @@
         <div *ngIf="showBoardSwitcher" class="boardSwitcherBackdrop" (click)="showBoardSwitcher = false"></div>
       </div>
 
-      <nav class="viewTabs" aria-label="Workspace views">
+      <nav class="viewTabs" aria-label="Board views">
         <a
           class="viewTab"
-          [routerLink]="['/board', projectId, 'overview']"
-          routerLinkActive="viewTab--active"
+          [routerLink]="['/board', projectId, 'tasks']"
+          [class.viewTab--active]="workspaceSection === 'tasks' && viewMode === 'kanban'"
+          (click)="setView('kanban')"
         >
-          Overview
+          Board
+        </a>
+        <a class="viewTab" [routerLink]="['/board', projectId, 'planner']" routerLinkActive="viewTab--active">
+          Planner
         </a>
         <a
           class="viewTab"
           [routerLink]="['/board', projectId, 'tasks']"
-          routerLinkActive="viewTab--active"
+          [class.viewTab--active]="workspaceSection === 'tasks' && viewMode === 'table'"
+          (click)="setView('table')"
         >
-          Tasks
+          Table
         </a>
         <a
           class="viewTab"
-          [routerLink]="['/board', projectId, 'notes']"
-          routerLinkActive="viewTab--active"
+          [routerLink]="['/board', projectId, 'tasks']"
+          [class.viewTab--active]="workspaceSection === 'tasks' && viewMode === 'timeline'"
+          (click)="setView('timeline')"
         >
-          Notes
+          Timeline
         </a>
         <a
           class="viewTab"
-          [routerLink]="['/board', projectId, 'activity']"
-          routerLinkActive="viewTab--active"
+          [routerLink]="['/board', projectId, 'tasks']"
+          [class.viewTab--active]="workspaceSection === 'tasks' && viewMode === 'dashboard'"
+          (click)="setView('dashboard')"
         >
-          Activity
-        </a>
-        <a
-          class="viewTab"
-          [routerLink]="['/board', projectId, 'planner']"
-          routerLinkActive="viewTab--active plannerLink"
-        >
-          Planner
+          Dashboard
         </a>
       </nav>
     </div>
