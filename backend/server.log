@@ -1,9 +1,7 @@
 Warning: Using default JWT secret. Set JWT_SECRET in environment.
-2026/04/28 17:42:38 Database path: /home/adithya/Desktop/SE final/Taskify/backend/taskify.db
-2026/04/28 17:42:38 Database migration: fresh database, skipping owner_id backfill
-2026/04/28 17:42:38 Database migration: project_members already backfilled
-2026/04/28 17:42:38 Database tables created successfully
-2026/04/28 17:42:38 Database connected successfully
-2026/04/28 17:42:38 Server starting on http://localhost:8080/api/projects
-2026/04/28 17:42:38 listen tcp :8080: bind: address already in use
-exit status 1
+2026/04/29 17:47:25 Database path: /home/adithya/Desktop/SE final/Taskify/backend/taskify.db
+2026/04/29 17:47:25 Database migration: fresh database, skipping owner_id backfill
+2026/04/29 17:47:25 Database migration: project_members already backfilled
+2026/04/29 17:47:25 Database tables created successfully
+2026/04/29 17:47:25 Database connected successfully
+2026/04/29 17:47:25 Server starting on http://localhost:8080/api/projects

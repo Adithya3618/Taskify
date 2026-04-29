@@ -711,3 +711,80 @@ func nullableStringPtr(value sql.NullString) *string {
 	s := value.String
 	return &s
 }
+
+// CreateTaskByProject creates a task in the first stage of a project
+func (s *TaskService) CreateTaskByProject(userID string, projectID int64, title, description string, position int, attrs TaskAttributes) (*models.Task, error) {
+	// Verify user has access to the project
+	hasAccess, err := s.hasProjectAccess(userID, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify project access: %v", err)
+	}
+	if !hasAccess {
+		return nil, fmt.Errorf("access denied to project")
+	}
+
+	// Get the first stage of the project
+	var stageID int64
+	err = s.db.QueryRow(
+		"SELECT id FROM stages WHERE project_id = ? ORDER BY position LIMIT 1",
+		projectID,
+	).Scan(&stageID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("no stages found in project")
+		}
+		return nil, fmt.Errorf("failed to get first stage: %v", err)
+	}
+
+	return s.CreateTask(userID, stageID, title, description, position, attrs)
+}
+
+// GetTasksByProject retrieves all tasks for a project
+func (s *TaskService) GetTasksByProject(userID string, projectID int64) ([]models.Task, error) {
+	// Verify user has access to the project
+	hasAccess, err := s.hasProjectAccess(userID, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify project access: %v", err)
+	}
+	if !hasAccess {
+		return nil, fmt.Errorf("access denied to project")
+	}
+
+	rows, err := s.db.Query(
+		`SELECT
+			tasks.id,
+			tasks.user_id,
+			tasks.stage_id,
+			tasks.title,
+			tasks.description,
+			tasks.position,
+			tasks.start_date,
+			tasks.deadline,
+			tasks.priority,
+			tasks.assigned_to,
+			COALESCE((SELECT COUNT(*) FROM subtasks WHERE subtasks.task_id = tasks.id), 0) AS subtask_count,
+			COALESCE((SELECT COUNT(*) FROM subtasks WHERE subtasks.task_id = tasks.id AND subtasks.is_completed = 1), 0) AS completed_count,
+			tasks.created_at,
+			tasks.updated_at
+		FROM tasks
+		JOIN stages ON tasks.stage_id = stages.id
+		WHERE stages.project_id = ? AND tasks.user_id = ?
+		ORDER BY stages.position, tasks.position`,
+		projectID, userID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tasks: %v", err)
+	}
+	defer rows.Close()
+
+	var tasks []models.Task
+	for rows.Next() {
+		task, err := scanTask(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan task: %v", err)
+		}
+		tasks = append(tasks, task)
+	}
+
+	return tasks, nil
+}

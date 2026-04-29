@@ -415,3 +415,72 @@ func decodeTaskUpdateRequest(r *http.Request) (taskUpdateRequest, error) {
 
 	return req, nil
 }
+
+// CreateTaskByProject handles POST /api/projects/:projectId/tasks
+func (c *TaskController) CreateTaskByProject(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	projectID, err := strconv.ParseInt(vars["projectId"], 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+		return
+	}
+
+	req, err := decodeTaskRequest(r)
+	if err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Title == "" {
+		http.Error(w, "Task title is required", http.StatusBadRequest)
+		return
+	}
+
+	attrs := services.TaskAttributes{
+		StartDate:  req.StartDate,
+		Deadline:   req.Deadline,
+		Priority:   req.Priority,
+		AssignedTo: req.AssignedTo,
+	}
+
+	task, err := c.service.CreateTaskByProject(userID, projectID, req.Title, req.Description, req.Position, attrs)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(task)
+}
+
+// GetTasksByProject handles GET /api/projects/:projectId/tasks
+func (c *TaskController) GetTasksByProject(w http.ResponseWriter, r *http.Request) {
+	userID := helpers.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	projectID, err := strconv.ParseInt(vars["projectId"], 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+		return
+	}
+
+	tasks, err := c.service.GetTasksByProject(userID, projectID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(tasks)
+}

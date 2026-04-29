@@ -154,6 +154,10 @@ func SetupRoutes(router *mux.Router, db *database.DB) {
 	protected.HandleFunc("/stages/{id}", stageController.DeleteStage).Methods("DELETE")
 
 	// Task routes (protected)
+	// Create task by project ID only (uses first/default stage)
+	protected.HandleFunc("/projects/{projectId}/tasks", taskController.CreateTaskByProject).Methods("POST")
+	protected.HandleFunc("/projects/{projectId}/tasks", taskController.GetTasksByProject).Methods("GET")
+	// Create task with stage ID (required)
 	protected.HandleFunc("/projects/{projectId}/stages/{stageId}/tasks", taskController.CreateTask).Methods("POST")
 	protected.HandleFunc("/projects/{projectId}/stages/{stageId}/tasks", taskController.GetTasksByStage).Methods("GET")
 	protected.HandleFunc("/tasks/{id}", taskController.GetTask).Methods("GET")
