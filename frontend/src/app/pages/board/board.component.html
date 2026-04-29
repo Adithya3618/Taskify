@@ -328,13 +328,6 @@
     </aside>
 
     <div class="board-content">
-    <div class="taskViewTabs" *ngIf="workspaceSection === 'tasks'">
-      <button class="viewTab" [class.viewTab--active]="viewMode === 'kanban'" (click)="setView('kanban')">Board</button>
-      <button class="viewTab" [class.viewTab--active]="viewMode === 'table'" (click)="setView('table')">Table</button>
-      <button class="viewTab" [class.viewTab--active]="viewMode === 'timeline'" (click)="setView('timeline')">Timeline</button>
-      <button class="viewTab" [class.viewTab--active]="viewMode === 'dashboard'" (click)="setView('dashboard')">Dashboard</button>
-    </div>
-
     <div class="columns-container" *ngIf="workspaceSection === 'tasks' && viewMode === 'kanban'">
       <!-- Stage Columns -->
       <div
