@@ -375,8 +375,19 @@
   .column-header-actions {
     display: flex;
     align-items: center;
-    gap: 0;
+    gap: 6px;
     flex-shrink: 0;
+  }
+  .column-sort-select {
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 0 6px;
+    font-family: inherit;
   }
   .btn-collapse-column {
     display: flex;
@@ -411,6 +422,11 @@
 [data-theme="light"] .column-header .btn-collapse-column {
   color: #97a0af;
   &:hover { background: rgba(23, 43, 77, 0.06); color: #172b4d; }
+}
+[data-theme="light"] .column-header .column-sort-select {
+  border-color: rgba(23, 43, 77, 0.15);
+  background: rgba(23, 43, 77, 0.04);
+  color: #172b4d;
 }
 
 /* Collapsed column vertical strip */
@@ -2252,6 +2268,39 @@
     &.overdue  { color: #ef4444; font-weight: 600; }
     &.due-today { color: #f59e0b; font-weight: 600; }
   }
+}
+
+.tableSortBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0.85;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.tableSortBtn:hover {
+  opacity: 1;
+}
+
+.tableSortBtn.active {
+  color: var(--text-1);
+  opacity: 1;
+}
+
+.tableSortGlyph {
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0.75;
+}
+
+.tableSortBtn.active .tableSortGlyph {
+  opacity: 1;
 }
 
 .taskRow {

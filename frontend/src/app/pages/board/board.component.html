@@ -344,6 +344,20 @@
             </span>
           </div>
           <div class="column-header-actions">
+            <select
+              class="column-sort-select"
+              [attr.data-testid]="'column-sort-' + stage.id"
+              [ngModel]="getColumnSortMode(stage.id)"
+              (ngModelChange)="setColumnSortMode(stage.id, $event)"
+              (click)="$event.stopPropagation()"
+              aria-label="Sort tasks in this list"
+            >
+              <option value="manual">Manual</option>
+              <option value="due">Due date</option>
+              <option value="priority">Priority</option>
+              <option value="updated">Recently updated</option>
+              <option value="alphabetical">A-Z</option>
+            </select>
             <button
               type="button"
               class="btn-collapse-column"
@@ -368,24 +382,24 @@
         </div>
 
         <!-- Tasks: static when filtered; drag-drop when not filtered -->
-        <ng-container *ngIf="hasActiveFilters">
+        <ng-container *ngIf="hasActiveFilters || !isManualColumnSort(stage.id)">
           <div class="tasks-list tasks-list--static">
             <div
               class="task-card"
-              *ngFor="let task of getFilteredTasks(stage); trackBy: trackByTaskId"
+              *ngFor="let task of getDisplayTasks(stage); trackBy: trackByTaskId"
               [ngClass]="getPriorityClass(task)"
               [class.task-completed]="isTaskDone(task)"
             >
               <ng-container *ngTemplateOutlet="taskCardInner; context: { task: task, stage: stage }"></ng-container>
             </div>
-            <p *ngIf="!getFilteredTasks(stage).length" class="no-tasks">
+            <p *ngIf="!getDisplayTasks(stage).length" class="no-tasks">
               {{ stage.tasks?.length ? 'No tasks match the filter' : 'No tasks yet' }}
             </p>
           </div>
         </ng-container>
 
         <div
-          *ngIf="!hasActiveFilters"
+          *ngIf="!hasActiveFilters && isManualColumnSort(stage.id)"
           class="tasks-list"
           cdkDropList
           [id]="stageDropListId(stage.id)"
@@ -540,32 +554,62 @@
         <table class="taskTable">
           <thead>
             <tr>
-              <th>Title</th>
-              <th>Stage</th>
-              <th>Priority</th>
-              <th>Due Date</th>
-              <th>Subtasks</th>
-              <th>Assignee</th>
+              <th>
+                <button type="button" class="tableSortBtn" data-testid="table-sort-title" [class.active]="isTableSortActive('title')" (click)="toggleTableSort('title')">
+                  Title <span class="tableSortGlyph">{{ isTableSortActive('title') ? tableSortIndicator('title') : '↕' }}</span>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="tableSortBtn" data-testid="table-sort-stage" [class.active]="isTableSortActive('stage')" (click)="toggleTableSort('stage')">
+                  Stage <span class="tableSortGlyph">{{ isTableSortActive('stage') ? tableSortIndicator('stage') : '↕' }}</span>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="tableSortBtn" data-testid="table-sort-priority" [class.active]="isTableSortActive('priority')" (click)="toggleTableSort('priority')">
+                  Priority <span class="tableSortGlyph">{{ isTableSortActive('priority') ? tableSortIndicator('priority') : '↕' }}</span>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="tableSortBtn" data-testid="table-sort-due" [class.active]="isTableSortActive('due')" (click)="toggleTableSort('due')">
+                  Due Date <span class="tableSortGlyph">{{ isTableSortActive('due') ? tableSortIndicator('due') : '↕' }}</span>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="tableSortBtn" data-testid="table-sort-updated" [class.active]="isTableSortActive('updated')" (click)="toggleTableSort('updated')">
+                  Updated <span class="tableSortGlyph">{{ isTableSortActive('updated') ? tableSortIndicator('updated') : '↕' }}</span>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="tableSortBtn" data-testid="table-sort-subtasks" [class.active]="isTableSortActive('subtasks')" (click)="toggleTableSort('subtasks')">
+                  Subtasks <span class="tableSortGlyph">{{ isTableSortActive('subtasks') ? tableSortIndicator('subtasks') : '↕' }}</span>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="tableSortBtn" data-testid="table-sort-assignee" [class.active]="isTableSortActive('assignee')" (click)="toggleTableSort('assignee')">
+                  Assignee <span class="tableSortGlyph">{{ isTableSortActive('assignee') ? tableSortIndicator('assignee') : '↕' }}</span>
+                </button>
+              </th>
             </tr>
           </thead>
           <tbody>
-            <ng-container *ngFor="let s of stages">
-              <tr *ngFor="let t of getFilteredTasks(s)" (click)="openTaskDetail(t)" class="taskRow">
+            <ng-container *ngFor="let row of tableRows">
+              <tr (click)="openTaskDetail(row.task)" class="taskRow">
                 <td class="taskRowTitle">
-                  <span class="taskRowDot" [class]="'priority-dot priority-dot--' + getEffectivePriority(t)"></span>
-                  {{ t.title }}
+                  <span class="taskRowDot" [class]="'priority-dot priority-dot--' + getEffectivePriority(row.task)"></span>
+                  {{ row.task.title }}
                 </td>
-                <td><span class="stagePill">{{ s.name }}</span></td>
-                <td><span class="priorityBadge priorityBadge--{{ getEffectivePriority(t) }}">{{ getEffectivePriority(t) }}</span></td>
-                <td [class.overdue]="isDueOverdue(t)" [class.due-today]="isDueToday(t)">{{ getTaskDueLabel(t) }}</td>
-                <td>{{ t.subtask_count ? (t.completed_count || 0) + '/' + t.subtask_count : '—' }}</td>
+                <td><span class="stagePill">{{ row.stage.name }}</span></td>
+                <td><span class="priorityBadge priorityBadge--{{ getEffectivePriority(row.task) }}">{{ getEffectivePriority(row.task) }}</span></td>
+                <td [class.overdue]="isDueOverdue(row.task)" [class.due-today]="isDueToday(row.task)">{{ getTaskDueLabel(row.task) }}</td>
+                <td>{{ getTaskUpdatedLabel(row.task) }}</td>
+                <td>{{ row.task.subtask_count ? (row.task.completed_count || 0) + '/' + row.task.subtask_count : '—' }}</td>
                 <td>
-                  <span class="tableAssigneeChip" *ngIf="getTaskAssignee(t) as assignee"
+                  <span class="tableAssigneeChip" *ngIf="getTaskAssignee(row.task) as assignee"
                         [title]="assignee.user_name || assignee.user_email || ''">
                     <span class="tableAssigneeAvatar">{{ getMemberInitials(assignee) }}</span>
                     {{ assignee.user_name || assignee.user_email }}
                   </span>
-                  <span *ngIf="!getTaskAssignee(t)" class="tableUnassigned">—</span>
+                  <span *ngIf="!getTaskAssignee(row.task)" class="tableUnassigned">—</span>
                 </td>
               </tr>
             </ng-container>
