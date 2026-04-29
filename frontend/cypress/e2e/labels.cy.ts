@@ -97,12 +97,12 @@ describe('Labels — filter panel', () => {
   beforeEach(() => visitBoard());
 
   it('shows a Label section in the filter panel', () => {
-    cy.get('button.btn-ghost').contains('Filter').click();
+    cy.get('[data-testid="board-filter-toggle"]').click();
     cy.contains('.filterGroupLabel', /label/i).should('be.visible');
   });
 
   it('All labels chip is active by default in the filter panel', () => {
-    cy.get('button.btn-ghost').contains('Filter').click();
+    cy.get('[data-testid="board-filter-toggle"]').click();
     cy.contains('.filterGroupLabel', /label/i)
       .parent()
       .contains('button', 'All')

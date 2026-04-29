@@ -25,26 +25,31 @@
   background: rgba(8,10,20,0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255,255,255,0.08); flex-shrink: 0;
 }
-.board-topbar .left  { display: flex; align-items: center; gap: 12px; }
-.board-topbar .right { display: flex; align-items: center; gap: 10px; }
+.board-topbar .left  { display: flex; align-items: center; gap: 12px; flex-wrap: nowrap; min-width: 0; }
+.board-topbar .right { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; flex-shrink: 0; }
 
 @media (max-width: 1200px) {
   .board-topbar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
+    flex-wrap: nowrap;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
   }
-  .board-topbar .left,
-  .board-topbar .right {
-    width: 100%;
-    flex-wrap: wrap;
+  .board-topbar .left {
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-wrap: nowrap;
   }
   .board-topbar .right {
-    justify-content: flex-start;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
   }
   .searchInput {
-    width: 180px;
-    &:focus { width: 220px; }
+    width: 160px;
+    min-width: 120px;
+    &:focus { width: 200px; }
   }
 }
 
@@ -1275,15 +1280,30 @@
 
 /* ── Topbar icon ── */
 .topbarIcon { width: 15px; height: 15px; display: inline-block; vertical-align: middle; margin-right: 5px; }
+.topbarIcon--solo { margin-right: 0; width: 18px; height: 18px; }
+
+.btn-ghost--iconOnly {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
 
 /* ── Filter button active state ── */
 .btn-ghost { position: relative; }
 .btn-ghost-active { background: rgba(129,140,248,0.18) !important; border-color: rgba(129,140,248,0.45) !important; color: #c7d2fe !important; }
 .filterBadge {
-  position: absolute; top: 4px; right: 4px;
+  position: absolute; top: 3px; right: 3px;
   min-width: 16px; height: 16px; border-radius: 999px; padding: 0 4px;
   background: #818CF8; color: #fff; font-size: 10px; font-weight: 700;
   display: flex; align-items: center; justify-content: center; line-height: 1;
+}
+.btn-ghost--iconOnly .filterBadge {
+  top: 2px;
+  right: 2px;
 }
 
 /* ── Filter Panel ── */
