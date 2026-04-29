@@ -791,3 +791,82 @@ describe('Board — empty list', () => {
     cy.get('.column:not(.add-column)').first().find('.no-tasks').should('contain', 'No tasks yet');
   });
 });
+
+describe('Board — column sorting', () => {
+  it('sorts a column alphabetically when A-Z is selected', () => {
+    visitBoard({
+      tasksByStageId: {
+        [STAGE_ID]: [
+          makeTask(9001, STAGE_ID, 'Zulu task', ''),
+          makeTask(9002, STAGE_ID, 'Alpha task', ''),
+        ],
+        [STAGE_2_ID]: [],
+      },
+    });
+
+    cy.get('[data-testid="column-sort-100"]').select('alphabetical');
+    cy.get('.column:not(.add-column)').first().find('.task-title').eq(0).should('contain', 'Alpha task');
+    cy.get('.column:not(.add-column)').first().find('.task-title').eq(1).should('contain', 'Zulu task');
+  });
+});
+
+describe('Board — table sorting', () => {
+  it('toggles title sort direction when clicking the same header', () => {
+    visitBoard({
+      tasksByStageId: {
+        [STAGE_ID]: [
+          makeTask(9101, STAGE_ID, 'Bravo', ''),
+          makeTask(9102, STAGE_ID, 'Alpha', ''),
+        ],
+        [STAGE_2_ID]: [],
+      },
+    });
+
+    cy.contains('button.viewTab', 'Table').click();
+    cy.get('.taskTable tbody .taskRow').eq(0).should('contain', 'Alpha');
+    cy.get('[data-testid="table-sort-title"]').click();
+    cy.get('.taskTable tbody .taskRow').eq(0).should('contain', 'Bravo');
+  });
+
+  it('sorts by due date when Due Date header is clicked', () => {
+    visitBoard({
+      tasksByStageId: {
+        [STAGE_ID]: [
+          makeTask(9201, STAGE_ID, 'Later due', taskDescriptionWithMeta('', { due: '2030-02-01' })),
+          makeTask(9202, STAGE_ID, 'Sooner due', taskDescriptionWithMeta('', { due: '2030-01-01' })),
+        ],
+        [STAGE_2_ID]: [],
+      },
+    });
+
+    cy.contains('button.viewTab', 'Table').click();
+    cy.get('[data-testid="table-sort-due"]').click();
+    cy.get('.taskTable tbody .taskRow').eq(0).should('contain', 'Later due');
+    cy.get('[data-testid="table-sort-due"]').click();
+    cy.get('.taskTable tbody .taskRow').eq(0).should('contain', 'Sooner due');
+  });
+
+  it('sorts by recently updated when Updated header is clicked', () => {
+    visitBoard({
+      tasksByStageId: {
+        [STAGE_ID]: [
+          {
+            ...makeTask(9301, STAGE_ID, 'Old update', ''),
+            updated_at: '2022-01-01T00:00:00.000Z',
+          },
+          {
+            ...makeTask(9302, STAGE_ID, 'New update', ''),
+            updated_at: '2024-01-01T00:00:00.000Z',
+          },
+        ],
+        [STAGE_2_ID]: [],
+      },
+    });
+
+    cy.contains('button.viewTab', 'Table').click();
+    cy.get('[data-testid="table-sort-updated"]').click();
+    cy.get('.taskTable tbody .taskRow').eq(0).should('contain', 'Old update');
+    cy.get('[data-testid="table-sort-updated"]').click();
+    cy.get('.taskTable tbody .taskRow').eq(0).should('contain', 'New update');
+  });
+});

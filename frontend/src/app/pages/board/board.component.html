@@ -346,6 +346,7 @@
           <div class="column-header-actions">
             <select
               class="column-sort-select"
+              [attr.data-testid]="'column-sort-' + stage.id"
               [ngModel]="getColumnSortMode(stage.id)"
               (ngModelChange)="setColumnSortMode(stage.id, $event)"
               (click)="$event.stopPropagation()"
@@ -554,37 +555,37 @@
           <thead>
             <tr>
               <th>
-                <button type="button" class="tableSortBtn" [class.active]="isTableSortActive('title')" (click)="toggleTableSort('title')">
+                <button type="button" class="tableSortBtn" data-testid="table-sort-title" [class.active]="isTableSortActive('title')" (click)="toggleTableSort('title')">
                   Title <span class="tableSortGlyph">{{ isTableSortActive('title') ? tableSortIndicator('title') : '↕' }}</span>
                 </button>
               </th>
               <th>
-                <button type="button" class="tableSortBtn" [class.active]="isTableSortActive('stage')" (click)="toggleTableSort('stage')">
+                <button type="button" class="tableSortBtn" data-testid="table-sort-stage" [class.active]="isTableSortActive('stage')" (click)="toggleTableSort('stage')">
                   Stage <span class="tableSortGlyph">{{ isTableSortActive('stage') ? tableSortIndicator('stage') : '↕' }}</span>
                 </button>
               </th>
               <th>
-                <button type="button" class="tableSortBtn" [class.active]="isTableSortActive('priority')" (click)="toggleTableSort('priority')">
+                <button type="button" class="tableSortBtn" data-testid="table-sort-priority" [class.active]="isTableSortActive('priority')" (click)="toggleTableSort('priority')">
                   Priority <span class="tableSortGlyph">{{ isTableSortActive('priority') ? tableSortIndicator('priority') : '↕' }}</span>
                 </button>
               </th>
               <th>
-                <button type="button" class="tableSortBtn" [class.active]="isTableSortActive('due')" (click)="toggleTableSort('due')">
+                <button type="button" class="tableSortBtn" data-testid="table-sort-due" [class.active]="isTableSortActive('due')" (click)="toggleTableSort('due')">
                   Due Date <span class="tableSortGlyph">{{ isTableSortActive('due') ? tableSortIndicator('due') : '↕' }}</span>
                 </button>
               </th>
               <th>
-                <button type="button" class="tableSortBtn" [class.active]="isTableSortActive('updated')" (click)="toggleTableSort('updated')">
+                <button type="button" class="tableSortBtn" data-testid="table-sort-updated" [class.active]="isTableSortActive('updated')" (click)="toggleTableSort('updated')">
                   Updated <span class="tableSortGlyph">{{ isTableSortActive('updated') ? tableSortIndicator('updated') : '↕' }}</span>
                 </button>
               </th>
               <th>
-                <button type="button" class="tableSortBtn" [class.active]="isTableSortActive('subtasks')" (click)="toggleTableSort('subtasks')">
+                <button type="button" class="tableSortBtn" data-testid="table-sort-subtasks" [class.active]="isTableSortActive('subtasks')" (click)="toggleTableSort('subtasks')">
                   Subtasks <span class="tableSortGlyph">{{ isTableSortActive('subtasks') ? tableSortIndicator('subtasks') : '↕' }}</span>
                 </button>
               </th>
               <th>
-                <button type="button" class="tableSortBtn" [class.active]="isTableSortActive('assignee')" (click)="toggleTableSort('assignee')">
+                <button type="button" class="tableSortBtn" data-testid="table-sort-assignee" [class.active]="isTableSortActive('assignee')" (click)="toggleTableSort('assignee')">
                   Assignee <span class="tableSortGlyph">{{ isTableSortActive('assignee') ? tableSortIndicator('assignee') : '↕' }}</span>
                 </button>
               </th>
