@@ -19,7 +19,7 @@ import { NotificationService } from '../../services/notification.service';
 import { NotificationBellComponent } from '../../components/notification-bell/notification-bell.component';
 
 type TaskSortMode = 'manual' | 'due' | 'priority' | 'updated' | 'alphabetical';
-type TableSortKey = 'title' | 'stage' | 'priority' | 'due' | 'subtasks' | 'assignee';
+type TableSortKey = 'title' | 'stage' | 'priority' | 'due' | 'updated' | 'subtasks' | 'assignee';
 type TableSortDir = 'asc' | 'desc';
 
 @Component({
@@ -772,7 +772,7 @@ export class BoardComponent implements OnInit, OnDestroy {
   }
 
   private isValidTableSortKey(value: string): value is TableSortKey {
-    return value === 'title' || value === 'stage' || value === 'priority' || value === 'due' || value === 'subtasks' || value === 'assignee';
+    return value === 'title' || value === 'stage' || value === 'priority' || value === 'due' || value === 'updated' || value === 'subtasks' || value === 'assignee';
   }
 
   private saveCollapsedColumnState(): void {
@@ -2028,7 +2028,7 @@ export class BoardComponent implements OnInit, OnDestroy {
       this.tableSortDir = this.tableSortDir === 'asc' ? 'desc' : 'asc';
     } else {
       this.tableSortKey = key;
-      this.tableSortDir = key === 'due' || key === 'priority' || key === 'subtasks' ? 'desc' : 'asc';
+      this.tableSortDir = key === 'due' || key === 'priority' || key === 'updated' || key === 'subtasks' ? 'desc' : 'asc';
     }
     this.saveTableSortState();
   }
@@ -2074,6 +2074,12 @@ export class BoardComponent implements OnInit, OnDestroy {
       if (diff !== 0) return diff * dir;
       return at.title.localeCompare(bt.title) * dir;
     }
+    if (this.tableSortKey === 'updated') {
+      const av = new Date(at.updated_at || 0).getTime();
+      const bv = new Date(bt.updated_at || 0).getTime();
+      if (av !== bv) return (av - bv) * dir;
+      return at.title.localeCompare(bt.title) * dir;
+    }
     if (this.tableSortKey === 'subtasks') {
       const av = at.subtask_count || 0;
       const bv = bt.subtask_count || 0;
@@ -2086,6 +2092,16 @@ export class BoardComponent implements OnInit, OnDestroy {
       return an.localeCompare(bn) * dir;
     }
     return 0;
+  }
+
+  getTaskUpdatedLabel(task: Task): string {
+    const raw = task.updated_at || task.created_at;
+    if (!raw) return '—';
+    return new Date(raw).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
   }
 
   private migrateBoardOwnersEmail(oldEmail: string, newEmail: string) {

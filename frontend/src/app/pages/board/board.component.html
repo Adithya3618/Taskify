@@ -574,6 +574,11 @@
                 </button>
               </th>
               <th>
+                <button type="button" class="tableSortBtn" [class.active]="isTableSortActive('updated')" (click)="toggleTableSort('updated')">
+                  Updated <span class="tableSortGlyph">{{ isTableSortActive('updated') ? tableSortIndicator('updated') : '↕' }}</span>
+                </button>
+              </th>
+              <th>
                 <button type="button" class="tableSortBtn" [class.active]="isTableSortActive('subtasks')" (click)="toggleTableSort('subtasks')">
                   Subtasks <span class="tableSortGlyph">{{ isTableSortActive('subtasks') ? tableSortIndicator('subtasks') : '↕' }}</span>
                 </button>
@@ -595,6 +600,7 @@
                 <td><span class="stagePill">{{ row.stage.name }}</span></td>
                 <td><span class="priorityBadge priorityBadge--{{ getEffectivePriority(row.task) }}">{{ getEffectivePriority(row.task) }}</span></td>
                 <td [class.overdue]="isDueOverdue(row.task)" [class.due-today]="isDueToday(row.task)">{{ getTaskDueLabel(row.task) }}</td>
+                <td>{{ getTaskUpdatedLabel(row.task) }}</td>
                 <td>{{ row.task.subtask_count ? (row.task.completed_count || 0) + '/' + row.task.subtask_count : '—' }}</td>
                 <td>
                   <span class="tableAssigneeChip" *ngIf="getTaskAssignee(row.task) as assignee"
