@@ -22,10 +22,38 @@
 
 .table-scroll {
   flex: 1;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
   border: 1px solid rgba(9, 30, 66, 0.1);
   border-radius: 8px;
   background: #fff;
+}
+
+.tableVirtualViewport {
+  flex: 1;
+  width: 100%;
+  min-height: 200px;
+}
+
+.tv-col--task { width: 24%; }
+.tv-col--list { width: 11%; }
+.tv-col--due { width: 11%; }
+.tv-col--labels { width: 14%; }
+.tv-col--assignees { width: 16%; }
+.tv-col--checklist { width: 10%; }
+.tv-col--attach { width: 13%; }
+
+.data-table--header {
+  flex-shrink: 0;
+  margin: 0;
+  table-layout: fixed;
+}
+
+.data-table--body {
+  margin: 0;
+  table-layout: fixed;
 }
 
 .data-table {
@@ -64,6 +92,9 @@
       display: block;
       font-weight: 500;
       color: #172b4d;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .task-desc {
       display: block;
