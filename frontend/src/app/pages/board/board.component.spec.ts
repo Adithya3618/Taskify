@@ -461,7 +461,7 @@ describe('BoardComponent', () => {
   });
 
   describe('onTaskDrop and moveTask', () => {
-    it('should not call loadTasks after a successful cross-column drop', () => {
+    it('should reload both columns after a successful cross-column drop', () => {
       const loadSpy = spyOn(component, 'loadTasks');
       apiSpy.moveTask.and.returnValue(of(makeTask({ id: 5, stage_id: 2 })));
 
@@ -483,7 +483,7 @@ describe('BoardComponent', () => {
       component.onTaskDrop(event);
 
       expect(apiSpy.moveTask).toHaveBeenCalled();
-      expect(loadSpy).not.toHaveBeenCalled();
+      expect(loadSpy).toHaveBeenCalledTimes(2);
     });
 
     it('should call loadTasks to reconcile when moveTask fails', () => {
