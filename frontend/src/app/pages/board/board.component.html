@@ -509,8 +509,8 @@
           </div>
         </div>
 
-        <!-- Tasks: static when filtered; drag-drop when not filtered -->
-        <ng-container *ngIf="hasActiveFilters || !isManualColumnSort(stage.id)">
+        <!-- Tasks: static only when filtered; drag-drop otherwise -->
+        <ng-container *ngIf="hasActiveFilters">
           <div class="tasks-list tasks-list--static">
             <div
               class="task-card"
@@ -527,7 +527,7 @@
         </ng-container>
 
         <div
-          *ngIf="!hasActiveFilters && isManualColumnSort(stage.id)"
+          *ngIf="!hasActiveFilters"
           class="tasks-list"
           cdkDropList
           [id]="stageDropListId(stage.id)"
