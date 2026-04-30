@@ -49,6 +49,31 @@ Sprint 4 focused on finishing the product experience, adding regression coverage
   - backend API overview
 - Added this `Sprint4.md` report for Sprint 4 submission requirements.
 
+## Frontend Work Completed - Sai Meghana
+
+### Board performance, loading UX, and optimistic interactions
+
+- Added **Angular CDK virtual scrolling** on the main project board for **Table** and **Timeline** views so large task lists stay responsive (`cdk-virtual-scroll-viewport`, fixed row/item heights, column `<colgroup>` alignment between header and body tables).
+- Added **virtual scrolling** for the standalone **`app-table-view`** component used in the BoardService-based board shell (spreadsheet-style card table).
+- Replaced the spinner-only board load state with a **skeleton layout** (top bar and column placeholders with shimmer) and `data-testid="board-loading-skeleton"` for testing.
+- Implemented **optimistic UI** for **creating tasks and lists**: temporary negative IDs until the API responds, replace with server entities on success, remove optimistic rows and fall back to local/demo behavior on failure.
+- After a **successful Kanban drag-and-drop move**, skipped redundant **`loadTasks` refetches** for the affected stages to prevent flicker; **errors still refetch** both stages to reconcile with the server.
+
+### Board navigation and layout refinements
+
+- Introduced **routed workspace sections** on the board (`overview`, `tasks`, `notes`, `activity`) so workspace switching uses the URL and deep links correctly.
+- Updated the **boards navbar** for clearer structure and **accessibility** (keyboard/focus-friendly controls).
+- **Removed the sidebar** in favor of the streamlined top navigation pattern.
+- Replaced the board **back button** with a **Taskify home logo** link for consistent branding and navigation.
+- **Removed duplicate view tabs** from the page body so view switching lives in one clear control region.
+- Adjusted **task metrics** so summary metrics appear on the **dashboard-style views**, not duplicated across Board / Table / Timeline.
+- Improved **column headers** (single-line titles, spacing), **filter behavior**, and **wider columns / larger task cards** for readability.
+
+### Tests added for this frontend work
+
+- Extended **`board.component.spec.ts`** with coverage for virtual-scroll **trackBy** helpers, fixed **table/timeline row heights**, **skeleton** rendering while `loading` is true, **optimistic `createTask`** (pending API vs replaced task id), and **`onTaskDrop`** / **`moveTask`** (no `loadTasks` on success, `loadTasks` on failure).
+- Added **`table-view.component.spec.ts`** for **`tableRows` sort order** (list order then card order), **`trackByCardId`**, **`openCard` → `BoardService.openCardDetail`**, and **`virtualRowHeight`**.
+
 ## Backend Work Completed
 
 ### Backend: Project Task Search Endpoint
@@ -275,7 +300,8 @@ Sprint 4 frontend unit test files include:
 |------|----------|
 | `frontend/src/app/pages/profile/profile.component.spec.ts` | Profile rendering, valid save, invalid email rejection, unchanged form save state |
 | `frontend/src/app/pages/home/home.component.spec.ts` | Board search, solo/shared filters, active refinement state, clear behavior |
-| `frontend/src/app/pages/board/board.component.spec.ts` | Task search by title/description, trimmed case-insensitive matching, match counts, empty state support, clear filters |
+| `frontend/src/app/pages/board/board.component.spec.ts` | Task search by title/description, trimmed case-insensitive matching, match counts, empty state support, clear filters; virtual-scroll trackBy helpers and row heights; skeleton loading DOM; optimistic task creation; drag move success/failure vs `loadTasks` |
+| `frontend/src/app/components/table-view/table-view.component.spec.ts` | Table row ordering, `trackByCardId`, open-card delegation, virtual row height |
 
 Previously existing frontend unit tests also continue to cover app shell behavior, authentication service behavior, theme service behavior, notification service behavior, notification bell UI, board filters, board view calculations, and planner-board behavior.
 
@@ -719,7 +745,7 @@ Error responses:
 For the narrated video presentation, demonstrate:
 
 - Taskify overview for someone new to the project.
-- New Sprint 4 frontend functionality: profile page, board search/filter on the home page, and board task search.
+- New Sprint 4 frontend functionality: profile page, board search/filter on the home page, board task search, board workspace sections, board loading skeletons, virtualized table/timeline views, and optimistic task/list creation where applicable.
 - Main frontend workflows: authentication, boards, task details, labels, comments, checklists, planner, notifications, members, and activity.
 - Backend API responsibilities and protected route structure.
 - Unit test and Cypress test results, including Sprint 3 and Sprint 4 coverage.
