@@ -75,6 +75,9 @@ export class BoardComponent implements OnInit, OnDestroy {
   /** Fixed row height for CDK virtual scroll (table + timeline). */
   readonly tableVirtualRowHeight = 52;
   readonly timelineVirtualItemHeight = 72;
+  /** `*ngFor` counters for loading skeleton (avoid hard-coded duplicate markup). */
+  readonly skeletonColumnPlaceholders = [0, 1, 2, 3] as const;
+  readonly skeletonCardPlaceholders = [0, 1, 2] as const;
   tableSortKey: TableSortKey = 'title';
   tableSortDir: TableSortDir = 'asc';
   workspaceSection: WorkspaceSection = 'tasks';

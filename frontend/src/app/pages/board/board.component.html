@@ -234,10 +234,21 @@
     </div>
   </div>
 
-  <!-- Loading State -->
-  <div class="loading" *ngIf="loading">
-    <div class="loadingSpinner"></div>
-    <p>Loading board...</p>
+  <!-- Loading State — skeleton mirrors board shell for smoother perceived load -->
+  <div class="board-loading-skeleton" *ngIf="loading" data-testid="board-loading-skeleton" aria-busy="true" aria-label="Loading board">
+    <div class="board-skeleton-topbar">
+      <div class="skeleton-bar skeleton-bar--brand"></div>
+      <div class="skeleton-bar skeleton-bar--title"></div>
+      <div class="skeleton-bar skeleton-bar--search"></div>
+      <div class="skeleton-chip"></div>
+      <div class="skeleton-chip"></div>
+    </div>
+    <div class="board-skeleton-columns">
+      <div class="board-skeleton-column" *ngFor="let _ of skeletonColumnPlaceholders">
+        <div class="skeleton-bar skeleton-bar--colhead"></div>
+        <div class="board-skeleton-card skeleton-bar" *ngFor="let __ of skeletonCardPlaceholders"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Board Content -->
