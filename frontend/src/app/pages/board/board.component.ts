@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/r
 import { FormsModule } from '@angular/forms';
 import { Subject, Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
 import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 import { ApiService } from '../../services/api.service';
 import { ActivityLog } from '../../models/activity.model';
 import { AddProjectMemberRequest, Project, ProjectMember } from '../../models/project.model';
@@ -26,7 +27,7 @@ type WorkspaceSection = 'overview' | 'tasks' | 'notes' | 'activity';
 @Component({
   selector: 'app-board',
   standalone: true,
-  imports: [CommonModule, FormsModule, DragDropModule, RouterLink, RouterLinkActive, NotificationBellComponent],
+  imports: [CommonModule, FormsModule, DragDropModule, ScrollingModule, RouterLink, RouterLinkActive, NotificationBellComponent],
   templateUrl: './board.component.html',
   styleUrls: ['./board.component.scss']
 })
@@ -68,9 +69,15 @@ export class BoardComponent implements OnInit, OnDestroy {
   private searchSub?: Subscription;
   private searchSubject = new Subject<string>();
 
-  /** Active board view tab — tasks section defaults to dashboard + board preview. */
-  viewMode: 'kanban' | 'table' | 'dashboard' | 'timeline' = 'dashboard';
+  /** Active board view tab — tasks section opens on the kanban board by default. */
+  viewMode: 'kanban' | 'table' | 'dashboard' | 'timeline' = 'kanban';
   readonly previewTaskLimit = 4;
+  /** Fixed row height for CDK virtual scroll (table + timeline). */
+  readonly tableVirtualRowHeight = 52;
+  readonly timelineVirtualItemHeight = 72;
+  /** `*ngFor` counters for loading skeleton (avoid hard-coded duplicate markup). */
+  readonly skeletonColumnPlaceholders = [0, 1, 2, 3] as const;
+  readonly skeletonCardPlaceholders = [0, 1, 2] as const;
   tableSortKey: TableSortKey = 'title';
   tableSortDir: TableSortDir = 'asc';
   workspaceSection: WorkspaceSection = 'tasks';
@@ -623,6 +630,13 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.accountSuccess = 'Password change UI is ready. Backend endpoint can be connected later.';
   }
 
+  private optimisticIdSeq = 0;
+  /** Temporary negative ids for optimistic UI (replaced when the API responds). */
+  private nextOptimisticId(): number {
+    this.optimisticIdSeq += 1;
+    return -(Date.now() + this.optimisticIdSeq);
+  }
+
   createStage() {
     const name = this.newStageName.trim();
     if (!name) {
@@ -632,19 +646,32 @@ export class BoardComponent implements OnInit, OnDestroy {
 
     const position = this.stages.length;
     const request: CreateStageRequest = { name, position };
-    console.log('Creating stage for project', this.projectId, 'with name:', name, 'position:', position);
-    
+    const optimisticId = this.nextOptimisticId();
+    const optimistic: Stage = {
+      id: optimisticId,
+      project_id: this.projectId,
+      name,
+      position,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      tasks: [],
+    };
+    this.stages.push(optimistic);
+    this.newStageName = '';
+
     this.apiService.createStage(this.projectId, request).subscribe({
       next: (stage: Stage) => {
-        console.log('Stage created successfully:', stage);
-        this.stages.push(stage);
-        this.newStageName = '';
+        const idx = this.stages.findIndex((s) => s.id === optimisticId);
+        if (idx >= 0) {
+          stage.tasks = this.stages[idx].tasks ?? [];
+          this.stages[idx] = stage;
+        } else {
+          this.stages.push(stage);
+        }
       },
       error: (err) => {
         console.error('Failed to create stage:', err);
-        console.error('Error status:', err.status);
-        console.error('Error message:', err.message);
-        // Demo fallback: create stage locally so board remains usable
+        this.stages = this.stages.filter((s) => s.id !== optimisticId);
         const localStage: Stage = {
           id: Date.now(),
           project_id: this.projectId,
@@ -655,16 +682,29 @@ export class BoardComponent implements OnInit, OnDestroy {
           tasks: []
         };
         this.stages.push(localStage);
-        this.newStageName = '';
       }
     });
+  }
+
+  private clearNewTaskForm(stageId: number): void {
+    this.newTaskTitles[stageId] = '';
+    this.newTaskDescs[stageId] = '';
+    this.newTaskDues[stageId] = '';
+    this.newTaskPriorities[stageId] = '';
+    this.newTaskNotes[stageId] = '';
+    this.newTaskLabels[stageId] = [];
+    this.showTaskDetails[stageId] = false;
   }
 
   createTask(stageId: number) {
     const title = this.newTaskTitles[stageId]?.trim();
     if (!title) return;
 
-    const position = this.stages.find(s => s.id === stageId)?.tasks?.length || 0;
+    const stage = this.stages.find((s) => s.id === stageId);
+    if (!stage) return;
+    if (!stage.tasks) stage.tasks = [];
+
+    const position = stage.tasks.length;
     const description = this.buildCardDescription(
       this.newTaskDescs[stageId] || '',
       this.newTaskDues[stageId] || '',
@@ -672,33 +712,53 @@ export class BoardComponent implements OnInit, OnDestroy {
       this.newTaskNotes[stageId] || ''
     );
     const request: CreateTaskRequest = { title, description, position };
-    this.apiService.createTask(this.projectId, stageId, request).subscribe({
 
+    const optimisticId = this.nextOptimisticId();
+    const optimisticTask: Task = {
+      id: optimisticId,
+      stage_id: stageId,
+      title,
+      description,
+      position,
+      completed: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    stage.tasks.push(optimisticTask);
+
+    const selectedLabels = [...(this.newTaskLabels[stageId] || [])];
+    if (selectedLabels.length) {
+      this.taskLabelMap[optimisticId] = selectedLabels;
+    }
+    this.clearNewTaskForm(stageId);
+
+    this.apiService.createTask(this.projectId, stageId, request).subscribe({
       next: (task: Task) => {
-        const stage = this.stages.find(s => s.id === stageId);
-        if (stage) {
-          if (!stage.tasks) stage.tasks = [];
-          stage.tasks.push(task);
+        const st = this.stages.find((s) => s.id === stageId);
+        if (st?.tasks) {
+          const idx = st.tasks.findIndex((t) => t.id === optimisticId);
+          if (idx >= 0) {
+            st.tasks[idx] = task;
+          } else {
+            st.tasks.push(task);
+          }
+          this.sortStageTasks(st);
         }
-        // Apply selected labels to the new task
-        const selectedLabels = this.newTaskLabels[stageId] || [];
         if (selectedLabels.length) {
+          delete this.taskLabelMap[optimisticId];
           this.taskLabelMap[task.id] = selectedLabels;
           localStorage.setItem(this.taskLabelsKey(task.id), JSON.stringify(selectedLabels));
         }
-        this.newTaskTitles[stageId] = '';
-        this.newTaskDescs[stageId] = '';
-        this.newTaskDues[stageId] = '';
-        this.newTaskPriorities[stageId] = '';
-        this.newTaskNotes[stageId] = '';
-        this.newTaskLabels[stageId] = [];
-        this.showTaskDetails[stageId] = false;
       },
       error: (err) => {
         console.error('Failed to create task:', err);
-        const stage = this.stages.find(s => s.id === stageId);
-        if (stage) {
-          if (!stage.tasks) stage.tasks = [];
+        const st = this.stages.find((s) => s.id === stageId);
+        if (st?.tasks) {
+          st.tasks = st.tasks.filter((t) => t.id !== optimisticId);
+        }
+        delete this.taskLabelMap[optimisticId];
+        if (st) {
+          if (!st.tasks) st.tasks = [];
           const localTask: Task = {
             id: Date.now(),
             stage_id: stageId,
@@ -709,20 +769,12 @@ export class BoardComponent implements OnInit, OnDestroy {
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           };
-          stage.tasks.push(localTask);
-          const selectedLabels = this.newTaskLabels[stageId] || [];
+          st.tasks.push(localTask);
           if (selectedLabels.length) {
             this.taskLabelMap[localTask.id] = selectedLabels;
             localStorage.setItem(this.taskLabelsKey(localTask.id), JSON.stringify(selectedLabels));
           }
         }
-        this.newTaskTitles[stageId] = '';
-        this.newTaskDescs[stageId] = '';
-        this.newTaskDues[stageId] = '';
-        this.newTaskPriorities[stageId] = '';
-        this.newTaskNotes[stageId] = '';
-        this.newTaskLabels[stageId] = [];
-        this.showTaskDetails[stageId] = false;
       }
     });
   }
@@ -921,6 +973,17 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   trackByTaskId(_index: number, task: Task): number {
     return task.id;
+  }
+
+  trackByTableRow(_index: number, row: { task: Task; stage: Stage }): number {
+    return row.task.id;
+  }
+
+  trackByTimelineItem(
+    _index: number,
+    item: { task: Task; stageId: number; stageName: string; dateLabel: string; isOverdue: boolean; isToday: boolean }
+  ): number {
+    return item.task.id;
   }
 
   /** Open task modal — edit flow (same as clicking card body). */

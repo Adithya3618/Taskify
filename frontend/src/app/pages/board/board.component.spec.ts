@@ -336,8 +336,8 @@ describe('BoardComponent', () => {
   });
 
   // ── viewMode ─────────────────────────────────────────────
-  it('viewMode should default to dashboard', () => {
-    expect(component.viewMode).toBe('dashboard');
+  it('viewMode should default to kanban', () => {
+    expect(component.viewMode).toBe('kanban');
   });
 
   it('setView("dashboard") should switch viewMode to dashboard', () => {
