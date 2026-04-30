@@ -1,8 +1,9 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
-import { of, Subject } from 'rxjs';
+import { CdkDragDrop } from '@angular/cdk/drag-drop';
+import { of, Subject, throwError } from 'rxjs';
 import { BoardComponent } from './board.component';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
@@ -39,6 +40,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
 
 describe('BoardComponent', () => {
   let component: BoardComponent;
+  let fixture: ComponentFixture<BoardComponent>;
   let navigateSpy: jasmine.Spy;
   let authSpy: jasmine.SpyObj<AuthService>;
   let apiSpy: jasmine.SpyObj<ApiService>;
@@ -118,7 +120,7 @@ describe('BoardComponent', () => {
       ],
     }).compileComponents();
 
-    const fixture = TestBed.createComponent(BoardComponent);
+    fixture = TestBed.createComponent(BoardComponent);
     component = fixture.componentInstance;
     navigateSpy = spyOn(TestBed.inject(Router), 'navigate');
 
@@ -392,5 +394,120 @@ describe('BoardComponent', () => {
   it('timelineTasks should return empty array when no tasks have due dates', () => {
     component.stages = [makeStage([makeTask()])];
     expect(component.timelineTasks.length).toBe(0);
+  });
+
+  // ── Virtual scroll helpers, skeleton loading, optimistic create, drag perf ──
+  describe('virtual scroll helpers and loading skeleton', () => {
+    it('trackByTableRow should return the task id', () => {
+      const row = { task: makeTask({ id: 77 }), stage: makeStage() };
+      expect(component.trackByTableRow(0, row)).toBe(77);
+    });
+
+    it('trackByTimelineItem should return the nested task id', () => {
+      const item = {
+        task: makeTask({ id: 88 }),
+        stageId: 1,
+        stageName: 'To Do',
+        dateLabel: 'Jan 1',
+        isOverdue: false,
+        isToday: false,
+      };
+      expect(component.trackByTimelineItem(0, item)).toBe(88);
+    });
+
+    it('should expose fixed row heights for virtual scroll', () => {
+      expect(component.tableVirtualRowHeight).toBe(52);
+      expect(component.timelineVirtualItemHeight).toBe(72);
+    });
+
+    it('should render board loading skeleton when loading is true', () => {
+      component.loading = true;
+      fixture.detectChanges();
+      const el = fixture.nativeElement.querySelector('[data-testid="board-loading-skeleton"]');
+      expect(el).toBeTruthy();
+    });
+  });
+
+  describe('optimistic createTask', () => {
+    it('should insert an optimistic task before the API responds and replace it on success', () => {
+      const pending = new Subject<Task>();
+      apiSpy.createTask.and.returnValue(pending.asObservable());
+
+      const stage = makeStage([]);
+      stage.id = 1;
+      component.stages = [stage];
+      component.projectId = 1;
+      component.newTaskTitles[1] = 'Hello task';
+
+      component.createTask(1);
+
+      expect(stage.tasks!.length).toBe(1);
+      expect(stage.tasks![0].title).toBe('Hello task');
+      expect(stage.tasks![0].id).toBeLessThan(0);
+
+      pending.next(
+        makeTask({
+          id: 200,
+          title: 'Hello task',
+          stage_id: 1,
+          description: stage.tasks![0].description,
+          position: 0,
+        })
+      );
+      pending.complete();
+
+      expect(stage.tasks![0].id).toBe(200);
+    });
+  });
+
+  describe('onTaskDrop and moveTask', () => {
+    it('should not call loadTasks after a successful cross-column drop', () => {
+      const loadSpy = spyOn(component, 'loadTasks');
+      apiSpy.moveTask.and.returnValue(of(makeTask({ id: 5, stage_id: 2 })));
+
+      const task = makeTask({ id: 5, stage_id: 1 });
+      const stage1 = makeStage([task]);
+      stage1.id = 1;
+      const stage2 = makeStage([]);
+      stage2.id = 2;
+      component.stages = [stage1, stage2];
+
+      const event = {
+        previousContainer: { id: 'stage-drop-1', data: stage1.tasks! },
+        container: { id: 'stage-drop-2', data: stage2.tasks! },
+        previousIndex: 0,
+        currentIndex: 0,
+        item: { data: task },
+      } as CdkDragDrop<Task[]>;
+
+      component.onTaskDrop(event);
+
+      expect(apiSpy.moveTask).toHaveBeenCalled();
+      expect(loadSpy).not.toHaveBeenCalled();
+    });
+
+    it('should call loadTasks to reconcile when moveTask fails', () => {
+      const loadSpy = spyOn(component, 'loadTasks');
+      apiSpy.moveTask.and.returnValue(throwError(() => new Error('network')));
+
+      const task = makeTask({ id: 5, stage_id: 1 });
+      const stage1 = makeStage([task]);
+      stage1.id = 1;
+      const stage2 = makeStage([]);
+      stage2.id = 2;
+      component.stages = [stage1, stage2];
+
+      const event = {
+        previousContainer: { id: 'stage-drop-1', data: stage1.tasks! },
+        container: { id: 'stage-drop-2', data: stage2.tasks! },
+        previousIndex: 0,
+        currentIndex: 0,
+        item: { data: task },
+      } as CdkDragDrop<Task[]>;
+
+      component.onTaskDrop(event);
+
+      expect(loadSpy).toHaveBeenCalled();
+    });
   });
 });
