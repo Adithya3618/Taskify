@@ -462,6 +462,15 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   setColumnSortMode(stageId: number, mode: TaskSortMode): void {
     this.columnSortModes[stageId] = mode;
+    const stage = this.stages.find((s) => s.id === stageId);
+    if (stage?.tasks?.length) {
+      // Keep rendered drag list in sync with selected dropdown sort mode.
+      if (mode === 'manual') {
+        this.sortStageTasks(stage);
+      } else {
+        stage.tasks = this.getSortedTasks(stage.tasks, mode);
+      }
+    }
     this.saveColumnSortState();
   }
 
