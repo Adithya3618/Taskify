@@ -352,32 +352,113 @@ func (s *TaskService) hasProjectAccess(userID string, projectID int64) (bool, er
 	return count > 0, nil
 }
 
-// MoveTask moves a task to a different stage (validates ownership)
-func (s *TaskService) MoveTask(userID string, id int64, newStageID int64, newPosition int) (*models.Task, error) {
-	// Verify new stage belongs to user's project
-	projectID, err := s.verifyStageOwnership(userID, newStageID)
+// projectIDForStageIfAccessible returns the project id for a stage when the user is the project owner
+// or a project member (same access model as GetStagesByProject / hasProjectAccess).
+func (s *TaskService) projectIDForStageIfAccessible(userID string, stageID int64) (int64, error) {
+	var projectID int64
+	err := s.db.QueryRow(`
+		SELECT stages.project_id
+		FROM stages
+		JOIN projects ON projects.id = stages.project_id
+		LEFT JOIN project_members pm ON pm.project_id = projects.id AND pm.user_id = ?
+		WHERE stages.id = ?
+		  AND (projects.owner_id = ? OR pm.user_id IS NOT NULL)`,
+		userID, stageID, userID,
+	).Scan(&projectID)
+	if err == sql.ErrNoRows {
+		return 0, nil
+	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to verify stage ownership: %v", err)
+		return 0, err
 	}
-	if projectID == 0 {
-		return nil, fmt.Errorf("stage not found or access denied")
-	}
+	return projectID, nil
+}
 
-	// Verify task belongs to user
-	_, err = s.GetTaskByID(userID, id)
+// getTaskForProjectAccess returns a task if the user can access the task's project (owner or member),
+// not only when tasks.user_id matches the current user.
+func (s *TaskService) getTaskForProjectAccess(userID string, taskID int64) (*models.Task, error) {
+	row := s.db.QueryRow(
+		`SELECT
+			tasks.id,
+			tasks.user_id,
+			tasks.stage_id,
+			tasks.title,
+			tasks.description,
+			tasks.position,
+			tasks.start_date,
+			tasks.deadline,
+			tasks.priority,
+			tasks.assigned_to,
+			COALESCE((SELECT COUNT(*) FROM subtasks WHERE subtasks.task_id = tasks.id), 0) AS subtask_count,
+			COALESCE((SELECT COUNT(*) FROM subtasks WHERE subtasks.task_id = tasks.id AND subtasks.is_completed = 1), 0) AS completed_count,
+			tasks.created_at,
+			tasks.updated_at
+		FROM tasks
+		JOIN stages ON tasks.stage_id = stages.id
+		JOIN projects ON projects.id = stages.project_id
+		LEFT JOIN project_members pm ON pm.project_id = projects.id AND pm.user_id = ?
+		WHERE tasks.id = ?
+		  AND (projects.owner_id = ? OR pm.user_id IS NOT NULL)`,
+		userID, taskID, userID,
+	)
+	task, err := scanTask(row)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get task: %v", err)
 	}
 
-	_, err = s.db.Exec(
-		"UPDATE tasks SET stage_id = ?, position = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?",
-		newStageID, newPosition, id, userID,
+	return &task, nil
+}
+
+// MoveTask moves a task to a different stage (project owner or member may move any task in the project).
+func (s *TaskService) MoveTask(userID string, id int64, newStageID int64, newPosition int) (*models.Task, error) {
+	newProj, err := s.projectIDForStageIfAccessible(userID, newStageID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify target stage: %v", err)
+	}
+	if newProj == 0 {
+		return nil, fmt.Errorf("stage not found or access denied")
+	}
+
+	existing, err := s.getTaskForProjectAccess(userID, id)
+	if err != nil {
+		return nil, err
+	}
+	if existing == nil {
+		return nil, fmt.Errorf("task not found or access denied")
+	}
+
+	var oldProj int64
+	err = s.db.QueryRow(
+		`SELECT stages.project_id FROM tasks JOIN stages ON tasks.stage_id = stages.id WHERE tasks.id = ?`,
+		id,
+	).Scan(&oldProj)
+	if err != nil {
+		return nil, fmt.Errorf("task not found")
+	}
+	if oldProj != newProj {
+		return nil, fmt.Errorf("cannot move task to a stage in another project")
+	}
+
+	result, err := s.db.Exec(
+		"UPDATE tasks SET stage_id = ?, position = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+		newStageID, newPosition, id,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to move task: %v", err)
 	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("failed to move task: %v", err)
+	}
+	if n == 0 {
+		return nil, fmt.Errorf("task not found or access denied")
+	}
 
-	return s.GetTaskByID(userID, id)
+	return s.getTaskForProjectAccess(userID, id)
 }
 
 // AssignTask assigns/unassigns a task to a user
