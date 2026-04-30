@@ -3,16 +3,19 @@ import { BoardService } from '../../services/board.service';
 import { Card } from '../../models/card.model';
 import { NgFor } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 
 @Component({
   selector: 'app-table-view',
   standalone: true,
-  imports: [NgFor, FormsModule],
+  imports: [NgFor, FormsModule, ScrollingModule],
   templateUrl: './table-view.component.html',
   styleUrl: './table-view.component.scss',
 })
 export class TableViewComponent {
   private boardService = inject(BoardService);
+
+  readonly virtualRowHeight = 64;
 
   lists = this.boardService.currentLists;
   cards = this.boardService.currentBoardCards;
@@ -57,5 +60,9 @@ export class TableViewComponent {
 
   openCard(cardId: string): void {
     this.boardService.openCardDetail(cardId);
+  }
+
+  trackByCardId(_index: number, card: Card): string {
+    return card.id;
   }
 }

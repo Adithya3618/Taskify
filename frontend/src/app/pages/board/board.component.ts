@@ -526,10 +526,7 @@ export class BoardComponent implements OnInit, OnDestroy {
     const newPos = event.currentIndex;
     this.apiService.moveTask(task.id, { newStageId: nextStageId, newPos }).subscribe({
       next: () => {
-        const prev = this.stages.find((s) => s.id === prevStageId);
-        const next = this.stages.find((s) => s.id === nextStageId);
-        if (prev) this.loadTasks(prev);
-        if (next && next.id !== prev?.id) this.loadTasks(next);
+        /* UI already reflects the drop; skip refetch to avoid flicker and extra work. */
       },
       error: () => {
         const prev = this.stages.find((s) => s.id === prevStageId);

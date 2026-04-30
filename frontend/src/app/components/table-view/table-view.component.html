@@ -3,7 +3,16 @@
     <h2 class="table-title">Table – Spreadsheet-like task tracking</h2>
   </div>
   <div class="table-scroll">
-    <table class="data-table">
+    <table class="data-table data-table--header">
+      <colgroup>
+        <col class="tv-col tv-col--task" />
+        <col class="tv-col tv-col--list" />
+        <col class="tv-col tv-col--due" />
+        <col class="tv-col tv-col--labels" />
+        <col class="tv-col tv-col--assignees" />
+        <col class="tv-col tv-col--checklist" />
+        <col class="tv-col tv-col--attach" />
+      </colgroup>
       <thead>
         <tr>
           <th>Task</th>
@@ -15,32 +24,55 @@
           <th>Attachments</th>
         </tr>
       </thead>
-      <tbody>
-        @for (card of tableRows(); track card.id) {
-          <tr (click)="openCard(card.id)" class="clickable-row">
-            <td class="col-title">
-              <span class="task-title">{{ card.title }}</span>
-              @if (card.description) {
-                <span class="task-desc">{{ card.description }}</span>
-              }
-            </td>
-            <td>{{ getListName(card.listId) }}</td>
-            <td>{{ formatDate(card.dueDate) }}</td>
-            <td>
-              <span class="labels-cell">
-                @for (label of card.labels || []; track label.id) {
-                  <span class="label-dot" [style.background-color]="label.color" [title]="label.name"></span>
-                }
-                @if (!card.labels?.length) { — }
-              </span>
-            </td>
-            <td>{{ assigneesDisplay(card) }}</td>
-            <td>{{ checklistDisplay(card) }}</td>
-            <td>{{ (card.attachments?.length ?? 0) > 0 ? card.attachments!.length + ' file(s)' : '—' }}</td>
-          </tr>
-        }
-      </tbody>
     </table>
+    @if (tableRows().length > 0) {
+      <cdk-virtual-scroll-viewport
+        [itemSize]="virtualRowHeight"
+        class="tableVirtualViewport"
+        minBufferPx="280"
+        maxBufferPx="560"
+      >
+        <table class="data-table data-table--body">
+          <colgroup>
+            <col class="tv-col tv-col--task" />
+            <col class="tv-col tv-col--list" />
+            <col class="tv-col tv-col--due" />
+            <col class="tv-col tv-col--labels" />
+            <col class="tv-col tv-col--assignees" />
+            <col class="tv-col tv-col--checklist" />
+            <col class="tv-col tv-col--attach" />
+          </colgroup>
+          <tbody>
+            <tr
+              *cdkVirtualFor="let card of tableRows(); trackBy: trackByCardId"
+              (click)="openCard(card.id)"
+              class="clickable-row"
+              [style.height.px]="virtualRowHeight"
+            >
+              <td class="col-title">
+                <span class="task-title">{{ card.title }}</span>
+                @if (card.description) {
+                  <span class="task-desc">{{ card.description }}</span>
+                }
+              </td>
+              <td>{{ getListName(card.listId) }}</td>
+              <td>{{ formatDate(card.dueDate) }}</td>
+              <td>
+                <span class="labels-cell">
+                  @for (label of card.labels || []; track label.id) {
+                    <span class="label-dot" [style.background-color]="label.color" [title]="label.name"></span>
+                  }
+                  @if (!card.labels?.length) { — }
+                </span>
+              </td>
+              <td>{{ assigneesDisplay(card) }}</td>
+              <td>{{ checklistDisplay(card) }}</td>
+              <td>{{ (card.attachments?.length ?? 0) > 0 ? card.attachments!.length + ' file(s)' : '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </cdk-virtual-scroll-viewport>
+    }
   </div>
   @if (tableRows().length === 0) {
     <p class="table-empty">No tasks yet. Add cards from the Board view.</p>
