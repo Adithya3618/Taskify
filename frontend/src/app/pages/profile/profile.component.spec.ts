@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { RouterTestingModule } from '@angular/router/testing';
 import { ProfileComponent } from './profile.component';
 import { AuthService, AuthUser } from '../../services/auth.service';
 
@@ -20,7 +21,7 @@ describe('ProfileComponent', () => {
     authSpy.getCurrentUser.and.returnValue(mockUser);
 
     await TestBed.configureTestingModule({
-      imports: [ProfileComponent],
+      imports: [ProfileComponent, RouterTestingModule],
       providers: [{ provide: AuthService, useValue: authSpy }],
     }).compileComponents();
 
