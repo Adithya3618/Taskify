@@ -668,7 +668,16 @@
     <!-- ── Table View ── -->
     <div class="viewPanel" *ngIf="workspaceSection === 'tasks' && viewMode === 'table'">
       <div class="tableWrap">
-        <table class="taskTable">
+        <table class="taskTable taskTable--header">
+          <colgroup>
+            <col class="tableCol tableCol--title" />
+            <col class="tableCol tableCol--stage" />
+            <col class="tableCol tableCol--priority" />
+            <col class="tableCol tableCol--due" />
+            <col class="tableCol tableCol--updated" />
+            <col class="tableCol tableCol--subtasks" />
+            <col class="tableCol tableCol--assignee" />
+          </colgroup>
           <thead>
             <tr>
               <th>
@@ -708,9 +717,31 @@
               </th>
             </tr>
           </thead>
-          <tbody>
-            <ng-container *ngFor="let row of tableRows">
-              <tr (click)="openTaskDetail(row.task)" class="taskRow">
+        </table>
+        <cdk-virtual-scroll-viewport
+          *ngIf="tableRows.length > 0"
+          [itemSize]="tableVirtualRowHeight"
+          class="tableVirtualViewport"
+          minBufferPx="300"
+          maxBufferPx="600"
+        >
+          <table class="taskTable taskTable--virtualBody">
+            <colgroup>
+              <col class="tableCol tableCol--title" />
+              <col class="tableCol tableCol--stage" />
+              <col class="tableCol tableCol--priority" />
+              <col class="tableCol tableCol--due" />
+              <col class="tableCol tableCol--updated" />
+              <col class="tableCol tableCol--subtasks" />
+              <col class="tableCol tableCol--assignee" />
+            </colgroup>
+            <tbody>
+              <tr
+                *cdkVirtualFor="let row of tableRows; trackBy: trackByTableRow"
+                (click)="openTaskDetail(row.task)"
+                class="taskRow"
+                [style.height.px]="tableVirtualRowHeight"
+              >
                 <td class="taskRowTitle">
                   <span class="taskRowDot" [class]="'priority-dot priority-dot--' + getEffectivePriority(row.task)"></span>
                   {{ row.task.title }}
@@ -729,9 +760,9 @@
                   <span *ngIf="!getTaskAssignee(row.task)" class="tableUnassigned">—</span>
                 </td>
               </tr>
-            </ng-container>
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </cdk-virtual-scroll-viewport>
         <div class="tableEmpty" *ngIf="dashTotalTasks === 0">No tasks yet. Switch to Board view to add some.</div>
         <div class="tableEmpty" *ngIf="dashTotalTasks > 0 && hasActiveFilters && !hasVisibleTasks">No tasks match your search.</div>
       </div>
@@ -746,16 +777,29 @@
         <div class="timelineEmpty" *ngIf="timelineTasks.length === 0 && searchQuery.trim()">
           No tasks match your search.
         </div>
-        <div class="timelineItem" *ngFor="let item of timelineTasks" (click)="openTaskDetail(item.task)">
-          <div class="timelineDate" [class.overdue]="item.isOverdue" [class.today]="item.isToday">
-            {{ item.dateLabel }}
+        <cdk-virtual-scroll-viewport
+          *ngIf="timelineTasks.length > 0"
+          [itemSize]="timelineVirtualItemHeight"
+          class="timelineVirtualViewport"
+          minBufferPx="240"
+          maxBufferPx="480"
+        >
+          <div
+            class="timelineItem"
+            *cdkVirtualFor="let item of timelineTasks; trackBy: trackByTimelineItem"
+            (click)="openTaskDetail(item.task)"
+            [style.min-height.px]="timelineVirtualItemHeight"
+          >
+            <div class="timelineDate" [class.overdue]="item.isOverdue" [class.today]="item.isToday">
+              {{ item.dateLabel }}
+            </div>
+            <div class="timelineContent">
+              <span class="timelineTitle">{{ item.task.title }}</span>
+              <span class="timelineStagePill">{{ item.stageName }}</span>
+              <span class="priorityBadge priorityBadge--{{ getEffectivePriority(item.task) }}">{{ getEffectivePriority(item.task) }}</span>
+            </div>
           </div>
-          <div class="timelineContent">
-            <span class="timelineTitle">{{ item.task.title }}</span>
-            <span class="timelineStagePill">{{ item.stageName }}</span>
-            <span class="priorityBadge priorityBadge--{{ getEffectivePriority(item.task) }}">{{ getEffectivePriority(item.task) }}</span>
-          </div>
-        </div>
+        </cdk-virtual-scroll-viewport>
       </div>
     </div>
 

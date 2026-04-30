@@ -2586,6 +2586,31 @@
   overflow: hidden;
 }
 
+.tableVirtualViewport {
+  display: block;
+  width: 100%;
+  height: min(72vh, calc(100vh - 220px));
+  border-top: 1px solid var(--border);
+}
+
+.tableCol--title { width: 26%; }
+.tableCol--stage { width: 14%; }
+.tableCol--priority { width: 11%; }
+.tableCol--due { width: 11%; }
+.tableCol--updated { width: 13%; }
+.tableCol--subtasks { width: 10%; }
+.tableCol--assignee { width: 15%; }
+
+.taskTable--header {
+  table-layout: fixed;
+  margin: 0;
+}
+
+.taskTable--virtualBody {
+  table-layout: fixed;
+  margin: 0;
+}
+
 .taskTable {
   width: 100%;
   border-collapse: collapse;
@@ -2695,6 +2720,12 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.timelineVirtualViewport {
+  display: block;
+  width: 100%;
+  height: min(70vh, calc(100vh - 220px));
 }
 
 .timelineEmpty {

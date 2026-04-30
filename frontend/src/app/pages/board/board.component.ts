@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/r
 import { FormsModule } from '@angular/forms';
 import { Subject, Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
 import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 import { ApiService } from '../../services/api.service';
 import { ActivityLog } from '../../models/activity.model';
 import { AddProjectMemberRequest, Project, ProjectMember } from '../../models/project.model';
@@ -26,7 +27,7 @@ type WorkspaceSection = 'overview' | 'tasks' | 'notes' | 'activity';
 @Component({
   selector: 'app-board',
   standalone: true,
-  imports: [CommonModule, FormsModule, DragDropModule, RouterLink, RouterLinkActive, NotificationBellComponent],
+  imports: [CommonModule, FormsModule, DragDropModule, ScrollingModule, RouterLink, RouterLinkActive, NotificationBellComponent],
   templateUrl: './board.component.html',
   styleUrls: ['./board.component.scss']
 })
@@ -68,9 +69,12 @@ export class BoardComponent implements OnInit, OnDestroy {
   private searchSub?: Subscription;
   private searchSubject = new Subject<string>();
 
-  /** Active board view tab — tasks section defaults to dashboard + board preview. */
-  viewMode: 'kanban' | 'table' | 'dashboard' | 'timeline' = 'dashboard';
+  /** Active board view tab — tasks section opens on the kanban board by default. */
+  viewMode: 'kanban' | 'table' | 'dashboard' | 'timeline' = 'kanban';
   readonly previewTaskLimit = 4;
+  /** Fixed row height for CDK virtual scroll (table + timeline). */
+  readonly tableVirtualRowHeight = 52;
+  readonly timelineVirtualItemHeight = 72;
   tableSortKey: TableSortKey = 'title';
   tableSortDir: TableSortDir = 'asc';
   workspaceSection: WorkspaceSection = 'tasks';
@@ -921,6 +925,17 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   trackByTaskId(_index: number, task: Task): number {
     return task.id;
+  }
+
+  trackByTableRow(_index: number, row: { task: Task; stage: Stage }): number {
+    return row.task.id;
+  }
+
+  trackByTimelineItem(
+    _index: number,
+    item: { task: Task; stageId: number; stageName: string; dateLabel: string; isOverdue: boolean; isToday: boolean }
+  ): number {
+    return item.task.id;
   }
 
   /** Open task modal — edit flow (same as clicking card body). */
