@@ -535,7 +535,6 @@ export class BoardComponent implements OnInit, OnDestroy {
     const prevStageId = this.parseDropListId(event.previousContainer.id);
     const nextStageId = this.parseDropListId(event.container.id);
     if (prevStageId === null || nextStageId === null) return;
-    if (!this.isManualColumnSort(prevStageId) || !this.isManualColumnSort(nextStageId)) return;
 
     const task = event.item.data as Task | undefined;
     if (!task) return;
