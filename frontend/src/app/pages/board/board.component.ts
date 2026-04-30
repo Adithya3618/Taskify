@@ -2,7 +2,8 @@ import { ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit } from '@
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { Subject, Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject, Subscription, debounceTime, distinctUntilChanged, forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { ApiService } from '../../services/api.service';
@@ -379,12 +380,7 @@ export class BoardComponent implements OnInit, OnDestroy {
         this.stages = (stages || []).map((s) => ({ ...s, tasks: s.tasks ?? [] }));
         this.loadCollapsedColumnState();
         this.loadColumnSortState();
-        // Load tasks and members in parallel
-        if (this.stages.length > 0) {
-          this.stages.forEach(stage => this.loadTasks(stage));
-        }
-        this.loadProjectMembers();
-        this.loading = false;
+        this.finishBoardLoadAfterTasksLoaded();
       },
       error: (err) => {
         console.error('Failed to load stages:', err);
@@ -397,26 +393,58 @@ export class BoardComponent implements OnInit, OnDestroy {
         ];
         this.loadCollapsedColumnState();
         this.loadColumnSortState();
+        this.finishBoardLoadAfterTasksLoaded();
+      }
+    });
+  }
+
+  /**
+   * Waits for every column's tasks before clearing loading — avoids a race where a late GET
+   * overwrites in-memory arrays after a drag-and-drop (card snaps back).
+   */
+  private finishBoardLoadAfterTasksLoaded(): void {
+    if (this.stages.length === 0) {
+      this.loadProjectMembers();
+      this.loading = false;
+      return;
+    }
+    const loads = this.stages.map((stage) =>
+      this.apiService.getTasks(this.projectId, stage.id).pipe(
+        catchError((err) => {
+          console.error('Failed to load tasks for stage:', stage.id, err);
+          return of([] as Task[]);
+        })
+      )
+    );
+    forkJoin(loads).subscribe({
+      next: (taskArrays) => {
+        taskArrays.forEach((tasks, i) => this.applyLoadedTasks(this.stages[i], tasks));
+        this.loadProjectMembers();
+        this.loading = false;
+      },
+      error: () => {
+        this.loadProjectMembers();
         this.loading = false;
       }
     });
   }
 
+  /** Merge API tasks into a stage (completion flags, sort, notifications). */
+  private applyLoadedTasks(stage: Stage, tasks: Task[] | null | undefined): void {
+    stage.tasks = this.taskCompletionStorage.mergeTasks(this.projectId, tasks || []);
+    this.sortStageTasks(stage);
+    this.apiService.primeTaskComments((stage.tasks || []).map((task) => task.id));
+    const withDeadlines = (tasks || [])
+      .map(t => ({ id: t.id, title: t.title, deadline: t.deadline || this.parseCardMeta(t.description || '').due }))
+      .filter(t => !!t.deadline);
+    if (withDeadlines.length) {
+      this.notificationService.checkDeadlines(withDeadlines, this.projectId);
+    }
+  }
+
   loadTasks(stage: Stage) {
     this.apiService.getTasks(this.projectId, stage.id).subscribe({
-      next: (tasks) => {
-        stage.tasks = this.taskCompletionStorage.mergeTasks(this.projectId, tasks || []);
-        this.sortStageTasks(stage);
-        this.apiService.primeTaskComments((stage.tasks || []).map((task) => task.id));
-        // Check for upcoming/overdue deadlines and push notifications
-        // Prefer backend deadline field; fall back to metadata in description
-        const withDeadlines = (tasks || [])
-          .map(t => ({ id: t.id, title: t.title, deadline: t.deadline || this.parseCardMeta(t.description || '').due }))
-          .filter(t => !!t.deadline);
-        if (withDeadlines.length) {
-          this.notificationService.checkDeadlines(withDeadlines, this.projectId);
-        }
-      },
+      next: (tasks) => this.applyLoadedTasks(stage, tasks),
       error: (err) => {
         console.error('Failed to load tasks for stage:', stage.id, err);
       }
@@ -526,7 +554,11 @@ export class BoardComponent implements OnInit, OnDestroy {
     const newPos = event.currentIndex;
     this.apiService.moveTask(task.id, { newStageId: nextStageId, newPos }).subscribe({
       next: () => {
-        /* UI already reflects the drop; skip refetch to avoid flicker and extra work. */
+        const prev = this.stages.find((s) => s.id === prevStageId);
+        const next = this.stages.find((s) => s.id === nextStageId);
+        /* Sync from server so lists match persisted order/stage; avoids stale parallel GET overwriting the drop. */
+        if (prev) this.loadTasks(prev);
+        if (next) this.loadTasks(next);
       },
       error: () => {
         const prev = this.stages.find((s) => s.id === prevStageId);
